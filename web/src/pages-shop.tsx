@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { api, ApiError, type Page } from "./api";
 import { Alert, Loading, pattern, ProductArt, ProductTile, useAsync } from "./components";
 import { useAuth, useCart, useCurrency, type CartLine } from "./context";
+import { useGuestCheckoutEnabled } from "./guest-config";
 import type { Category, Product, Variant } from "./types";
 
 /* ------------------------------------------------------------------- home */
@@ -197,6 +198,7 @@ export function ProductPage() {
   const { add } = useCart();
   const { money, isBase, currency } = useCurrency();
   const [variantId, setVariantId] = useState<number | null>(null);
+  const { t } = useT();
   const [qty, setQty] = useState(1);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [adding, setAdding] = useState(false);
@@ -270,7 +272,9 @@ export function ProductPage() {
               </div>
             </>
           )}
-          {variant && (variant.in_stock ? <p className="stock-ok">In stock</p> : <p className="stock-out">Sold out</p>)}
+          {variant && (variant.on_backorder
+            ? <p className="stock-ok">{t("product.backorder")}{variant.backorder_days ? `. ${t("product.backorderDays", { days: variant.backorder_days })}` : ""}</p>
+            : variant.in_stock ? <p className="stock-ok">In stock</p> : <p className="stock-out">Sold out</p>)}
           <div className="buy-row">
             <div className="qty" role="group" aria-label="Quantity">
               <button aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
@@ -308,6 +312,7 @@ export function Bag() {
   const { lines, setQuantity, remove } = useCart();
   const { toNumber, money, currency, exact } = useCurrency();
   const { user } = useAuth();
+  const guestEnabled = useGuestCheckoutEnabled();
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
@@ -324,7 +329,7 @@ export function Bag() {
     return (
       <div className="wrap page empty">
         <h1>{t("bag.empty")}</h1>
-        <p className="muted">Find something made with care and it will wait for you here.</p>
+        <p className="muted">{t("bag.emptyHint")}</p>
         <Link to="/shop" className="btn">{t("common.browse")}</Link>
       </div>
     );
@@ -343,14 +348,14 @@ export function Bag() {
               <div>
                 <strong>{l.slug ? <Link to={`/shop/${l.slug}`}>{l.name}</Link> : l.name}</strong>
                 {l.variantName && <div className="muted small">{l.variantName}</div>}
-                <div className="muted small">{money(l.unitPrice, l.currency)} each</div>
+                <div className="muted small">{t("bag.each", { price: money(l.unitPrice, l.currency) })}</div>
                 <div className="actions">
                   <div className="qty" role="group" aria-label={`Quantity for ${l.name}`}>
                     <button aria-label="Decrease quantity" onClick={() => run(() => setQuantity(l, l.quantity - 1))} disabled={l.quantity <= 1}>−</button>
                     <span>{l.quantity}</span>
                     <button aria-label="Increase quantity" onClick={() => run(() => setQuantity(l, Math.min(99, l.quantity + 1)))}>+</button>
                   </div>
-                  <button className="link-button" onClick={() => run(() => remove(l))}>Remove</button>
+                  <button className="link-button" onClick={() => run(() => remove(l))}>{t("common.remove")}</button>
                 </div>
               </div>
               <strong>{exact((toNumber(l.unitPrice, l.currency) * l.quantity).toFixed(2), currency)}</strong>
@@ -359,15 +364,18 @@ export function Bag() {
         </div>
         <aside className="summary" aria-label="Order summary">
           <dl>
-            <dt>Items</dt>
+            <dt>{t("bag.items")}</dt>
             <dd>{exact(subtotal.toFixed(2), currency)}</dd>
-            <dt>Delivery</dt>
-            <dd className="muted">Chosen at checkout</dd>
+            <dt>{t("checkout.delivery")}</dt>
+            <dd className="muted">{t("bag.chosenLater")}</dd>
           </dl>
-          <button className="btn block" onClick={() => navigate(user ? "/checkout" : "/login?next=/checkout")}>
-            {user ? "Continue to checkout" : "Sign in to check out"}
-          </button>
-          <p className="small muted" style={{ marginTop: "0.75rem" }}>Your bag is saved. Delivery and the final total are confirmed before you pay.</p>
+          {user || guestEnabled ? (
+            <button className="btn block" onClick={() => navigate("/checkout")}>{user ? t("bag.continue") : t("guest.checkout")}</button>
+          ) : (
+            <button className="btn block" onClick={() => navigate("/login?next=/checkout")}>{t("bag.signInToCheckOut")}</button>
+          )}
+          {!user && guestEnabled && <p className="small" style={{ marginTop: "0.75rem" }}><Link to="/login?next=/checkout">{t("guest.signIn")}</Link></p>}
+          <p className="small muted" style={{ marginTop: "0.75rem" }}>{t("bag.saved")}</p>
         </aside>
       </div>
     </div>

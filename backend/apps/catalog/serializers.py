@@ -29,10 +29,12 @@ class VariantSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     in_stock = serializers.SerializerMethodField()
     quantity = serializers.SerializerMethodField()
+    on_backorder = serializers.SerializerMethodField()
+    backorder_days = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductVariant
-        fields = ("id", "sku", "name", "attributes", "price_override", "price", "is_active", "in_stock", "quantity")
+        fields = ("id", "sku", "name", "attributes", "price_override", "price", "is_active", "in_stock", "quantity", "on_backorder", "backorder_days")
 
     def _inv(self, obj):
         return getattr(obj, "inventory", None)
@@ -40,6 +42,15 @@ class VariantSerializer(serializers.ModelSerializer):
     def get_in_stock(self, obj):
         inv = self._inv(obj)
         return bool(inv and (inv.quantity > 0 or inv.allow_backorder))
+
+    def get_on_backorder(self, obj):
+        """True when the shopper can still order it, but it ships after a wait."""
+        inv = self._inv(obj)
+        return bool(inv and inv.allow_backorder and inv.quantity <= 0)
+
+    def get_backorder_days(self, obj):
+        inv = self._inv(obj)
+        return inv.backorder_days if inv and inv.allow_backorder and inv.quantity <= 0 else None
 
     def get_quantity(self, obj):
         # Exact stock levels are only exposed to staff.
@@ -54,9 +65,14 @@ class StaffVariantSerializer(VariantSerializer):
     """Adds the alert level, which customers do not see."""
 
     low_stock_threshold = serializers.SerializerMethodField()
+    allow_backorder = serializers.SerializerMethodField()
 
     class Meta(VariantSerializer.Meta):
-        fields = VariantSerializer.Meta.fields + ("low_stock_threshold",)
+        fields = VariantSerializer.Meta.fields + ("low_stock_threshold", "allow_backorder")
+
+    def get_allow_backorder(self, obj):
+        inv = self._inv(obj)
+        return bool(inv and inv.allow_backorder)
 
     def get_low_stock_threshold(self, obj):
         inv = self._inv(obj)

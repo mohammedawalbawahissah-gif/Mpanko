@@ -5,15 +5,17 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback } from "react";
 import { api, ApiError, idempotencyKey, type Page } from "./api";
 import { useAuth } from "./auth";
-import { fieldHints, type AddressRules } from "./core/addressRules";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxEstimate } from "./types";
 import { OrderReturns } from "./screens-help";
+import { GuestBag } from "./screens-guest";
+import { AddressForm } from "./address-form";
 import { Busy, Button, Input, Notice, Pill, s, statusLabel, useAsync } from "./ui";
 
 export type RootParams = {
-  Tabs: undefined; Checkout: undefined; OrderDetail: { number: string }; Return: { number: string };
+  Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
+  OrderDetail: { number: string }; Return: { number: string };
   Profile: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
 };
 type Nav = NavigationProp<RootParams>;
@@ -21,12 +23,13 @@ type Nav = NavigationProp<RootParams>;
 /* ------------------------------------------------------------------- bag */
 
 export function BagScreen() {
-  const { user, cart, setQuantity, removeItem, refreshCart } = useAuth();
+  const { user, cart, setQuantity, removeItem, refreshCart, guestEnabled } = useAuth();
   const { money } = usePrefs();
   const nav = useNavigation<Nav>();
   const [err, setErr] = useState("");
   useFocusEffect(useCallback(() => { if (user) refreshCart(); }, [user, refreshCart]));
 
+  if (!user && guestEnabled) return <GuestBag />;
   if (!user) return <View style={[s.screen, s.pad]}><Text style={s.h1}>Your bag</Text><Text style={s.muted}>Sign in from the Account tab to see and fill your bag.</Text></View>;
   if (cart.length === 0) return <View style={[s.screen, s.pad]}><Text style={s.h1}>Your bag is empty</Text><Text style={s.muted}>Browse the shop and add something you like.</Text></View>;
 
@@ -294,59 +297,23 @@ export function CheckoutScreen() {
   );
 }
 
-const BLANK = { recipient_name: "", phone: "", country: "GH", line1: "", line2: "", city: "", region: "", postal_code: "" };
-
-function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => void; onCancel?: () => void }) {
-  const [f, setF] = useState(BLANK);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof BLANK) => (v: string) => setF((x) => ({ ...x, [k]: v }));
-  const [rules, setRules] = useState<AddressRules | null>(null);
-  const cc = f.country.toUpperCase();
-  useEffect(() => {
-    if (cc.length !== 2) return;
-    let cancelled = false;
-    api<AddressRules>(`/auth/address-rules/?country=${cc}`).then((r) => !cancelled && setRules(r)).catch(() => !cancelled && setRules(null));
-    return () => { cancelled = true; };
-  }, [cc]);
-  const hints = fieldHints(rules);
-  const { t } = usePrefs();
-  const save = async () => {
-    setBusy(true);
-    setErrors({});
-    try {
-      onSaved(await api<Address>("/auth/addresses/", { method: "POST", body: { ...f, country: f.country.toUpperCase() } }));
-    } catch (e) {
-      if (e instanceof ApiError) setErrors(e.fields());
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <View>
-      <Input label="Full name" value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
-      <Input label="Phone number for the courier" value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
-      <Input label="Country (2-letter code, e.g. GH, US, GB)" value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
-      <Input label="Street address" value={f.line1} onChangeText={set("line1")} error={errors.line1} />
-      <Input label="Apartment or landmark (optional)" value={f.line2} onChangeText={set("line2")} error={errors.line2} />
-      <Input label="Town or city" value={f.city} onChangeText={set("city")} error={errors.city} />
-      <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
-      {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
-      <Button title={busy ? "Saving…" : "Save address"} disabled={busy} onPress={save} />
-      {onCancel && <View style={{ height: 8 }} />}
-      {onCancel && <Button title="Cancel" kind="quiet" onPress={onCancel} />}
-    </View>
-  );
-}
-
 /* ---------------------------------------------------------------- orders */
 
 export function OrdersScreen() {
-  const { user } = useAuth();
+  const { user, guestEnabled } = useAuth();
+  const { t } = usePrefs();
   const nav = useNavigation<Nav>();
   const { data, error, loading, reload } = useAsync(() => (user ? api<Page<OrderSummary>>("/orders/") : Promise.resolve(null)), [user?.id]);
   useFocusEffect(useCallback(() => { if (user) reload(); }, [user, reload]));
-  if (!user) return <View style={[s.screen, s.pad]}><Text style={s.h1}>Your orders</Text><Text style={s.muted}>Sign in from the Account tab to see your orders.</Text></View>;
+  if (!user) {
+    return (
+      <View style={[s.screen, s.pad]}>
+        <Text style={s.h1}>Your orders</Text>
+        <Text style={s.muted}>Sign in from the Account tab to see your orders.</Text>
+        {guestEnabled && <View style={{ marginTop: 16 }}><Button title={t("guest.find")} kind="quiet" onPress={() => nav.navigate("FindOrder")} /></View>}
+      </View>
+    );
+  }
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
       <Text style={s.h1}>Your orders</Text>

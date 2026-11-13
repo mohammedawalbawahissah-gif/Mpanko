@@ -1,6 +1,8 @@
 import { refreshPushRegistration, unregisterDevice } from "./push";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, getTokens, setSignedOutHandler, setTokens, type Tokens } from "./api";
+import { addLine, loadBag, mergeIntoAccount, removeLine, saveBag, setQuantity as setGuestQty, type GuestLine } from "./core/guestBag";
 import type { CartItem, User } from "./types";
 
 interface Ctx {
@@ -19,6 +21,13 @@ interface Ctx {
   addToCart: (variantId: number, quantity: number) => Promise<void>;
   setQuantity: (id: number, quantity: number) => Promise<void>;
   removeItem: (id: number) => Promise<void>;
+  /** Guest checkout: whether the shop lets visitors buy without an account, and their bag until they do. */
+  guestEnabled: boolean;
+  guestLines: GuestLine[];
+  addGuestLine: (line: GuestLine) => Promise<void>;
+  setGuestQuantity: (variantId: number, quantity: number) => Promise<void>;
+  removeGuestLine: (variantId: number) => Promise<void>;
+  clearGuestBag: () => Promise<void>;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -28,6 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [guestEnabled, setGuestEnabled] = useState(false);
+  const [guestLines, setGuestLines] = useState<GuestLine[]>([]);
+
+  const updateGuest = useCallback(async (next: GuestLine[]) => {
+    setGuestLines(next);
+    await saveBag(AsyncStorage, next);
+  }, []);
+
+  useEffect(() => {
+    loadBag(AsyncStorage).then(setGuestLines);
+    api<{ guest_checkout?: boolean }>("/config/").then((c) => setGuestEnabled(!!c.guest_checkout)).catch(() => setGuestEnabled(false));
+  }, []);
 
   const refreshCart = useCallback(async () => {
     try {
@@ -62,6 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!r.access || !r.refresh || !r.user) throw new Error("Unexpected response from the server.");
     await setTokens({ access: r.access, refresh: r.refresh });
     setUser(r.user);
+    // Whatever they put in the bag before signing in moves into their account.
+    const waiting = await loadBag(AsyncStorage);
+    if (waiting.length) {
+      await mergeIntoAccount(waiting, (variant, quantity) => api("/cart/items/", { method: "POST", body: { variant, quantity } }));
+      await updateGuest([]);
+    }
     await refreshCart();
     refreshPushRegistration().catch(() => undefined);
   };
@@ -107,6 +134,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const r = await api<{ items: CartItem[] }>(`/cart/items/${id}/`, { method: "DELETE" });
       setCart(r.items);
     },
+    guestEnabled,
+    guestLines,
+    addGuestLine: (line) => updateGuest(addLine(guestLines, line)),
+    setGuestQuantity: (variantId, quantity) => updateGuest(setGuestQty(guestLines, variantId, quantity)),
+    removeGuestLine: (variantId) => updateGuest(removeLine(guestLines, variantId)),
+    clearGuestBag: () => updateGuest([]),
   };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

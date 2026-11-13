@@ -317,6 +317,7 @@ function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
   const [orderEmails, setOrderEmails] = useState(user?.notify_order_emails ?? true);
   const [marketing, setMarketing] = useState(user?.marketing_opt_in ?? false);
   const [sms, setSms] = useState(user?.notify_sms ?? false);
+  const [whatsapp, setWhatsapp] = useState(user?.notify_whatsapp ?? false);
   const [currency, setCurrency] = useState(user?.preferred_currency ?? "");
   const f = useSubmit();
   const save = (e: FormEvent) => {
@@ -324,7 +325,7 @@ function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
     f.run(async () => {
       await api("/auth/me/", {
         method: "PATCH",
-        body: { full_name: name, phone, notify_order_emails: orderEmails, marketing_opt_in: marketing, notify_sms: sms, preferred_currency: currency },
+        body: { full_name: name, phone, notify_order_emails: orderEmails, marketing_opt_in: marketing, notify_sms: sms, notify_whatsapp: whatsapp, preferred_currency: currency },
       });
       await onSaved();
     });
@@ -344,6 +345,7 @@ function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
         <legend className="small">Contact me about</legend>
         <label className="small"><input type="checkbox" checked={orderEmails} onChange={(e) => setOrderEmails(e.target.checked)} /> Shipping and delivery updates by email</label><br />
         <label className="small"><input type="checkbox" checked={sms} onChange={(e) => setSms(e.target.checked)} /> Text messages about my orders</label><br />
+        <label className="small"><input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} /> WhatsApp messages about my orders</label><br />
         <label className="small"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} /> News and offers</label>
       </fieldset>
       <button className="btn" disabled={f.busy}>Save details</button>

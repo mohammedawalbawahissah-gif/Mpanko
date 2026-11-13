@@ -1,0 +1,14 @@
+# A returning customer signs in, then sees the orders tab.
+appId: com.wolbiroyal.mpanko
+---
+- launchApp:
+    clearState: true
+- tapOn: "Account"
+- tapOn: "Email"
+- inputText: "customer@mpanko.test"
+- tapOn: "Password"
+- inputText: "Mpanko-demo-123"
+- hideKeyboard
+- tapOn: "Sign in"
+- tapOn: "Orders"
+- assertVisible: "Your orders"

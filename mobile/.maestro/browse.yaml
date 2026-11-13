@@ -1,0 +1,13 @@
+# A shopper browses the catalog and opens a product. No account needed.
+appId: com.wolbiroyal.mpanko
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Mpanko"
+- scrollUntilVisible:
+    element: "Kente"
+- tapOn: "Kente.*"
+- assertVisible: "Add to bag"
+- assertVisible: "Made by.*"
+- back
+- assertVisible: "Mpanko"

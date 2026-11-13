@@ -44,7 +44,8 @@ def place(api, variant, key="g-1", **over):
 
 # --- off by default ------------------------------------------------------------------------------------------
 
-def test_guest_checkout_is_closed_until_switched_on(api):
+def test_guest_checkout_is_closed_until_switched_on(api, settings):
+    settings.GUEST_CHECKOUT_ENABLED = False  # do not depend on the developer's .env
     _, variant = make_product()
     assert api.get("/api/v1/config/").data == {"guest_checkout": False}
     assert place(api, variant).status_code == 404

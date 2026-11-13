@@ -133,3 +133,25 @@ Railway-provided domains work for launch. When you buy a domain later: add it in
 - [ ] Low-stock alert email arrives (set a threshold on a test item)
 - [ ] Backups: Railway Postgres > Backups enabled
 - [ ] Super admin has MFA switched on
+
+## Staff two-step secrets
+
+Set `MFA_ENCRYPTION_KEY` to a long random value before go-live. Authenticator secrets are stored encrypted with it. Changing it later makes existing secrets unreadable, so staff would have to re-enrol. Run `python manage.py migrate` so existing secrets are encrypted.
+
+## Check everything with one command
+
+Once the live keys are set on the api service, run `python manage.py preflight` (Railway: open the api service, Shell). It reads each account (gateway balance or sign-in, Twilio account, image bucket, exchange-rate feed) and prints PASS, WARN, FAIL or skip with a plain instruction for each. It sends no money and no customer messages. Fix every FAIL, read every WARN, and run it again until it says no blockers. Add `--offline` to check settings only, or `--json` for a machine-readable list.
+
+This checks that your accounts accept the keys. It does not replace one real test payment, one real refund and one real parcel label before launch.
+
+## Extra payment gateways
+
+`paystack` is on by default. To add Stripe, PayPal or Flutterwave, set their variables (see `.env.example`), add the name to `PAYMENT_PROVIDERS_ENABLED`, and create each gateway's webhook pointing at `https://YOUR-API/api/v1/payments/webhooks/<name>/` (`stripe`, `paypal` or `flutterwave`). Stripe and PayPal charge in USD, EUR, GBP, CAD and AUD; Flutterwave in GHS, NGN, KES, ZAR, USD, EUR and GBP. Stripe, PayPal and Flutterwave were built from each gateway's documentation and tested with simulated responses. Make one small real payment and one refund through each before announcing it.
+
+## WhatsApp
+
+Set `WHATSAPP_BACKEND=twilio` and `TWILIO_WHATSAPP_FROM` (your approved WhatsApp sender, or the Twilio sandbox number while testing). WhatsApp only lets a business start a chat using an approved template, so create one template per event in Twilio and list them in `WHATSAPP_TEMPLATE_SIDS` as JSON, for example `{"order_confirmation":"HX...","shipment_dispatched":"HX..."}`. Placeholders are filled in this order: order confirmation, delivered, payment failed and return approved take {{1}} order number; shipped takes {{1}} order number, {{2}} carrier, {{3}} tracking number; refunded takes {{1}} return number. Customers opt in under their account and need a verified phone number.
+
+## Serving the web and admin apps with security headers
+
+`npm run build` then `npm start` in `web/` and `admin/` serves the site with a strict Content-Security-Policy, HSTS, no framing and a locked-down permissions policy. Set `API_ORIGIN` (your API's address, for example `https://api.example.com`) so the pages are allowed to call it, and optionally `IMG_ORIGINS` to limit where images may load from. Railway: set the start command to `npm start`. Test the shop after the first deploy; if something that used to load is blocked, the browser console names the blocked address.

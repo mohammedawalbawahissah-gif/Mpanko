@@ -11,7 +11,7 @@ from .models import AttemptStatus, Dispute, PaymentAttempt
 logger = logging.getLogger(__name__)
 
 # Provider words for how a resolved dispute ended. Anything that is not clearly a win for us is treated as a loss.
-WON = {"merchant-accepted", "won", "resolved-in-favour-of-merchant", "merchant_won"}
+WON = {"merchant-accepted", "won", "warning_closed", "resolved-in-favour-of-merchant", "merchant_won"}
 ACCEPTED = {"accepted", "refunded", "customer-refunded"}
 
 

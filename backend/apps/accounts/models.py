@@ -49,6 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     marketing_opt_in = models.BooleanField(default=False)
     notify_order_emails = models.BooleanField(default=True, help_text="Order and shipping updates by email")
     notify_sms = models.BooleanField(default=False)
+    notify_whatsapp = models.BooleanField(default=False)
     notify_push = models.BooleanField(default=False)
     preferred_currency = models.CharField(max_length=3, blank=True)
     is_active = models.BooleanField(default=True)
@@ -143,11 +144,31 @@ class TOTPDevice(models.Model):
     LOCK_MINUTES = 5
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="totp_device")
-    secret = models.CharField(max_length=64)
+    secret = models.CharField(max_length=255, help_text="Encrypted at rest; use plain_secret to read it")
     confirmed = models.BooleanField(default=False)
     last_used_step = models.BigIntegerField(default=0, help_text="Last accepted 30s time step; blocks code replay")
     failed_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def plain_secret(self) -> str:
+        from . import crypto
+
+        return crypto.decrypt(self.secret)
+
+    def set_secret(self, plain: str) -> None:
+        from . import crypto
+
+        self.secret = crypto.encrypt(plain)
+
+
+class MFABackupCode(models.Model):
+    """One-time codes for signing in when the authenticator phone is lost. Only a hash is stored."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mfa_backup_codes")
+    code_hash = models.CharField(max_length=64, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

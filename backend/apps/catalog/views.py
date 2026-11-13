@@ -178,6 +178,31 @@ class InventoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         AuditLog.record(request.user, "stock.threshold", inv.variant, level=level)
         return Response({"sku": inv.variant.sku, "low_stock_threshold": level, "is_low": inv.is_low})
 
+    @action(detail=True, methods=["patch"], url_path="backorder")
+    def backorder(self, request, pk=None):
+        """Let shoppers order this variant when it is out of stock, with an optional wait time."""
+        inv = Inventory.objects.filter(variant_id=pk).first()
+        if not inv:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        allow = request.data.get("allow_backorder")
+        if not isinstance(allow, bool):
+            raise ValidationError({"allow_backorder": "Send true or false."})
+        days = request.data.get("backorder_days")
+        if days in (None, ""):
+            days = None
+        else:
+            try:
+                days = int(days)
+            except (TypeError, ValueError):
+                raise ValidationError({"backorder_days": "Enter a whole number of days, 1 to 365."})
+            if not 1 <= days <= 365:
+                raise ValidationError({"backorder_days": "Enter a whole number of days, 1 to 365."})
+        inv.allow_backorder = allow
+        inv.backorder_days = days if allow else None
+        inv.save(update_fields=["allow_backorder", "backorder_days"])
+        AuditLog.record(request.user, "stock.backorder", inv.variant, allow=allow, days=inv.backorder_days)
+        return Response({"sku": inv.variant.sku, "allow_backorder": allow, "backorder_days": inv.backorder_days})
+
     @action(detail=True, methods=["get"], url_path="movements")
     def movements(self, request, pk=None):
         qs = ProductVariant.objects.get(pk=pk).movements.select_related("actor")[:200]

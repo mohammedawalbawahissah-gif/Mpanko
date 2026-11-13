@@ -73,10 +73,10 @@ function CodeStep({ ticket, onDone, onBack }: { ticket: string; onDone: (t: Toke
   return (
     <form className="form" onSubmit={submit} noValidate>
       <h1>Enter your code</h1>
-      <p className="muted">Open your authenticator app and enter the 6-digit code for Mpanko.</p>
+      <p className="muted">Open your authenticator app and enter the 6-digit code for Mpanko. If you have lost your phone, enter one of your backup codes instead.</p>
       {error && <Alert>{error}</Alert>}
-      <Field id="code" label="6-digit code">
-        <input id="code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus required />
+      <Field id="code" label="6-digit code or backup code">
+        <input id="code" className="input" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus required />
       </Field>
       <div style={{ display: "flex", gap: "0.75rem" }}>
         <button className="btn" disabled={busy || code.length < 6}>{busy ? "Checking…" : "Verify"}</button>
@@ -92,6 +92,7 @@ function EnrollStep({ ticket, onDone }: { ticket: string; onDone: (t: Tokens) =>
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ tokens: Tokens; codes: string[] } | null>(null);
 
   useEffect(() => {
     api<{ secret: string; otpauth_uri: string }>("/auth/mfa/setup/", { method: "POST", body: { mfa_token: ticket } })
@@ -107,13 +108,24 @@ function EnrollStep({ ticket, onDone }: { ticket: string; onDone: (t: Tokens) =>
     setBusy(true);
     setError("");
     try {
-      const t = await api<Tokens>("/auth/mfa/confirm/", { method: "POST", body: { mfa_token: ticket, code } });
-      await onDone(t);
+      const r = await api<Tokens & { backup_codes: string[] }>("/auth/mfa/confirm/", { method: "POST", body: { mfa_token: ticket, code } });
+      setDone({ tokens: r, codes: r.backup_codes });
+      setBusy(false);
     } catch (err) {
       setError(errText(err));
       setBusy(false);
     }
   };
+
+  if (done) {
+    return (
+      <div className="form">
+        <h1>Save your backup codes</h1>
+        <BackupCodes codes={done.codes} />
+        <button className="btn" onClick={() => onDone(done.tokens)}>I have saved them. Continue</button>
+      </div>
+    );
+  }
 
   return (
     <form className="form" onSubmit={submit} noValidate>
@@ -132,5 +144,35 @@ function EnrollStep({ ticket, onDone }: { ticket: string; onDone: (t: Tokens) =>
         </>
       )}
     </form>
+  );
+}
+
+/** Shown once. Each code signs in once if the authenticator phone is lost. */
+export function BackupCodes({ codes }: { codes: string[] }) {
+  const text = codes.join("\n");
+  return (
+    <>
+      <p>Keep these somewhere safe, such as a password manager. Each code works once if you lose your phone. We cannot show them again.</p>
+      <ul className="backup-codes" aria-label="Backup codes">
+        {codes.map((c) => <li key={c}><code>{c}</code></li>)}
+      </ul>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button type="button" className="btn quiet" onClick={() => navigator.clipboard?.writeText(text).catch(() => undefined)}>Copy codes</button>
+        <button
+          type="button"
+          className="btn quiet"
+          onClick={() => {
+            const url = URL.createObjectURL(new Blob([text + "\n"], { type: "text/plain" }));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "mpanko-backup-codes.txt";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Download as a file
+        </button>
+      </div>
+    </>
   );
 }

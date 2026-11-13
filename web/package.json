@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/prerender.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/prerender.mjs && node scripts/applinks.mjs",
     "preview": "vite preview",
+    "start": "node server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

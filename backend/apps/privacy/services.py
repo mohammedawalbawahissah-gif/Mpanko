@@ -44,7 +44,7 @@ def export_user_data(user):
         "exported_at": timezone.now().isoformat(),
         "profile": {
             "email": user.email, "full_name": user.full_name, "phone": user.phone, "joined": user.date_joined.isoformat(),
-            "marketing_opt_in": user.marketing_opt_in, "notify_order_emails": user.notify_order_emails, "notify_sms": user.notify_sms,
+            "marketing_opt_in": user.marketing_opt_in, "notify_order_emails": user.notify_order_emails, "notify_sms": user.notify_sms, "notify_whatsapp": user.notify_whatsapp,
             "notify_push": user.notify_push, "preferred_currency": user.preferred_currency,
         },
         "addresses": [{"label": a.label, "recipient_name": a.recipient_name, "phone": a.phone, "line1": a.line1, "line2": a.line2, "city": a.city,
@@ -98,7 +98,7 @@ def delete_account(user):
     pk = user.pk
     user.email = f"deleted-{pk}@deleted.invalid"
     user.full_name = user.phone = user.preferred_currency = ""
-    user.marketing_opt_in = user.notify_sms = user.notify_push = user.notify_order_emails = user.email_verified = False
+    user.marketing_opt_in = user.notify_sms = user.notify_whatsapp = user.notify_push = user.notify_order_emails = user.email_verified = False
     user.is_active = False
     user.set_unusable_password()
     user.save()

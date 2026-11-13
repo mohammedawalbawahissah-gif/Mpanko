@@ -188,9 +188,14 @@ class MfaLoginView(AuthThrottled, APIView):
         user = mfa.read_ticket(s.validated_data["mfa_token"], {"login"})
         if not user:
             raise AuthenticationFailed("Sign in again to continue.")
-        if not mfa.verify_code(user, s.validated_data["code"]):
+        used = mfa.verify_second_factor(user, s.validated_data["code"])
+        if not used:
             raise AuthenticationFailed("Invalid or expired code.")
-        return Response(tokens_for(user))
+        body = tokens_for(user)
+        if used == "backup":
+            AuditLog.record(user, "mfa.backup_code_used", user)
+            body["backup_codes_left"] = mfa.backup_codes_left(user)
+        return Response(body)
 
 
 class MfaSetupView(AuthThrottled, APIView):
@@ -205,8 +210,8 @@ class MfaSetupView(AuthThrottled, APIView):
             raise ValidationError({"detail": "MFA is for staff accounts."})
         if mfa.has_confirmed_device(user) and not (request.user and request.user.is_authenticated):
             raise ValidationError({"detail": "MFA is already enabled."})
-        device, uri = mfa.start_enrolment(user)
-        return Response({"secret": device.secret, "otpauth_uri": uri})
+        _device, secret, uri = mfa.start_enrolment(user)
+        return Response({"secret": secret, "otpauth_uri": uri})
 
 
 class MfaConfirmView(AuthThrottled, APIView):
@@ -226,10 +231,11 @@ class MfaConfirmView(AuthThrottled, APIView):
         device.confirmed = True
         device.save(update_fields=["confirmed"])
         AuditLog.record(user, "mfa.enabled", user)
+        backup_codes = mfa.generate_backup_codes(user)  # shown once; only hashes are kept
         # Enrolment ticket holders have no tokens yet; signed-in users already do.
         if not (request.user and request.user.is_authenticated):
-            return Response({"detail": "MFA enabled.", **tokens_for(user)})
-        return Response({"detail": "MFA enabled."})
+            return Response({"detail": "MFA enabled.", "backup_codes": backup_codes, **tokens_for(user)})
+        return Response({"detail": "MFA enabled.", "backup_codes": backup_codes})
 
 
 class MfaDisableView(AuthThrottled, APIView):
@@ -241,11 +247,32 @@ class MfaDisableView(AuthThrottled, APIView):
             raise ValidationError({"detail": "MFA is required for staff accounts."})
         s = CodeSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        if not mfa.verify_code(request.user, s.validated_data["code"]):
+        if not mfa.verify_second_factor(request.user, s.validated_data["code"]):
             raise ValidationError({"code": "Invalid code."})
         request.user.totp_device.delete()
+        mfa.MFABackupCode.objects.filter(user=request.user).delete()
         AuditLog.record(request.user, "mfa.disabled", request.user)
         return Response({"detail": "MFA disabled."})
+
+
+class MfaBackupCodesView(AuthThrottled, APIView):
+    """GET: how many backup codes are left. POST with a current authenticator code: replace them with a fresh set."""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        return Response({"enabled": mfa.has_confirmed_device(request.user), "backup_codes_left": mfa.backup_codes_left(request.user)})
+
+    @extend_schema(request=CodeSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        s = CodeSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        if not mfa.has_confirmed_device(request.user):
+            raise ValidationError({"detail": "Turn on two-step sign-in first."})
+        code = s.validated_data["code"]
+        if mfa.looks_like_backup_code(code) or not mfa.verify_code(request.user, code):
+            raise ValidationError({"code": "Enter the 6-digit code from your authenticator app."})
+        AuditLog.record(request.user, "mfa.backup_codes_regenerated", request.user)
+        return Response({"backup_codes": mfa.generate_backup_codes(request.user)})
 
 
 # --- Phone: verify a number, sign in with it ------------------------------------------------------------------

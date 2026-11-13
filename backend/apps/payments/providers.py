@@ -1,6 +1,7 @@
 """
 Provider-neutral payment layer (FR-PAY-01). Checkout/order code never imports a specific gateway.
-To add Stripe, PayPal or Flutterwave: subclass PaymentProvider, implement the four methods, register it below.
+To add another gateway: subclass PaymentProvider, implement its methods, and register it in _registry() below.
+Stripe, PayPal and Flutterwave live in providers_extra.py.
 """
 import hashlib
 import hmac
@@ -232,11 +233,15 @@ class MockProvider(PaymentProvider):
         return list(self.ledger or [])
 
 
-_REGISTRY = {"paystack": PaystackProvider, "mock": MockProvider}
+def _registry():
+    from .providers_extra import FlutterwaveProvider, PayPalProvider, StripeProvider
+
+    return {"paystack": PaystackProvider, "mock": MockProvider, "stripe": StripeProvider, "paypal": PayPalProvider, "flutterwave": FlutterwaveProvider}
 
 
 def enabled_providers():
-    return {name: _REGISTRY[name]() for name in settings.PAYMENT_PROVIDERS_ENABLED if name in _REGISTRY}
+    registry = _registry()
+    return {name: registry[name]() for name in settings.PAYMENT_PROVIDERS_ENABLED if name in registry}
 
 
 def chargeable_currencies():

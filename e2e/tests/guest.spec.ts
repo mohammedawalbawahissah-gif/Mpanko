@@ -4,9 +4,11 @@ import { expect, test } from "@playwright/test";
 test("a visitor checks out as a guest, pays, and finds the order again", async ({ page }) => {
   await page.goto("/shop/kente-scarf");
   await page.getByRole("button", { name: "Add to bag" }).click();
-  await page.goto("/checkout");
+  await page.goto("/bag");
   await page.waitForLoadState("networkidle");
-  test.skip(/\/login/.test(page.url()), "Guest checkout is off on this API");
+  const guestButton = page.getByRole("button", { name: "Check out as a guest" });
+  test.skip(!(await guestButton.isVisible()), "Guest checkout is off on this API");
+  await guestButton.click();
 
   await expect(page.getByRole("heading", { name: "Check out as a guest" })).toBeVisible();
   const guestEmail = `guest-${Date.now()}@example.com`;

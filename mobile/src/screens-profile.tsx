@@ -28,6 +28,7 @@ export function ProfileScreen() {
   const [name, setName] = useState(user?.full_name ?? "");
   const [orderEmails, setOrderEmails] = useState(user?.notify_order_emails ?? true);
   const [sms, setSms] = useState(user?.notify_sms ?? false);
+  const [whatsapp, setWhatsapp] = useState(user?.notify_whatsapp ?? false);
   const [push, setPush] = useState(user?.notify_push ?? false);
   const [marketing, setMarketing] = useState(user?.marketing_opt_in ?? false);
   const [search, setSearch] = useState("");
@@ -45,7 +46,7 @@ export function ProfileScreen() {
     try {
       await api("/auth/me/", {
         method: "PATCH",
-        body: { full_name: name, notify_order_emails: orderEmails, notify_sms: verified && sms, marketing_opt_in: marketing, preferred_currency: currency },
+        body: { full_name: name, notify_order_emails: orderEmails, notify_sms: verified && sms, notify_whatsapp: verified && whatsapp, marketing_opt_in: marketing, preferred_currency: currency },
       });
       await refreshUser();
       setMsg({ kind: "ok", text: t("prefs.saved") });
@@ -108,6 +109,7 @@ export function ProfileScreen() {
       <Text style={s.h2}>{t("prefs.notifications")}</Text>
       <Toggle label={t("prefs.orderEmails")} value={orderEmails} onChange={setOrderEmails} />
       <Toggle label={t("prefs.sms")} value={verified && sms} onChange={setSms} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
+      <Toggle label={t("prefs.whatsapp")} value={verified && whatsapp} onChange={setWhatsapp} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
       <Toggle label={t("prefs.push")} value={push} onChange={togglePush} />
       <Toggle label={t("prefs.marketing")} value={marketing} onChange={setMarketing} />
 

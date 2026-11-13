@@ -183,4 +183,10 @@ def send_notification(key, to, context, ref="", dedupe=True):
         sms_for_email(key, to, context, ref=ref)
     except Exception as exc:  # noqa: BLE001
         logger.warning("SMS for %s skipped: %s", key, exc)
+    try:
+        from .whatsapp import whatsapp_for_email
+
+        whatsapp_for_email(key, to, context, ref=ref)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("WhatsApp for %s skipped: %s", key, exc)
     return True

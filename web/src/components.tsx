@@ -198,11 +198,13 @@ export function ProductTile({ product }: { product: Product }) {
   const { money } = useCurrency();
   const { t } = useT();
   const inStock = product.variants.some((v) => v.in_stock && v.is_active);
+  const onBackorder = inStock && !product.variants.some((v) => v.in_stock && v.is_active && !v.on_backorder);
   return (
     <Link to={`/shop/${product.slug}`} className="tile">
       <div className="art">
         <ProductArt product={product} />
         {!inStock && <span className="badge-out">{t("common.soldOut")}</span>}
+        {inStock && onBackorder && <span className="badge-out">{t("common.backorder")}</span>}
       </div>
       <span className="name">{product.name}</span>
       {product.maker && <span className="maker">{product.maker}</span>}

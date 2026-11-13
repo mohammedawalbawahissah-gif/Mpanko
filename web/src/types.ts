@@ -6,6 +6,8 @@ export interface Variant {
   price: string;
   is_active: boolean;
   in_stock: boolean;
+  on_backorder?: boolean;
+  backorder_days?: number | null;
 }
 
 export interface ProductImage {
@@ -46,6 +48,7 @@ export interface User {
   marketing_opt_in?: boolean;
   notify_order_emails?: boolean;
   notify_sms?: boolean;
+  notify_whatsapp?: boolean;
   phone_verified?: boolean;
   notify_push?: boolean;
   preferred_currency?: string;

@@ -165,7 +165,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
 
 /* ----------------------------------------------------------------- stock */
 
-interface StockRow { id: number; sku: string; name: string; quantity: number | null; low_stock_threshold?: number | null; product?: number }
+interface StockRow { id: number; sku: string; name: string; quantity: number | null; low_stock_threshold?: number | null; allow_backorder?: boolean; backorder_days?: number | null; product?: number }
 interface Movement { id: number; delta: number; reason: string; note: string; actor_email: string | null; order_ref: string | null; created_at: string }
 
 export function Stock() {
@@ -181,12 +181,12 @@ export function Stock() {
       {data && (
         <div className="scroll" style={{ marginTop: "1rem" }}>
           <table className="table">
-            <thead><tr><th>SKU</th><th>Variant</th><th className="num">On hand</th><th className="num">Alert at</th><th></th></tr></thead>
+            <thead><tr><th>SKU</th><th>Variant</th><th className="num">On hand</th><th className="num">Alert at</th><th>Backorder</th><th></th></tr></thead>
             <tbody>
               {data.results.map((v) => (
-                <tr key={v.id}><td>{v.sku}</td><td>{v.name}</td><td className="num">{v.quantity ?? 0}</td><td className="num">{v.low_stock_threshold ?? "—"}</td><td><button className="link-button" onClick={() => setOpen(v)}>Adjust</button></td></tr>
+                <tr key={v.id}><td>{v.sku}</td><td>{v.name}</td><td className="num">{v.quantity ?? 0}</td><td className="num">{v.low_stock_threshold ?? "—"}</td><td>{v.allow_backorder ? "On" : "Off"}</td><td><button className="link-button" onClick={() => setOpen(v)}>Adjust</button></td></tr>
               ))}
-              {data.results.length === 0 && <tr><td colSpan={5} className="muted">Nothing to show.</td></tr>}
+              {data.results.length === 0 && <tr><td colSpan={6} className="muted">Nothing to show.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -204,6 +204,19 @@ function Adjust({ row, onClose, onSaved }: { row: StockRow; onClose: () => void;
   const [err, setErr] = useState("");
   const [level, setLevel] = useState(String(row.low_stock_threshold ?? 5));
   const [info, setInfo] = useState("");
+  const [back, setBack] = useState(!!row.allow_backorder);
+  const [days, setDays] = useState(row.backorder_days ? String(row.backorder_days) : "");
+  const saveBackorder = async (e: FormEvent) => {
+    e.preventDefault();
+    setErr("");
+    setInfo("");
+    try {
+      await api(`/inventory/${row.id}/backorder/`, { method: "PATCH", body: { allow_backorder: back, backorder_days: back && days ? Number(days) : null } });
+      setInfo("Backorder setting saved.");
+    } catch (x) {
+      setErr(errText(x));
+    }
+  };
   const saveLevel = async (e: FormEvent) => {
     e.preventDefault();
     setErr("");
@@ -241,6 +254,11 @@ function Adjust({ row, onClose, onSaved }: { row: StockRow; onClose: () => void;
       <form className="row" onSubmit={saveLevel}>
         <Field id="a-t" label="Email staff when stock falls to"><input id="a-t" className="input" inputMode="numeric" value={level} onChange={(e) => setLevel(e.target.value)} required /></Field>
         <button className="btn quiet">Save alert level</button>
+      </form>
+      <form className="row" onSubmit={saveBackorder}>
+        <label className="small" htmlFor="a-b"><input id="a-b" type="checkbox" checked={back} onChange={(e) => setBack(e.target.checked)} /> Let shoppers order this when it is out of stock</label>
+        {back && <Field id="a-bd" label="Usual wait in days (optional)"><input id="a-bd" className="input" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} /></Field>}
+        <button className="btn quiet">Save backorder setting</button>
       </form>
       {info && <Alert kind="ok">{info}</Alert>}
       <h3>Recent movements</h3>

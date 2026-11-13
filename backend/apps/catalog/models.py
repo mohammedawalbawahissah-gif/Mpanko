@@ -112,6 +112,8 @@ class Inventory(models.Model):
     quantity = models.IntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(default=5)
     allow_backorder = models.BooleanField(default=False)
+    # Typical days until a backordered item ships. Shown to shoppers when the item is out of stock.
+    backorder_days = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "inventory"

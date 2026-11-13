@@ -58,3 +58,7 @@ If the owner has turned on guest checkout, some orders have an email but no acco
 | The shop is down | Tell the owner. See docs/BACKUPS.md for monitoring and restore. |
 
 Keep your password private, use a different one for this site, and sign out on shared computers.
+
+## Backup codes for two-step sign-in
+
+When a staff member finishes setting up their authenticator app, ten backup codes are shown once. Each works one time in place of the 6-digit code if the phone is lost. Staff can see how many are left and make a new set under **Security** in the admin menu (this needs a current authenticator code and cancels the old set). If someone has lost both phone and codes, a super admin resets their two-step sign-in from the Staff page.

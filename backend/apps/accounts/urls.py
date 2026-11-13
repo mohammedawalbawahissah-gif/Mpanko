@@ -27,5 +27,6 @@ urlpatterns = [
     path("mfa/setup/", views.MfaSetupView.as_view(), name="mfa-setup"),
     path("mfa/confirm/", views.MfaConfirmView.as_view(), name="mfa-confirm"),
     path("mfa/disable/", views.MfaDisableView.as_view(), name="mfa-disable"),
+    path("mfa/backup-codes/", views.MfaBackupCodesView.as_view(), name="mfa-backup-codes"),
     path("", include(router.urls)),
 ]

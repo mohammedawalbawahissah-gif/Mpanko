@@ -12,6 +12,7 @@ import { ProfileScreen } from "./src/screens-profile";
 import { PrefsProvider, usePrefs } from "./src/prefs";
 import { ErrorBoundary } from "./src/crash";
 import { installGlobalErrorReporting, setCurrentScreen } from "./src/report";
+import { FindOrderScreen, GuestCheckoutScreen, GuestOrderScreen } from "./src/screens-guest";
 import { BagScreen, CheckoutScreen, OrderDetailScreen, OrdersScreen, type RootParams } from "./src/screens-buy";
 import { ProductScreen, ShopList, type RootTabs, type ShopStack } from "./src/screens-shop";
 import { ReturnScreen, SupportListScreen, SupportNewScreen, SupportThreadScreen } from "./src/screens-help";
@@ -38,9 +39,9 @@ function TabLabel({ text, focused }: { text: string; focused: boolean }) {
 }
 
 function TabsNav() {
-  const { cart } = useAuth();
+  const { cart, user, guestLines } = useAuth();
   const { t } = usePrefs();
-  const count = cart.reduce((n, i) => n + i.quantity, 0);
+  const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
     <Tabs.Navigator screenOptions={{ ...header, tabBarIcon: () => null, tabBarActiveTintColor: color.indigo }}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
@@ -59,6 +60,8 @@ const linking: LinkingOptions<RootParams> = {
     screens: {
       Profile: "profile",
       Tabs: { screens: { Orders: "orders", Bag: "bag", Account: "account", Shop: { screens: { Product: "shop/:slug", List: "shop" } } } },
+      GuestOrder: "orders/guest/:number",
+      FindOrder: "orders/find",
       OrderDetail: "orders/:number",
       Return: "orders/:number/return",
       SupportList: "support",
@@ -94,6 +97,9 @@ export default function App() {
           <Root.Navigator screenOptions={header}>
             <Root.Screen name="Tabs" component={TabsNav} options={{ headerShown: false }} />
             <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: "Checkout" }} />
+            <Root.Screen name="GuestCheckout" component={GuestCheckoutScreen} options={{ title: "Checkout" }} />
+            <Root.Screen name="GuestOrder" component={GuestOrderScreen} options={{ title: "Order" }} />
+            <Root.Screen name="FindOrder" component={FindOrderScreen} options={{ title: "Find my order" }} />
             <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: "Order" }} />
             <Root.Screen name="Return" component={ReturnScreen} options={{ title: "Return items" }} />
             <Root.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile and preferences" }} />

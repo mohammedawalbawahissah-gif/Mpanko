@@ -63,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.security_headers.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -265,6 +266,8 @@ RETENTION_ORDER_YEARS = int(os.environ.get("RETENTION_ORDER_YEARS", "7"))  # con
 # --- SMS (FR-NOT-02, phone sign-in) ---------------------------------------------
 # "log" writes messages to the server log; "twilio" sends for real. See docs/GO-LIVE.md.
 # Guest checkout (FR-AUTH-05, FR-CHK-05): off until the client decides OD-12. Guests get a signed link to their order.
+# Key for the stored staff authenticator secrets. Falls back to a key derived from SECRET_KEY when empty.
+MFA_ENCRYPTION_KEY = os.environ.get("MFA_ENCRYPTION_KEY", "")
 GUEST_CHECKOUT_ENABLED = env_bool("GUEST_CHECKOUT_ENABLED", False)
 GUEST_ORDER_LINK_DAYS = int(os.environ.get("GUEST_ORDER_LINK_DAYS", "30"))
 SMS_BACKEND = os.environ.get("SMS_BACKEND", "log")
@@ -272,6 +275,10 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM = os.environ.get("TWILIO_FROM", "")  # a number or an approved alphanumeric sender id
 TWILIO_MESSAGING_SERVICE_SID = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
+# WhatsApp through the same Twilio account (INT-05). "log" writes to the server log; "twilio" sends for real.
+WHATSAPP_BACKEND = os.environ.get("WHATSAPP_BACKEND", "log")
+TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")  # e.g. whatsapp:+14155238886 (the Twilio sandbox number)
+WHATSAPP_TEMPLATE_SIDS = os.environ.get("WHATSAPP_TEMPLATE_SIDS", "")  # JSON: event key -> approved Twilio template sid
 
 APP_SCHEME = os.environ.get("APP_SCHEME", "mpanko")  # deep-link scheme of the mobile app
 EXPO_ACCESS_TOKEN = os.environ.get("EXPO_ACCESS_TOKEN", "")  # optional; raises Expo push limits
@@ -316,9 +323,19 @@ UPS_ACCOUNT = os.environ.get("UPS_ACCOUNT", "")
 # --- Payments -----------------------------------------------------------------
 PAYMENT_PROVIDERS_ENABLED = env_list("PAYMENT_PROVIDERS_ENABLED", "mock" if DEBUG else "paystack")
 PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_WEBHOOK_ID = os.environ.get("PAYPAL_WEBHOOK_ID", "")
+PAYPAL_ENV = os.environ.get("PAYPAL_ENV", "sandbox")  # "live" for real money
+FLUTTERWAVE_SECRET_KEY = os.environ.get("FLUTTERWAVE_SECRET_KEY", "")
+FLUTTERWAVE_WEBHOOK_HASH = os.environ.get("FLUTTERWAVE_WEBHOOK_HASH", "")  # the "secret hash" set in the dashboard
 PAYMENT_RETURN_URL = os.environ.get("PAYMENT_RETURN_URL", f"{FRONTEND_URL}/checkout/complete")
 
 # --- Security -----------------------------------------------------------------
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)

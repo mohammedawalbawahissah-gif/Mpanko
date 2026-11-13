@@ -1,0 +1,15 @@
+# Someone without an account can ask for their order link again.
+# Needs the API started with GUEST_CHECKOUT_ENABLED=true.
+appId: com.wolbiroyal.mpanko
+---
+- launchApp:
+    clearState: true
+- tapOn: "Orders"
+- tapOn: "Find my order"
+- tapOn: "Order number"
+- inputText: "MP-0000"
+- tapOn: "Email for your receipt and order link"
+- inputText: "nobody@example.com"
+- hideKeyboard
+- tapOn: "Email me the link"
+- assertVisible: "If those details match an order.*"

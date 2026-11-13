@@ -4,6 +4,7 @@ import { ApiError } from "./api";
 import { daysLeft } from "./pages-finance";
 import { asPercent, fromPercent } from "./pages-tax";
 import { Alert, Field, Pill, label, when } from "./ui";
+import { BackupCodes } from "./login";
 
 describe("percentages in the tax screens", () => {
   it("shows a share as a percentage", () => {
@@ -63,5 +64,15 @@ describe("ApiError", () => {
   it("prefers detail", () => {
     expect(new ApiError(403, { detail: "No access" }).message).toBe("No access");
     expect(new ApiError(500, null).message).toBe("Request failed (500)");
+  });
+});
+
+describe("backup codes", () => {
+  it("lists every code once, with the warning that they are shown only once", () => {
+    const html = renderToStaticMarkup(<BackupCodes codes={["abcd-efgh", "jkmn-pqrs"]} />);
+    expect(html).toContain("abcd-efgh");
+    expect(html).toContain("jkmn-pqrs");
+    expect(html).toContain("We cannot show them again");
+    expect(html).toContain("Download as a file");
   });
 });

@@ -9,6 +9,7 @@ import { ShippingRules } from "./pages-shipping";
 import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Returns, StaffPage, Support, SupportDetail } from "./pages-store";
 import { Chargebacks, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
+import { Security } from "./pages-security";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
 const NAV: { to: string; name: string; roles: string[] }[] = [
@@ -30,6 +31,7 @@ const NAV: { to: string; name: string; roles: string[] }[] = [
   { to: "/tax", name: "Tax and duties", roles: ["super_admin", "store_admin", "finance"] },
   { to: "/staff", name: "Staff", roles: ["super_admin", "store_admin"] },
   { to: "/audit", name: "Activity log", roles: ["super_admin", "store_admin"] },
+  { to: "/security", name: "Security", roles: ALL_STAFF },
 ];
 
 function Shell() {
@@ -91,6 +93,7 @@ export default function App() {
             <Route path="pages" element={route("/pages", <Pages />)} />
             <Route path="staff" element={route("/staff", <StaffPage />)} />
             <Route path="audit" element={route("/audit", <AuditLog />)} />
+            <Route path="security" element={route("/security", <Security />)} />
             <Route path="shipments" element={route("/shipments", <Shipments />)} />
             <Route path="shipments/:id" element={route("/shipments", <ShipmentDetail />)} />
             <Route path="shipping-rules" element={route("/shipping-rules", <ShippingRules />)} />

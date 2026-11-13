@@ -12,21 +12,8 @@ import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from
 
 /* ---------------------------------------------------------------- config */
 
-let configPromise: Promise<boolean> | null = null;
-
-/** Whether the shop lets visitors check out without an account. Null while we ask. */
-export function useGuestCheckoutEnabled(): boolean | null {
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-  useEffect(() => {
-    configPromise ??= api<{ guest_checkout?: boolean }>("/config/").then((c) => !!c.guest_checkout).catch(() => false);
-    let cancelled = false;
-    configPromise.then((v) => !cancelled && setEnabled(v));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return enabled;
-}
+export { useGuestCheckoutEnabled } from "./guest-config";
+import { useGuestCheckoutEnabled } from "./guest-config";
 
 /** Flatten DRF's nested errors ({address: {line1: [..]}}) into one readable map. */
 export function flatErrors(data: unknown, prefix = ""): Record<string, string> {
@@ -146,8 +133,8 @@ export function GuestCheckout() {
   if (lines.length === 0 && !order) {
     return (
       <div className="wrap page empty">
-        <h1>Your bag is empty</h1>
-        <Link to="/shop" className="btn">Browse the shop</Link>
+        <h1>{t("bag.empty")}</h1>
+        <Link to="/shop" className="btn">{t("common.browse")}</Link>
       </div>
     );
   }
@@ -212,7 +199,7 @@ export function GuestCheckout() {
       <div className="bag">
         <div style={{ display: "grid", gap: "2.5rem" }}>
           <section aria-labelledby="g-contact">
-            <h2 id="g-contact">Contact</h2>
+            <h2 id="g-contact">{t("guest.contact")}</h2>
             <div className="form">
               <Field id="g-email" label={t("guest.email")} error={errors.email}>
                 <input id="g-email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!order} required />
@@ -248,27 +235,27 @@ export function GuestCheckout() {
                       <input type="radio" name="service" checked={s.service_code === serviceCode} onChange={() => setServiceCode(s.service_code)} disabled={!!order} />
                       <span>
                         <strong>{s.service_name}</strong> · {money(s.price, s.currency)}<br />
-                        <span className="muted small">{s.eta_days_min && s.eta_days_max ? `Arrives in ${s.eta_days_min} to ${s.eta_days_max} days` : "Delivery time confirmed after dispatch"}</span>
+                        <span className="muted small">{s.eta_days_min && s.eta_days_max ? t("checkout.arrives", { min: s.eta_days_min, max: s.eta_days_max }) : t("checkout.etaLater")}</span>
                       </span>
                     </label>
                   ))}
                 </div>
               )}
-              {services && services.length === 0 && restricted.length === 0 && <Alert kind="info">We don't deliver to this country yet.</Alert>}
+              {services && services.length === 0 && restricted.length === 0 && <Alert kind="info">{t("checkout.noDelivery")}</Alert>}
             </section>
           )}
 
           <section aria-labelledby="pay">
             <h2 id="pay">{t("checkout.payment")}</h2>
-            {shown !== currency && <Alert kind="info">You're viewing prices in {shown}, but we take payment in {currency}. The {currency} amounts below are what you'll pay.</Alert>}
+            {shown !== currency && <Alert kind="info">{t("checkout.viewing", { shown, currency })}</Alert>}
             {methods.length === 0 ? (
-              <Alert kind="info">No payment method is available in {currency}. Try again shortly or contact us.</Alert>
+              <Alert kind="info">{t("checkout.noMethod", { currency })}</Alert>
             ) : (
               <div className="choice-list" role="radiogroup" aria-labelledby="pay">
                 {methods.map((m) => (
                   <label className="choice" key={m.provider}>
                     <input type="radio" name="provider" checked={m.provider === provider} onChange={() => setProvider(m.provider)} />
-                    <span><strong>{providerName(m.provider, currency)}</strong><br /><span className="muted small">You'll finish paying on a secure page, then come back here.</span></span>
+                    <span><strong>{providerName(m.provider, currency, t)}</strong><br /><span className="muted small">{t("checkout.finishSecure")}</span></span>
                   </label>
                 ))}
               </div>
@@ -285,28 +272,28 @@ export function GuestCheckout() {
             </div>
           ))}
           <dl style={{ marginTop: "1rem" }}>
-            <dt>Items</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
-            <dt>Delivery</dt><dd>{service ? exact(shippingTotal.toFixed(2), currency) : "—"}</dd>
-            {tax > 0 && <><dt>Tax</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
+            <dt>{t("checkout.items")}</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
+            <dt>{t("checkout.delivery")}</dt><dd>{service ? exact(shippingTotal.toFixed(2), currency) : "—"}</dd>
+            {tax > 0 && <><dt>{t("checkout.tax")}</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
             {prepaid && dutyTotal > 0 && <><dt>{t("checkout.dutiesTitle")}</dt><dd>{exact(dutyTotal.toFixed(2), currency)}</dd></>}
-            <dt className="total">Total</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
+            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
           </dl>
           <div className="form" style={{ marginTop: "1rem" }}>
-            <Field id="notes" label="Delivery notes (optional)">
-              <input id="notes" className="input" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Gate code, landmark, best time" />
+            <Field id="notes" label={t("checkout.notes")}>
+              <input id="notes" className="input" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("checkout.notesPlaceholder")} />
             </Field>
             {international && (
               <label className="small">
-                <input type="checkbox" checked={duties} onChange={(e) => setDuties(e.target.checked)} /> I understand I may have to pay import duties and taxes in my country.
+                <input type="checkbox" checked={duties} onChange={(e) => setDuties(e.target.checked)} /> {t("checkout.dutiesAccept")}
               </label>
             )}
             <label className="small">
-              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> I accept the terms of sale and the returns policy.
+              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> {t("checkout.termsAccept")}
             </label>
           </div>
-          <button className="btn block" disabled={!canPlace} onClick={place}>{placing ? "Taking you to payment…" : "Pay now"}</button>
-          <p className="small muted" style={{ marginTop: "0.75rem" }}>The final amount is calculated on our server when you pay. You're charged exactly the total we confirm.</p>
-          <button className="link-button" onClick={() => navigate("/bag")}>Back to bag</button>
+          <button className="btn block" disabled={!canPlace} onClick={place}>{placing ? t("checkout.taking") : t("checkout.pay")}</button>
+          <p className="small muted" style={{ marginTop: "0.75rem" }}>{t("checkout.finalNoteShort")}</p>
+          <button className="link-button" onClick={() => navigate("/bag")}>{t("checkout.backToBag")}</button>
         </aside>
       </div>
     </div>

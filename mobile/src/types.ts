@@ -1,4 +1,4 @@
-export interface Variant { id: number; sku: string; name: string; price: string; in_stock: boolean; is_active: boolean }
+export interface Variant { id: number; sku: string; name: string; price: string; in_stock: boolean; on_backorder?: boolean; backorder_days?: number | null; is_active: boolean }
 export interface Product {
   id: number; name: string; slug: string; description: string; category: number | null; category_name: string | null;
   origin_country: string; maker: string; base_price: string; currency: string; variants: Variant[];
@@ -6,7 +6,7 @@ export interface Product {
 export interface Category { id: number; name: string; slug: string }
 export interface User {
   id: number; email: string; full_name: string; role: string; email_verified: boolean; phone?: string; phone_verified?: boolean;
-  notify_order_emails?: boolean; notify_sms?: boolean; notify_push?: boolean; marketing_opt_in?: boolean; preferred_currency?: string;
+  notify_order_emails?: boolean; notify_sms?: boolean; notify_whatsapp?: boolean; notify_push?: boolean; marketing_opt_in?: boolean; preferred_currency?: string;
 }
 export interface TaxEstimate {
   tax: string;

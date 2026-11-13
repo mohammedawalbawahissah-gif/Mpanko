@@ -76,7 +76,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
 }
 
 export function ProductScreen({ route, navigation }: NativeStackScreenProps<ShopStack, "Product">) {
-  const { user, addToCart } = useAuth();
+  const { user, addToCart, guestEnabled, addGuestLine } = useAuth();
   const { money, t } = usePrefs();
   const { data: p, error, loading, savedAt } = useCachedAsync(`product:${route.params.slug}`, () => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
   const [variantId, setVariantId] = useState<number | null>(null);
@@ -91,6 +91,11 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
 
   const add = async () => {
     if (!chosen) return;
+    if (!user && guestEnabled) {
+      await addGuestLine({ variantId: chosen.id, slug: p.slug, name: p.name, variantName: chosen.name, unitPrice: chosen.price, currency: p.currency, quantity: qty });
+      setMsg({ kind: "ok", text: "Added to your bag." });
+      return;
+    }
     if (!user) {
       (navigation.getParent() as unknown as { navigate: (n: string) => void }).navigate("Account");
       return;
@@ -122,7 +127,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
             {variants.map((v) => (
               <Pressable key={v.id} onPress={() => setVariantId(v.id)} accessibilityRole="radio" accessibilityState={{ selected: chosen?.id === v.id }}
                 style={[s.choice, chosen?.id === v.id && s.choiceOn]}>
-                <Text style={{ fontWeight: "600", color: color.ink }}>{v.name}{!v.in_stock ? " (sold out)" : ""}</Text>
+                <Text style={{ fontWeight: "600", color: color.ink }}>{v.name}{!v.in_stock ? " (sold out)" : v.on_backorder ? " (backorder)" : ""}</Text>
               </Pressable>
             ))}
           </>
@@ -133,8 +138,9 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
           <Button title="+" kind="quiet" onPress={() => setQty((n) => Math.min(20, n + 1))} />
         </View>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
-        <Button title={!user ? "Sign in to add to bag" : busy ? "Adding…" : "Add to bag"} disabled={busy || !chosen || !chosen.in_stock} onPress={add} />
+        <Button title={!user && !guestEnabled ? "Sign in to add to bag" : busy ? "Adding…" : "Add to bag"} disabled={busy || !chosen || !chosen.in_stock} onPress={add} />
         {chosen && !chosen.in_stock && <Text style={[s.muted, { marginTop: 8 }]}>This one is sold out.</Text>}
+        {chosen?.on_backorder && <Text style={[s.muted, { marginTop: 8 }]}>{t("product.backorder")}{chosen.backorder_days ? `. ${t("product.backorderDays", { days: chosen.backorder_days })}` : ""}</Text>}
       </View>
     </ScrollView>
   );

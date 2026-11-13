@@ -52,7 +52,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "role", "email_verified", "marketing_opt_in", "notify_order_emails", "notify_sms", "notify_push", "preferred_currency", "mfa_enabled", "phone_verified")
+        fields = ("id", "email", "full_name", "phone", "role", "email_verified", "marketing_opt_in", "notify_order_emails", "notify_sms", "notify_whatsapp", "notify_push", "preferred_currency", "mfa_enabled", "phone_verified")
         read_only_fields = ("id", "email", "role", "email_verified", "phone_verified")
 
     def validate_phone(self, value):

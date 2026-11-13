@@ -93,8 +93,8 @@ export function Checkout() {
   if (lines.length === 0 && !order) {
     return (
       <div className="wrap page empty">
-        <h1>Your bag is empty</h1>
-        <Link to="/shop" className="btn">Browse the shop</Link>
+        <h1>{t("bag.empty")}</h1>
+        <Link to="/shop" className="btn">{t("common.browse")}</Link>
       </div>
     );
   }
@@ -195,7 +195,7 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
                     </span>
                   </label>
                 ))}
-                <button className="link-button" style={{ justifySelf: "start" }} onClick={() => setAdding(true)}>Use a different address</button>
+                <button className="link-button" style={{ justifySelf: "start" }} onClick={() => setAdding(true)}>{t("checkout.useDifferent")}</button>
               </div>
             )}
             {(adding || (!addresses.loading && list.length === 0)) && (
@@ -226,33 +226,31 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
                       <input type="radio" name="service" checked={s.service_code === serviceCode} onChange={() => setServiceCode(s.service_code)} disabled={!!order} />
                       <span>
                         <strong>{s.service_name}</strong> · {money(s.price, s.currency)}<br />
-                        <span className="muted small">{s.eta_days_min && s.eta_days_max ? `Arrives in ${s.eta_days_min} to ${s.eta_days_max} days` : "Delivery time confirmed after dispatch"}</span>
+                        <span className="muted small">{s.eta_days_min && s.eta_days_max ? t("checkout.arrives", { min: s.eta_days_min, max: s.eta_days_max }) : t("checkout.etaLater")}</span>
                       </span>
                     </label>
                   ))}
                 </div>
               )}
-              {services && services.length === 0 && restricted.length === 0 && <Alert kind="info">We don't deliver to this country yet.</Alert>}
+              {services && services.length === 0 && restricted.length === 0 && <Alert kind="info">{t("checkout.noDelivery")}</Alert>}
             </section>
           )}
 
           <section aria-labelledby="pay">
             <h2 id="pay">{t("checkout.payment")}</h2>
             {shown !== currency && (
-              <Alert kind="info">
-                You're viewing prices in {shown}, but we take payment in {currency}. The {currency} amounts below are what you'll pay.
-              </Alert>
+              <Alert kind="info">{t("checkout.viewing", { shown, currency })}</Alert>
             )}
             {methods.length === 0 ? (
-              <Alert kind="info">No payment method is available in {currency}. Try again shortly or contact us.</Alert>
+              <Alert kind="info">{t("checkout.noMethod", { currency })}</Alert>
             ) : (
               <div className="choice-list" role="radiogroup" aria-labelledby="pay">
                 {methods.map((m) => (
                   <label className="choice" key={m.provider}>
                     <input type="radio" name="provider" checked={m.provider === provider} onChange={() => setProvider(m.provider)} />
                     <span>
-                      <strong>{providerName(m.provider, currency)}</strong>
-                      <br /><span className="muted small">You'll finish paying on a secure page, then come back here.</span>
+                      <strong>{providerName(m.provider, currency, t)}</strong>
+                      <br /><span className="muted small">{t("checkout.finishSecure")}</span>
                     </span>
                   </label>
                 ))}
@@ -270,23 +268,23 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
             </div>
           ))}
           <dl style={{ marginTop: "1rem" }}>
-            <dt>Items</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
-            {coupon && !coupon.free_shipping && <><dt>Code {coupon.code}</dt><dd>−{exact(discount.toFixed(2), currency)}</dd></>}
-            <dt>Delivery</dt><dd>{service ? (coupon?.free_shipping ? `Free (${coupon.code})` : exact(shippingTotal.toFixed(2), currency)) : "—"}</dd>
-            {tax > 0 && <><dt>Tax</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
+            <dt>{t("checkout.items")}</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
+            {coupon && !coupon.free_shipping && <><dt>{t("checkout.code", { code: coupon.code })}</dt><dd>−{exact(discount.toFixed(2), currency)}</dd></>}
+            <dt>{t("checkout.delivery")}</dt><dd>{service ? (coupon?.free_shipping ? t("checkout.free", { code: coupon.code }) : exact(shippingTotal.toFixed(2), currency)) : "—"}</dd>
+            {tax > 0 && <><dt>{t("checkout.tax")}</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
             {prepaid && dutyTotal > 0 && <><dt>{t("checkout.dutiesTitle")}</dt><dd>{exact(dutyTotal.toFixed(2), currency)}</dd></>}
-            <dt className="total">Total</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
+            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
           </dl>
           <div className="form" style={{ marginTop: "1rem" }}>
-            <Field id="coupon" label="Discount code (optional)" error={couponError}>
+            <Field id="coupon" label={t("checkout.discountCode")} error={couponError}>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <input id="coupon" className="input" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} disabled={!!order} />
-                <button type="button" className="btn quiet" onClick={applyCoupon} disabled={!couponInput.trim() || !!order}>Apply</button>
+                <button type="button" className="btn quiet" onClick={applyCoupon} disabled={!couponInput.trim() || !!order}>{t("checkout.apply")}</button>
               </div>
             </Field>
-            {coupon && <p className="small">{coupon.free_shipping ? "Free delivery applied." : "Discount applied."} <button type="button" className="link-button" onClick={() => { setCoupon(null); setCouponInput(""); }}>Remove</button></p>}
-            <Field id="notes" label="Delivery notes (optional)">
-              <input id="notes" className="input" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Gate code, landmark, best time" />
+            {coupon && <p className="small">{coupon.free_shipping ? t("checkout.discountFree") : t("checkout.discountDone")} <button type="button" className="link-button" onClick={() => { setCoupon(null); setCouponInput(""); }}>{t("common.remove")}</button></p>}
+            <Field id="notes" label={t("checkout.notes")}>
+              <input id="notes" className="input" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("checkout.notesPlaceholder")} />
             </Field>
             {international && estimate?.duties && (
               <p className="small" role="note">
@@ -301,20 +299,18 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
             )}
             {international && (
               <label className="small">
-                <input type="checkbox" checked={duties} onChange={(e) => setDuties(e.target.checked)} /> I understand I may have to pay import duties and taxes in my country.
+                <input type="checkbox" checked={duties} onChange={(e) => setDuties(e.target.checked)} /> {t("checkout.dutiesAccept")}
               </label>
             )}
             <label className="small">
-              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> I accept the terms of sale and the returns policy.
+              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> {t("checkout.termsAccept")}
             </label>
           </div>
           <button className="btn block" disabled={!canPlace} onClick={place}>
-            {placing ? "Taking you to payment…" : "Pay now"}
+            {placing ? t("checkout.taking") : t("checkout.pay")}
           </button>
-          <p className="small muted" style={{ marginTop: "0.75rem" }}>
-            The final amount is calculated on our server when you pay, using today's exchange rate for {currency}. You're charged exactly the total we confirm.
-          </p>
-          <button className="link-button" onClick={() => navigate("/bag")}>Back to bag</button>
+          <p className="small muted" style={{ marginTop: "0.75rem" }}>{t("checkout.finalNote", { currency })}</p>
+          <button className="link-button" onClick={() => navigate("/bag")}>{t("checkout.backToBag")}</button>
           {order && <p className="small">Order {order.number} is waiting for payment. <Link to={`/orders/${order.number}`}>View order</Link></p>}
         </aside>
       </div>
@@ -322,8 +318,10 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
   );
 }
 
-export function providerName(provider: string, currency: string): string {
-  if (provider === "paystack") return currency === "GHS" ? "Mobile Money or card" : "Card";
+export function providerName(provider: string, currency: string, t?: (key: "checkout.methodMomo" | "checkout.methodCard") => string): string {
+  const momo = t ? t("checkout.methodMomo") : "Mobile Money or card";
+  const card = t ? t("checkout.methodCard") : "Card";
+  if (provider === "paystack") return currency === "GHS" ? momo : card;
   if (provider === "mock") return "Test payment (development only)";
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
@@ -337,6 +335,7 @@ interface Verified {
 }
 
 export function CheckoutComplete() {
+  const { t } = useT();
   const [params] = useSearchParams();
   const reference = params.get("reference") ?? params.get("trxref") ?? "";
   const { refresh } = useCart();
@@ -350,6 +349,7 @@ export function CheckoutComplete() {
     if (!reference) return;
     let cancelled = false;
     let tries = 0;
+    let failures = 0;
     const check = async () => {
       try {
         const r = await api<Verified>(guest ? `/payments/guest/verify/${reference}/?token=${encodeURIComponent(guest.token)}` : `/payments/verify/${reference}/`);
@@ -368,7 +368,10 @@ export function CheckoutComplete() {
           refresh().catch(() => undefined);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Couldn't confirm your payment.");
+        if (cancelled) return;
+        // A brief hiccup (a busy server, a dropped connection) should not look like a failed payment: try a few times first.
+        if (failures++ < 3) setTimeout(check, 1500);
+        else setError(e instanceof Error ? e.message : "Couldn't confirm your payment.");
       }
     };
     check();
@@ -388,23 +391,23 @@ export function CheckoutComplete() {
     <div className="wrap page narrow">
       {result.payment_status === "succeeded" && (
         <>
-          <h1>Thank you. Your order is confirmed.</h1>
-          <p>Order <strong>{result.order_number}</strong> is paid. We've emailed your confirmation and will send tracking as soon as it ships.</p>
-          <Link className="btn" to={orderLink(result.order_number)}>View your order</Link>
+          <h1>{t("done.thanks")}</h1>
+          <p>{t("done.order")} <strong>{result.order_number}</strong> {t("done.paidRest")}</p>
+          <Link className="btn" to={orderLink(result.order_number)}>{t("done.view")}</Link>
         </>
       )}
       {result.payment_status === "pending" && (
         <>
-          <h1>We're still confirming your payment</h1>
-          <p>This can take a minute. You don't need to pay again. Check your order for the latest status.</p>
-          <Link className="btn" to={orderLink(result.order_number)}>View your order</Link>
+          <h1>{t("done.confirming")}</h1>
+          <p>{t("done.confirmingBody")}</p>
+          <Link className="btn" to={orderLink(result.order_number)}>{t("done.view")}</Link>
         </>
       )}
       {(result.payment_status === "failed" || result.payment_status === "mismatch") && (
         <>
-          <h1>The payment didn't go through</h1>
-          <p>You haven't been charged for this attempt. Your items are held for a short time while you try again.</p>
-          <Link className="btn" to={orderLink(result.order_number)}>Try paying again</Link>
+          <h1>{t("done.failed")}</h1>
+          <p>{t("done.failedBody")}</p>
+          <Link className="btn" to={orderLink(result.order_number)}>{t("done.tryAgain")}</Link>
         </>
       )}
     </div>
@@ -425,14 +428,14 @@ export function Orders() {
       {error && <Alert>{error}</Alert>}
       {data && data.results.length === 0 && (
         <div className="empty">
-          <p className="muted">You haven't placed an order yet.</p>
-          <Link className="btn" to="/shop">Start shopping</Link>
+          <p className="muted">{t("orders.none")}</p>
+          <Link className="btn" to="/shop">{t("orders.start")}</Link>
         </div>
       )}
       {data && data.results.length > 0 && (
         <table className="table">
           <thead>
-            <tr><th scope="col">Order</th><th scope="col">Placed</th><th scope="col">Status</th><th scope="col">Items</th><th scope="col">Total</th></tr>
+            <tr><th scope="col">{t("orders.order")}</th><th scope="col">{t("orders.placed")}</th><th scope="col">{t("orders.status")}</th><th scope="col">{t("orders.items")}</th><th scope="col">{t("orders.total")}</th></tr>
           </thead>
           <tbody>
             {data.results.map((o) => (
@@ -452,6 +455,7 @@ export function Orders() {
 }
 
 export function OrderDetail() {
+  const { t } = useT();
   const { number = "" } = useParams();
   const { exact } = useCurrency();
   const { data: order, error, loading, reload } = useAsync(() => api<Order>(`/orders/${number}/`), [number]);
@@ -500,23 +504,23 @@ export function OrderDetail() {
   const a = order.shipping_address;
   return (
     <div className="wrap page">
-      <p className="small"><Link to="/orders">Your orders</Link></p>
-      <h1 style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>Order {order.number} <StatusPill status={order.status} /></h1>
+      <p className="small"><Link to="/orders">{t("orders.back")}</Link></p>
+      <h1 style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>{t("orders.orderN", { number: order.number })} <StatusPill status={order.status} /></h1>
       {actionError && <Alert>{actionError}</Alert>}
       {order.status === "pending_payment" && (
         <Alert kind="info">
-          <strong>This order is waiting for payment.</strong> Your items are held for a short time.
+          <strong>{t("orders.waitingTitle")}</strong> {t("orders.waitingBody")}
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
             {methods.map((m) => (
-              <button key={m.provider} className="btn" disabled={busy} onClick={() => payNow(m.provider)}>Pay with {providerName(m.provider, order.currency)}</button>
+              <button key={m.provider} className="btn" disabled={busy} onClick={() => payNow(m.provider)}>{t("orders.payWith", { method: providerName(m.provider, order.currency, t) })}</button>
             ))}
-            <button className="btn quiet" disabled={busy} onClick={cancel}>Cancel order</button>
+            <button className="btn quiet" disabled={busy} onClick={cancel}>{t("orders.cancel")}</button>
           </div>
         </Alert>
       )}
       <div className="two">
         <section aria-labelledby="items">
-          <h2 id="items">What you ordered</h2>
+          <h2 id="items">{t("orders.whatOrdered")}</h2>
           <table className="table">
             <tbody>
               {order.items.map((i) => (
@@ -525,26 +529,26 @@ export function OrderDetail() {
                   <td style={{ textAlign: "right" }}>{exact(i.line_total, order.currency)}</td>
                 </tr>
               ))}
-              <tr><td className="muted">Delivery ({order.shipping_service.service_name ?? "standard"})</td><td style={{ textAlign: "right" }}>{exact(order.shipping_total, order.currency)}</td></tr>
-              {Number(order.discount_total ?? 0) > 0 && <tr><td className="muted">Code {order.coupon_code}</td><td style={{ textAlign: "right" }}>−{exact(order.discount_total ?? "0", order.currency)}</td></tr>}
-              {Number(order.tax_total) > 0 && <tr><td className="muted">Tax</td><td style={{ textAlign: "right" }}>{exact(order.tax_total, order.currency)}</td></tr>}
-              <tr><th scope="row">Total</th><td style={{ textAlign: "right", fontWeight: 700 }}>{exact(order.grand_total, order.currency)}</td></tr>
+              <tr><td className="muted">{t("orders.deliveryRow", { service: order.shipping_service.service_name ?? "standard" })}</td><td style={{ textAlign: "right" }}>{exact(order.shipping_total, order.currency)}</td></tr>
+              {Number(order.discount_total ?? 0) > 0 && <tr><td className="muted">{t("checkout.code", { code: order.coupon_code ?? "" })}</td><td style={{ textAlign: "right" }}>−{exact(order.discount_total ?? "0", order.currency)}</td></tr>}
+              {Number(order.tax_total) > 0 && <tr><td className="muted">{t("checkout.tax")}</td><td style={{ textAlign: "right" }}>{exact(order.tax_total, order.currency)}</td></tr>}
+              <tr><th scope="row">{t("checkout.total")}</th><td style={{ textAlign: "right", fontWeight: 700 }}>{exact(order.grand_total, order.currency)}</td></tr>
             </tbody>
           </table>
-          {order.fx_rate_note && <p className="small muted">Exchange rate used: {order.fx_rate_note}</p>}
-          <h3>Delivering to</h3>
+          {order.fx_rate_note && <p className="small muted">{t("orders.fx", { note: order.fx_rate_note })}</p>}
+          <h3>{t("orders.deliveringTo")}</h3>
           <p>
             {a.recipient_name}<br />{a.line1}{a.line2 && `, ${a.line2}`}<br />{a.city}{a.region && `, ${a.region}`} {a.postal_code}<br />{countryName(a.country ?? "")}
           </p>
         </section>
 
         <section aria-labelledby="progress">
-          <h2 id="progress">Where it is</h2>
-          {order.shipments.length === 0 && <p className="muted">We'll show tracking here as soon as your order is handed to the courier.</p>}
+          <h2 id="progress">{t("orders.whereIs")}</h2>
+          {order.shipments.length === 0 && <p className="muted">{t("orders.noTracking")}</p>}
           {order.shipments.map((s) => (
             <div key={s.id} style={{ marginBottom: "1.5rem" }}>
               <p>
-                <strong>{s.carrier_name ?? "Courier"}</strong> {s.tracking_number && <>· Tracking {s.tracking_number}</>} <StatusPill status={s.status} />
+                <strong>{s.carrier_name ?? t("orders.courier")}</strong> {s.tracking_number && <>· {t("orders.tracking", { number: s.tracking_number })}</>} <StatusPill status={s.status} />
               </p>
               <ol className="timeline">
                 {s.events.map((e) => (
@@ -556,7 +560,7 @@ export function OrderDetail() {
               </ol>
             </div>
           ))}
-          <h3>Order history</h3>
+          <h3>{t("orders.history")}</h3>
           <ol className="timeline" style={{ display: "flex", flexDirection: "column-reverse" }}>
             {[...order.events].reverse().map((e, i) => (
               <li key={i}>
@@ -568,10 +572,10 @@ export function OrderDetail() {
         </section>
       </div>
       {order.status !== "pending_payment" && order.status !== "cancelled" && (
-        <p style={{ marginTop: "1.5rem" }}><button className="btn quiet" onClick={() => downloadFile(`/orders/${order.number}/invoice/`, `invoice-${order.number}.pdf`).catch(() => setActionError("Couldn't download the invoice. Try again shortly."))}>Download invoice (PDF)</button></p>
+        <p style={{ marginTop: "1.5rem" }}><button className="btn quiet" onClick={() => downloadFile(`/orders/${order.number}/invoice/`, `invoice-${order.number}.pdf`).catch(() => setActionError("Couldn't download the invoice. Try again shortly."))}>{t("orders.invoice")}</button></p>
       )}
       <OrderReturns orderNumber={order.number} status={order.status} />
-      {order.status !== "pending_payment" && <p className="small" style={{ marginTop: "1.5rem" }}>Need help with this order? <Link to={`/support/new?order=${order.number}`}>Contact us</Link>.</p>}
+      {order.status !== "pending_payment" && <p className="small" style={{ marginTop: "1.5rem" }}>{t("orders.help")} <Link to={`/support/new?order=${order.number}`}>{t("orders.contact")}</Link>.</p>}
     </div>
   );
 }

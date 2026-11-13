@@ -1,0 +1,28 @@
+# A visitor adds an item, checks out as a guest, and reaches the payment page.
+# Needs the API started with GUEST_CHECKOUT_ENABLED=true.
+appId: com.wolbiroyal.mpanko
+---
+- launchApp:
+    clearState: true
+- tapOn: "Kente.*"
+- tapOn: "Add to bag"
+- assertVisible: "Added to your bag."
+- back
+- tapOn: "Bag"
+- assertVisible: "Your bag"
+- tapOn: "Check out as a guest"
+- tapOn: "Email for your receipt and order link"
+- inputText: "maestro-guest@example.com"
+- tapOn: "Full name"
+- inputText: "Maestro Guest"
+- tapOn: "Phone number for the courier"
+- inputText: "+233200000003"
+- tapOn: "Street address"
+- inputText: "3 Test Road"
+- tapOn: "Town or city"
+- inputText: "Tamale"
+- hideKeyboard
+- tapOn: "Save address"
+- assertVisible: "Delivery"
+- tapOn: "I accept the terms of sale and the returns policy."
+- assertVisible: "Pay now"
