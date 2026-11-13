@@ -41,7 +41,7 @@ npm run dev
 Open http://localhost:5174. Staff sign in with a password and a 6-digit code from an authenticator app. If
 `REQUIRE_STAFF_MFA` is on, the first sign-in shows a QR code to set the app up.
 
-**4. Mobile app**
+**4. Mobile app** (Expo SDK 58 needs Node 22.13 or newer: check with `node -v`)
 ```
 cd mpanko\mobile
 npm install

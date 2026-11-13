@@ -4,7 +4,7 @@ import Constants from "expo-constants";
 import { api } from "./api";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false }),
+  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
 });
 
 /** Asks permission and returns this phone's Expo push token, or null if the shopper said no or this isn't a real device. */

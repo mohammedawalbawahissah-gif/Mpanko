@@ -57,7 +57,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         numColumns={2}
         contentContainerStyle={{ padding: 8 }}
         columnWrapperStyle={{ gap: 8 }}
-        ListEmptyComponent={products.loading ? null : <Text style={[s.muted, { padding: 16 }]}>Nothing matches. Try a different search.</Text>}
+        ListEmptyComponent={products.loading ? undefined : <Text style={[s.muted, { padding: 16 }]}>Nothing matches. Try a different search.</Text>}
         renderItem={({ item }) => (
           <Pressable style={[s.card, { flex: 1 }]} accessibilityRole="button" accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`} onPress={() => navigation.navigate("Product", { slug: item.slug })}>
             <Art seed={item.slug} />
