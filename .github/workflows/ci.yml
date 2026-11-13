@@ -67,7 +67,7 @@ jobs:
         with: { node-version: 20 }
       - name: Start the API
         working-directory: backend
-        env: { DEBUG: "true", GUEST_CHECKOUT_ENABLED: "true" }
+        env: { DEBUG: "true", GUEST_CHECKOUT_ENABLED: "true", THROTTLE_ANON: "100000/hour", THROTTLE_USER: "100000/hour" }
         run: |
           pip install -r requirements.txt
           python manage.py migrate
@@ -76,6 +76,9 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:8000/ready/ && break; sleep 1; done
       - name: Install the web app
         working-directory: web
+        run: npm ci
+      - name: Install the admin app
+        working-directory: admin
         run: npm ci
       - name: Run the browser tests
         working-directory: e2e
