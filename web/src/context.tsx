@@ -7,7 +7,9 @@ import type { Product, ServerCartItem, User, Variant } from "./types";
 interface AuthState {
   user: User | null;
   ready: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /** Resolves to a ticket when the account (a super admin with an authenticator) needs a 6-digit code next. */
+  login: (email: string, password: string) => Promise<{ mfaTicket: string } | null>;
+  completeMfa: (ticket: string, code: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
@@ -15,10 +17,15 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-interface LoginResponse extends Tokens {
-  user: User;
+interface LoginResponse extends Partial<Tokens> {
+  user?: User;
   mfa_required?: boolean;
+  mfa_enrollment_required?: boolean;
+  mfa_token?: string;
 }
+
+/** Customers and the super admin may shop; other staff roles use the admin dashboard. */
+const SHOP_ROLES = new Set(["customer", "super_admin"]);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,14 +50,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("mpanko:signed-out", onOut);
   }, [reload]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await api<LoginResponse>("/auth/login/", { method: "POST", body: { email, password } });
-    if (data.mfa_required || !data.access) {
+  const accept = useCallback((data: LoginResponse) => {
+    if (!data.access || !data.refresh || !data.user) throw new ApiError(400, { detail: "Unexpected response from the server." });
+    if (!SHOP_ROLES.has(data.user.role)) {
       throw new ApiError(400, { detail: "Staff accounts sign in at the admin dashboard." });
     }
     setTokens({ access: data.access, refresh: data.refresh });
     setUser(data.user);
   }, []);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const data = await api<LoginResponse>("/auth/login/", { method: "POST", body: { email, password } });
+      if (data.mfa_required && data.mfa_token) return { mfaTicket: data.mfa_token };
+      if (data.mfa_enrollment_required) {
+        throw new ApiError(400, { detail: "Set up two-step sign-in at the admin dashboard first, then come back here." });
+      }
+      accept(data);
+      return null;
+    },
+    [accept],
+  );
+
+  const completeMfa = useCallback(
+    async (ticket: string, code: string) => {
+      accept(await api<LoginResponse>("/auth/login/mfa/", { method: "POST", body: { mfa_token: ticket, code } }));
+    },
+    [accept],
+  );
 
   const register = useCallback(
     async (email: string, password: string, fullName: string) => {
@@ -73,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, ready, login, register, logout, reload }), [user, ready, login, register, logout, reload]);
+  const value = useMemo(() => ({ user, ready, login, completeMfa, register, logout, reload }), [user, ready, login, completeMfa, register, logout, reload]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

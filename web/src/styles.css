@@ -221,3 +221,8 @@ p { margin: 0 0 1em; max-width: 66ch; }
 
 .loading { color: var(--muted); padding: 2rem 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Password show/hide */
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 4.5rem; }
+.pw-toggle { position: absolute; top: 50%; right: 0.4rem; transform: translateY(-50%); font: inherit; font-size: 0.875rem; font-weight: 600; background: none; border: 0; color: var(--indigo, #2A3FA0); cursor: pointer; padding: 0.35rem 0.5rem; min-height: 2rem; }

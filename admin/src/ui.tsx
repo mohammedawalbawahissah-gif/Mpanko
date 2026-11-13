@@ -64,3 +64,13 @@ export function Stat({ name, value, tone }: { name: string; value: ReactNode; to
 export function errText(e: unknown): string {
   return e instanceof Error ? e.message : "Something went wrong.";
 }
+
+export function PasswordInput({ id, value, onChange, autoComplete, required }: { id: string; value: string; onChange: (v: string) => void; autoComplete: string; required?: boolean }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="pw-wrap">
+      <input id={id} className="input" type={shown ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
+      <button type="button" className="pw-toggle" onClick={() => setShown((v) => !v)} aria-pressed={shown} aria-controls={id}>{shown ? "Hide" : "Show"}</button>
+    </div>
+  );
+}

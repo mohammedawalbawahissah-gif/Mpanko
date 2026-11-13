@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import QRCode from "qrcode";
 import { api, ApiError, type Tokens } from "./api";
 import { useAuth, type LoginStep } from "./auth";
-import { Alert, Field, errText } from "./ui";
+import { Alert, Field, PasswordInput, errText } from "./ui";
 
 export function Login() {
   const { user, ready, start, finish } = useAuth();
@@ -39,7 +39,7 @@ export function Login() {
             <input id="email" className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </Field>
           <Field id="pw" label="Password">
-            <input id="pw" className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <PasswordInput id="pw" autoComplete="current-password" value={password} onChange={setPassword} required />
           </Field>
           <button className="btn" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
         </form>

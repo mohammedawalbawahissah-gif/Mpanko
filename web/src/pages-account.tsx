@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError, type Page } from "./api";
 import { AddressForm } from "./address";
-import { Alert, Field, Loading, useAsync } from "./components";
+import { Alert, Field, Loading, PasswordInput, useAsync } from "./components";
 import { useAuth } from "./context";
 import { countryName } from "./pages-shop";
 import type { Address } from "./types";
@@ -31,35 +31,51 @@ function useSubmit() {
 }
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, completeMfa } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get("next") || "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [code, setCode] = useState("");
   const { errors, message, busy, run } = useSubmit();
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
-      await login(email, password);
-      navigate(next, { replace: true });
+      if (ticket) {
+        await completeMfa(ticket, code);
+        navigate(next, { replace: true });
+        return;
+      }
+      const step = await login(email, password);
+      if (step) setTicket(step.mfaTicket);
+      else navigate(next, { replace: true });
     });
   };
   return (
     <div className="wrap page narrow">
-      <h1>Sign in</h1>
+      <h1>{ticket ? "Enter your code" : "Sign in"}</h1>
       {message && <Alert>{message}</Alert>}
       <form className="form" onSubmit={submit} noValidate>
-        <Field id="email" label="Email" error={errors.email}>
-          <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </Field>
-        <Field id="password" label="Password" error={errors.password}>
-          <input id="password" className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        </Field>
-        <button className="btn" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+        {!ticket ? (
+          <>
+            <Field id="email" label="Email" error={errors.email}>
+              <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <Field id="password" label="Password" error={errors.password}>
+              <PasswordInput id="password" autoComplete="current-password" value={password} onChange={setPassword} required />
+            </Field>
+          </>
+        ) : (
+          <Field id="code" label="6-digit code from your authenticator app" error={errors.code}>
+            <input id="code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus required />
+          </Field>
+        )}
+        <button className="btn" disabled={busy}>{busy ? "Signing in…" : ticket ? "Verify" : "Sign in"}</button>
       </form>
-      <p className="small"><Link to="/forgot-password">Forgot your password?</Link></p>
-      <p className="small">New to Mpanko? <Link to={`/register?next=${encodeURIComponent(next)}`}>Create an account</Link></p>
+      {!ticket && <p className="small"><Link to="/forgot-password">Forgot your password?</Link></p>}
+      {!ticket && <p className="small">New to Mpanko? <Link to={`/register?next=${encodeURIComponent(next)}`}>Create an account</Link></p>}
     </div>
   );
 }
@@ -92,7 +108,7 @@ export function Register() {
           <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
         <Field id="password" label="Password (at least 8 characters)" error={errors.password}>
-          <input id="password" className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <PasswordInput id="password" autoComplete="new-password" value={password} onChange={setPassword} required />
         </Field>
         <button className="btn" disabled={busy}>{busy ? "Creating account…" : "Create account"}</button>
       </form>
@@ -160,7 +176,7 @@ export function Reset() {
           {message && <Alert>{message}</Alert>}
           <form className="form" onSubmit={submit} noValidate>
             <Field id="pw" label="New password (at least 8 characters)" error={errors.new_password || errors.token}>
-              <input id="pw" className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <PasswordInput id="pw" autoComplete="new-password" value={password} onChange={setPassword} required />
             </Field>
             <button className="btn" disabled={busy}>{busy ? "Saving…" : "Save new password"}</button>
           </form>
@@ -247,10 +263,10 @@ export function Account() {
           {pw.message && <Alert>{pw.message}</Alert>}
           <form className="form" onSubmit={changePassword} noValidate>
             <Field id="cur" label="Current password" error={pw.errors.current_password}>
-              <input id="cur" className="input" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+              <PasswordInput id="cur" autoComplete="current-password" value={current} onChange={setCurrent} />
             </Field>
             <Field id="new" label="New password" error={pw.errors.new_password}>
-              <input id="new" className="input" type="password" autoComplete="new-password" value={fresh} onChange={(e) => setFresh(e.target.value)} />
+              <PasswordInput id="new" autoComplete="new-password" value={fresh} onChange={setFresh} />
             </Field>
             <button className="btn" disabled={pw.busy}>Change password</button>
           </form>

@@ -232,3 +232,17 @@ export function statusLabel(status: string): string {
 export function StatusPill({ status }: { status: string }) {
   return <span className={`status ${status}`}>{statusLabel(status)}</span>;
 }
+
+
+/** Password field with a show/hide button. Drop-in for <input type="password">. */
+export function PasswordInput({ id, value, onChange, autoComplete, required }: { id: string; value: string; onChange: (v: string) => void; autoComplete: string; required?: boolean }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="pw-wrap">
+      <input id={id} className="input" type={shown ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
+      <button type="button" className="pw-toggle" onClick={() => setShown((v) => !v)} aria-pressed={shown} aria-controls={id}>
+        {shown ? "Hide" : "Show"}
+      </button>
+    </div>
+  );
+}

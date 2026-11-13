@@ -1,0 +1,12 @@
+{
+  "name": "mpanko",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix web install && npm --prefix admin install && npm --prefix mobile install",
+    "web": "npm --prefix web run dev",
+    "admin": "npm --prefix admin run dev",
+    "mobile": "npm --prefix mobile run start",
+    "typecheck": "npm --prefix web run typecheck && npm --prefix admin run typecheck && npm --prefix mobile run typecheck",
+    "build": "npm --prefix web run build && npm --prefix admin run build"
+  }
+}

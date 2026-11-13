@@ -88,3 +88,7 @@ code.secret { background: #E7E9F3; padding: 0.15rem 0.4rem; border-radius: 3px; 
 .login .brand { font-weight: 800; font-size: 1.5rem; margin-bottom: 1.5rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 4.5rem; }
+.pw-toggle { position: absolute; top: 50%; right: 0.4rem; transform: translateY(-50%); font: inherit; font-size: 0.875rem; font-weight: 600; background: none; border: 0; color: var(--indigo); cursor: pointer; padding: 0.35rem 0.5rem; min-height: 2rem; }

@@ -88,8 +88,9 @@ TEMPLATES = [
 
 # --- Database: DATABASE_URL (Railway Postgres) or local SQLite -----------------
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    # `or` (not a default argument) so a blank DATABASE_URL= line in .env still falls back to SQLite.
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
     )
 }

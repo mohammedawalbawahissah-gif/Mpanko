@@ -35,11 +35,32 @@ export function Button({ title, onPress, disabled, kind = "primary" }: { title: 
   );
 }
 
-export function Input({ label, error, ...props }: TextInputProps & { label: string; error?: string }) {
+export function Input({ label, error, secureTextEntry, ...props }: TextInputProps & { label: string; error?: string }) {
+  const [hidden, setHidden] = useState(true);
+  const isSecret = !!secureTextEntry;
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={s.label}>{label}</Text>
-      <TextInput accessibilityLabel={label} style={[s.input, error ? { borderColor: color.bad } : null]} placeholderTextColor={color.muted} {...props} />
+      <View>
+        <TextInput
+          accessibilityLabel={label}
+          style={[s.input, isSecret && { paddingRight: 72 }, error ? { borderColor: color.bad } : null]}
+          placeholderTextColor={color.muted}
+          secureTextEntry={isSecret && hidden}
+          {...props}
+        />
+        {isSecret && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? "Show password" : "Hide password"}
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={8}
+            style={{ position: "absolute", right: 0, top: 0, bottom: 0, paddingHorizontal: 14, justifyContent: "center" }}
+          >
+            <Text style={{ color: color.indigo, fontWeight: "700" }}>{hidden ? "Show" : "Hide"}</Text>
+          </Pressable>
+        )}
+      </View>
       {!!error && <Text style={s.fieldError}>{error}</Text>}
     </View>
   );
