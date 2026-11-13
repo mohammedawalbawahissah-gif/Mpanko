@@ -77,6 +77,10 @@ Paystack sends `charge.dispute.create`, `charge.dispute.remind` and `charge.disp
 
 Set `SENTRY_DSN` (and optionally `SENTRY_ENVIRONMENT`) on the api, worker and beat services to send server errors to Sentry; personal data, cookies and request bodies are scrubbed before sending. The web, admin and mobile apps also post crashes to `POST /api/v1/client-errors/` (rate limited), which appear in the api logs under `mpanko.client`. Set `VITE_APP_VERSION` at build time to tag them.
 
+## 5f. Guest checkout (optional)
+
+Guest checkout is off. To allow buying without an account, set `GUEST_CHECKOUT_ENABLED=true` on the api service (and `GUEST_ORDER_LINK_DAYS` if 30 days is not right). Guests enter an email, get a signed order link by email, and can use "Find my order" (`/orders/find`) if they lose it. Their email is not verified, so `REQUIRE_VERIFIED_EMAIL` does not apply to them; a guest order moves into an account only once that account's email is verified. Per-user coupons need a sign-in. Guest checkout is available on the website only; the mobile app still asks shoppers to sign in.
+
 ## 6. Carriers (DHL Express, FedEx, UPS)
 
 Leave `CARRIER_SANDBOX=true` until each carrier is proven.

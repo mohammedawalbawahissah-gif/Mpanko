@@ -2,7 +2,8 @@ import { CookieNotice, Legal } from "./pages-legal";
 import { Route, Routes, Link } from "react-router-dom";
 import { Layout, RequireAuth } from "./components";
 import { Bag, Home, ProductPage, Shop } from "./pages-shop";
-import { Checkout, CheckoutComplete, OrderDetail, Orders } from "./pages-checkout";
+import { OrderDetail, Orders } from "./pages-checkout";
+import { CheckoutCompleteRoute, CheckoutRoute, FindOrderPage, GuestOrder } from "./pages-guest";
 import { ReturnForm, SupportList, SupportNew, SupportThread } from "./pages-help";
 import { Account, Forgot, Login, Register, Reset, VerifyEmail } from "./pages-account";
 
@@ -29,8 +30,10 @@ export default function App() {
         <Route path="forgot-password" element={<Forgot />} />
         <Route path="reset-password" element={<Reset />} />
         <Route path="verify-email" element={<VerifyEmail />} />
-        <Route path="checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
-        <Route path="checkout/complete" element={<RequireAuth><CheckoutComplete /></RequireAuth>} />
+        <Route path="checkout" element={<CheckoutRoute />} />
+        <Route path="checkout/complete" element={<CheckoutCompleteRoute />} />
+        <Route path="orders/guest/:number" element={<GuestOrder />} />
+        <Route path="orders/find" element={<FindOrderPage />} />
         <Route path="orders" element={<RequireAuth><Orders /></RequireAuth>} />
         <Route path="orders/:number" element={<RequireAuth><OrderDetail /></RequireAuth>} />
         <Route path="orders/:number/return" element={<RequireAuth><ReturnForm /></RequireAuth>} />

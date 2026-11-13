@@ -6,7 +6,7 @@ import { useAuth } from "./auth";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
-import { Art, Busy, Button, Notice, s, useAsync } from "./ui";
+import { Art, Busy, Button, Notice, s, useCachedAsync } from "./ui";
 
 export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
@@ -16,9 +16,10 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<number | null>(null);
-  const cats = useAsync(() => api<Page<Category> | Category[]>("/categories/"), []);
+  const cats = useCachedAsync("categories", () => api<Page<Category> | Category[]>("/categories/"), []);
   const list: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
-  const products = useAsync(
+  const products = useCachedAsync(
+    `products?cat=${cat ?? ""}&q=${query}`,
     () => api<Page<Product>>(`/products/?ordering=-created_at${cat ? `&category=${cat}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
     [cat, query]
   );
@@ -49,6 +50,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
           </Pressable>
         ))}
       </ScrollView>
+      {(products.savedAt || cats.savedAt) && !products.error ? <View style={{ paddingHorizontal: 12 }}><Notice kind="info">{t("offline.saved")}</Notice></View> : null}
       {products.loading && <Busy />}
       {products.error ? <View style={s.pad}><Notice>{products.error}</Notice><Button title="Try again" onPress={products.reload} /></View> : null}
       <FlatList
@@ -75,8 +77,8 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
 
 export function ProductScreen({ route, navigation }: NativeStackScreenProps<ShopStack, "Product">) {
   const { user, addToCart } = useAuth();
-  const { money } = usePrefs();
-  const { data: p, error, loading } = useAsync(() => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
+  const { money, t } = usePrefs();
+  const { data: p, error, loading, savedAt } = useCachedAsync(`product:${route.params.slug}`, () => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
   const [variantId, setVariantId] = useState<number | null>(null);
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -109,6 +111,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
     <ScrollView style={s.screen}>
       <Art seed={p.slug} height={200} />
       <View style={s.pad}>
+        {savedAt ? <Notice kind="info">{t("offline.saved")}</Notice> : null}
         <Text style={s.h1}>{p.name}</Text>
         <Text style={s.muted}>{p.maker ? `Made by ${p.maker}` : ""}{p.maker && p.origin_country ? " · " : ""}{p.origin_country}</Text>
         <Text style={{ fontSize: 22, fontWeight: "800", color: color.ink, marginVertical: 12 }}>{money(chosen?.price ?? p.base_price, p.currency)}</Text>

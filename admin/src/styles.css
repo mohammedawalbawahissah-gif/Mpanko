@@ -21,12 +21,12 @@ a { color: var(--indigo); }
 .small { font-size: 0.875rem; }
 
 .shell { display: grid; grid-template-columns: 14rem 1fr; min-height: 100vh; }
-.side { background: var(--ink); color: #fff; padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.25rem; position: sticky; top: 0; height: 100vh; }
+.side { background: var(--ink); color: #fff; padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.25rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
 .side .brand { font-weight: 800; font-size: 1.25rem; margin-bottom: 1.25rem; }
 .side a { color: #D9DDF2; text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 4px; }
 .side a:hover { background: rgba(255, 255, 255, 0.08); }
 .side a.active { background: var(--indigo); color: #fff; }
-.side .who { margin-top: auto; font-size: 0.85rem; color: #B9BFE0; }
+.side .who { margin-top: auto; padding-top: 0.75rem; font-size: 0.85rem; color: #B9BFE0; }
 .side button { margin-top: 0.5rem; }
 .main { padding: 2rem; max-width: 72rem; width: 100%; }
 @media (max-width: 800px) {

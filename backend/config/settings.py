@@ -163,7 +163,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ),
-    "DEFAULT_THROTTLE_RATES": {"anon": "200/hour", "user": "2000/hour", "auth": "20/minute", "client_errors": "30/hour"},
+    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "1000/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "client_errors": "30/hour", "guest_checkout": "30/hour"},
 }
 
 SIMPLE_JWT = {
@@ -264,6 +264,9 @@ RETENTION_ORDER_YEARS = int(os.environ.get("RETENTION_ORDER_YEARS", "7"))  # con
 # --- Returns ------------------------------------------------------------------
 # --- SMS (FR-NOT-02, phone sign-in) ---------------------------------------------
 # "log" writes messages to the server log; "twilio" sends for real. See docs/GO-LIVE.md.
+# Guest checkout (FR-AUTH-05, FR-CHK-05): off until the client decides OD-12. Guests get a signed link to their order.
+GUEST_CHECKOUT_ENABLED = env_bool("GUEST_CHECKOUT_ENABLED", False)
+GUEST_ORDER_LINK_DAYS = int(os.environ.get("GUEST_ORDER_LINK_DAYS", "30"))
 SMS_BACKEND = os.environ.get("SMS_BACKEND", "log")
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")

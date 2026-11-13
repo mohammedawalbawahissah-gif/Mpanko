@@ -18,9 +18,11 @@ test("a new shopper browses, registers, pays and sees the order", async ({ page 
   await page.getByLabel(/^Password/).fill(password);
   await page.getByLabel(/I accept the/).check();
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/checkout/);
-
-  await page.waitForLoadState("networkidle"); // the form remounts once the saved addresses load
+  // Wait for the checkout page itself: the register page's address is /register?next=/checkout, which also contains "/checkout".
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Checkout" })).toBeVisible();
+  // The address form only appears once the saved addresses have loaded.
+  await page.getByLabel("Full name").waitFor();
   await page.getByLabel("Full name").fill("E2E Shopper");
   await expect(page.getByLabel("Full name")).toHaveValue("E2E Shopper");
   await page.getByLabel("Phone number for the courier").fill("+233200000001");

@@ -77,9 +77,29 @@ def mark_paid(order, note="Payment verified"):
     return order
 
 
-def _cart_lines(cart, country):
+class _GuestItem:
+    """A bag line for someone checking out without an account; mirrors the fields checkout reads from a CartItem."""
+
+    def __init__(self, variant, quantity):
+        self.variant, self.quantity = variant, quantity
+
+
+def _guest_items(items):
+    from apps.catalog.models import ProductVariant
+
+    merged = {}
+    for variant_id, qty in items:
+        merged[int(variant_id)] = merged.get(int(variant_id), 0) + int(qty)
+    variants = {v.pk: v for v in ProductVariant.objects.select_related("product", "inventory").filter(pk__in=merged)}
+    if len(variants) != len(merged):
+        raise CheckoutError("Something in your bag is no longer available.", "cart")
+    return [_GuestItem(variants[pk], min(merged[pk], 99)) for pk in sorted(merged)]
+
+
+def _cart_lines(cart, country, items=None):
     lines = []
-    for item in cart.items.select_related("variant__product", "variant__inventory").order_by("variant_id"):
+    source = items if items is not None else cart.items.select_related("variant__product", "variant__inventory").order_by("variant_id")
+    for item in source:
         variant, product = item.variant, item.variant.product
         if product.status != ProductStatus.PUBLISHED or not variant.is_active:
             raise CheckoutError(f"'{product.name}' is no longer available.", "cart")
@@ -92,11 +112,11 @@ def _cart_lines(cart, country):
 
 
 @transaction.atomic
-def checkout(user, address, shipping_service_code, currency, idempotency_key="", declarations=None):
+def checkout(user, address, shipping_service_code, currency, idempotency_key="", declarations=None, guest=None):
     """
     Create exactly one order per idempotency key. Prices, shipping, tax and totals are all recomputed here
     from the database; nothing the client sends about money is trusted.
-    Returns (order, created).
+    Returns (order, created). `guest` ({"email", "items": [(variant_id, quantity)]}) places an order without an account.
     """
     d = declarations or {}
     if not d.get("accept_terms"):
@@ -118,16 +138,24 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
             f"We can't take payment in {currency} yet. Choose one of: {', '.join(sorted(chargeable_currencies()))}.", "currency"
         )
 
+    contact_email = guest["email"] if guest else user.email
     if idempotency_key:
-        existing = Order.objects.filter(user=user, idempotency_key=idempotency_key).first()
+        existing = Order.objects.filter(user=user, idempotency_key=idempotency_key)
+        if guest:
+            existing = existing.filter(contact_email__iexact=contact_email)
+        existing = existing.first()
         if existing:
             return existing, False
 
-    cart = Cart.objects.select_for_update().filter(user=user).first()
-    if not cart:
-        raise CheckoutError("Your cart is empty.", "cart")
     country = address.country.upper()
-    lines = _cart_lines(cart, country)
+    if guest:
+        cart = None
+        lines = _cart_lines(None, country, items=_guest_items(guest["items"]))
+    else:
+        cart = Cart.objects.select_for_update().filter(user=user).first()
+        if not cart:
+            raise CheckoutError("Your cart is empty.", "cart")
+        lines = _cart_lines(cart, country)
 
     from apps.shipping.parcel import from_lines
 
@@ -178,7 +206,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
         user=user, currency=currency, subtotal=subtotal, shipping_total=shipping_total, tax_total=tax_total,
         discount_total=discount, coupon_code=coupon.code if coupon else "", duties_total=duties_total,
         grand_total=grand_total, fx_rate_note=note, shipping_address=address.snapshot(),
-        shipping_service=rate.as_dict(), contact_email=user.email, idempotency_key=idempotency_key,
+        shipping_service=rate.as_dict(), contact_email=contact_email, idempotency_key=idempotency_key,
         contact_phone=phone[:32], delivery_notes=(d.get("delivery_notes") or "")[:300],
         terms_accepted_at=timezone.now(), duties_acknowledged=bool(d.get("duties_acknowledged")),
         expires_at=timezone.now() + timedelta(minutes=settings.STOCK_RESERVATION_MINUTES),
@@ -198,7 +226,8 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
 
         CouponRedemption.objects.create(coupon=coupon, order=order, user=user, amount=discount)
     OrderStatusEvent.objects.create(order=order, from_status="", to_status=order.status, actor=user, note="Order placed")
-    cart.items.all().delete()
+    if cart is not None:
+        cart.items.all().delete()
     return order, True
 
 

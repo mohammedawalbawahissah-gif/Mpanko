@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { api, ApiError, downloadFile, idempotencyKey, type Page } from "./api";
 import { AddressForm } from "./address";
 import { Alert, Field, Loading, StatusPill, statusLabel, useAsync } from "./components";
-import { useCart, useCurrency } from "./context";
+import { useAuth, useCart, useCurrency } from "./context";
 import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
 import { OrderReturns } from "./pages-help";
+import { readGuestSession, saveGuestSession } from "./guest-session";
 import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxEstimate } from "./types";
 
 interface Attempt {
@@ -339,6 +340,9 @@ export function CheckoutComplete() {
   const [params] = useSearchParams();
   const reference = params.get("reference") ?? params.get("trxref") ?? "";
   const { refresh } = useCart();
+  const { user } = useAuth();
+  const [guest] = useState(() => (user ? null : readGuestSession()));
+  const orderLink = (n: string) => (guest ? `/orders/guest/${n}?token=${encodeURIComponent(guest.token)}` : `/orders/${n}`);
   const [result, setResult] = useState<Verified | null>(null);
   const [error, setError] = useState("");
 
@@ -348,11 +352,21 @@ export function CheckoutComplete() {
     let tries = 0;
     const check = async () => {
       try {
-        const r = await api<Verified>(`/payments/verify/${reference}/`);
+        const r = await api<Verified>(guest ? `/payments/guest/verify/${reference}/?token=${encodeURIComponent(guest.token)}` : `/payments/verify/${reference}/`);
         if (cancelled) return;
         setResult(r);
         if (r.payment_status === "pending" && tries++ < 6) setTimeout(check, 2500);
-        else refresh().catch(() => undefined);
+        else {
+          if (guest && r.payment_status === "succeeded") {
+            try {
+              localStorage.removeItem("mpanko.guestCart");
+            } catch {
+              /* ignore */
+            }
+            saveGuestSession(null);
+          }
+          refresh().catch(() => undefined);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Couldn't confirm your payment.");
       }
@@ -361,6 +375,7 @@ export function CheckoutComplete() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference, refresh]);
 
   if (!reference) {
@@ -375,21 +390,21 @@ export function CheckoutComplete() {
         <>
           <h1>Thank you. Your order is confirmed.</h1>
           <p>Order <strong>{result.order_number}</strong> is paid. We've emailed your confirmation and will send tracking as soon as it ships.</p>
-          <Link className="btn" to={`/orders/${result.order_number}`}>View your order</Link>
+          <Link className="btn" to={orderLink(result.order_number)}>View your order</Link>
         </>
       )}
       {result.payment_status === "pending" && (
         <>
           <h1>We're still confirming your payment</h1>
           <p>This can take a minute. You don't need to pay again. Check your order for the latest status.</p>
-          <Link className="btn" to={`/orders/${result.order_number}`}>View your order</Link>
+          <Link className="btn" to={orderLink(result.order_number)}>View your order</Link>
         </>
       )}
       {(result.payment_status === "failed" || result.payment_status === "mismatch") && (
         <>
           <h1>The payment didn't go through</h1>
           <p>You haven't been charged for this attempt. Your items are held for a short time while you try again.</p>
-          <Link className="btn" to={`/orders/${result.order_number}`}>Try paying again</Link>
+          <Link className="btn" to={orderLink(result.order_number)}>Try paying again</Link>
         </>
       )}
     </div>

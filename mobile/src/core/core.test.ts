@@ -4,6 +4,7 @@ import { pickLanguage, translate } from "./i18n";
 import { LANGUAGES, MESSAGES } from "./locales";
 import { convert, formatMoney, rateOf, searchCurrencies, type Rates } from "./money";
 import { buildReport, makeDeduper } from "./report";
+import { fetchWithCache, isOffline, MAX_AGE_MS, readCached, type KeyValueStore } from "./cache";
 
 const rates: Rates = {
   base: "USD",
@@ -97,5 +98,60 @@ describe("crash reports", () => {
     expect(ok(buildReport(new Error("a")))).toBe(false);
     expect(ok(buildReport(new Error("b")))).toBe(true);
     expect(ok(buildReport(new Error("c")))).toBe(false);
+  });
+});
+
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
+  const data = new Map<string, string>();
+  return {
+    data,
+    getItem: async (k) => data.get(k) ?? null,
+    setItem: async (k, v) => void data.set(k, v),
+    removeItem: async (k) => void data.delete(k),
+  };
+}
+
+describe("offline catalog cache", () => {
+  const offline = Object.assign(new Error("Can't reach Mpanko."), { status: 0 });
+  const serverError = Object.assign(new Error("Server error"), { status: 500 });
+
+  it("returns fresh data and saves a copy", async () => {
+    const store = memoryStore();
+    const r = await fetchWithCache(store, "products", async () => ({ n: 1 }), () => 1000);
+    expect(r).toEqual({ data: { n: 1 }, savedAt: 1000, stale: false });
+    expect((await readCached(store, "products", 2000))?.data).toEqual({ n: 1 });
+  });
+  it("falls back to the saved copy only when the connection is down", async () => {
+    const store = memoryStore();
+    await fetchWithCache(store, "products", async () => ({ n: 1 }), () => 1000);
+    const r = await fetchWithCache(store, "products", async () => { throw offline; }, () => 5000);
+    expect(r).toEqual({ data: { n: 1 }, savedAt: 1000, stale: true });
+    await expect(fetchWithCache(store, "products", async () => { throw serverError; }, () => 5000)).rejects.toBe(serverError);
+  });
+  it("throws the original error when nothing was saved", async () => {
+    await expect(fetchWithCache(memoryStore(), "x", async () => { throw offline; })).rejects.toBe(offline);
+  });
+  it("does not show copies that are too old, from the future, or damaged", async () => {
+    const store = memoryStore();
+    await fetchWithCache(store, "a", async () => 1, () => 1000);
+    expect(await readCached(store, "a", 1000 + MAX_AGE_MS + 1)).toBeNull();
+    await fetchWithCache(store, "future", async () => 2, () => 1_000_000);
+    expect(await readCached(store, "future", 1)).toBeNull();
+    store.data.set("mpanko.cache.b", "{broken");
+    expect(await readCached(store, "b")).toBeNull();
+  });
+  it("keeps separate copies per key, and survives a failing disk", async () => {
+    const store = memoryStore();
+    await fetchWithCache(store, "cat=1", async () => "one", () => 1);
+    await fetchWithCache(store, "cat=2", async () => "two", () => 1);
+    expect((await readCached<string>(store, "cat=2", 2))?.data).toBe("two");
+    const broken: KeyValueStore = { getItem: async () => { throw new Error("x"); }, setItem: async () => { throw new Error("x"); }, removeItem: async () => undefined };
+    const r = await fetchWithCache(broken, "k", async () => 7);
+    expect(r.data).toBe(7);
+  });
+  it("recognises connection failures", () => {
+    expect(isOffline(offline)).toBe(true);
+    expect(isOffline(serverError)).toBe(false);
+    expect(isOffline(null)).toBe(false);
   });
 });

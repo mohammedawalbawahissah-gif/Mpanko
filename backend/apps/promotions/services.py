@@ -37,6 +37,8 @@ def discount_for(coupon, user, subtotal, shipping_total, currency):
         raise CouponError("That code has expired.")
     if coupon.max_uses is not None and _live(coupon.redemptions).count() >= coupon.max_uses:
         raise CouponError("That code has been fully used.")
+    if coupon.per_user_limit is not None and user is None:
+        raise CouponError("Sign in to use that code.")
     if coupon.per_user_limit is not None and _live(coupon.redemptions.filter(user=user)).count() >= coupon.per_user_limit:
         raise CouponError("You have already used that code.")
     base = settings.BASE_CURRENCY

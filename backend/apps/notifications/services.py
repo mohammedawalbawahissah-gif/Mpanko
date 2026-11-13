@@ -34,6 +34,13 @@ DEFAULTS = {
         "Shipping: {{ currency }} {{ shipping_total }}\nTotal: {{ currency }} {{ grand_total }}\n",
         {"order_number": "MP-1001", "lines": "  1 x Kente scarf — USD 40.00", "currency": "USD", "shipping_total": "30.00", "grand_total": "70.00"},
     ),
+    "guest_order_link": (
+        "Guest order link",
+        "Your Mpanko order {{ order_number }}",
+        "You placed order {{ order_number }} without an account. Use this link to see it, pay for it or track it:\n{{ link }}\n\n"
+        "The link works for 30 days. Create an account with this email address any time to keep all your orders in one place.",
+        {"order_number": "MP-1001", "link": "https://shop.example/orders/guest/MP-1001?token=x"},
+    ),
     "payment_failed": (
         "Payment failed",
         "Payment for order {{ order_number }} did not go through",

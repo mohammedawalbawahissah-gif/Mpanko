@@ -16,7 +16,8 @@ export const COUNTRIES: [string, string][] = [
 
 const EMPTY = { label: "", recipient_name: "", phone: "", line1: "", line2: "", city: "", region: "", postal_code: "", country: "GH", is_default: false };
 
-export function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => void; onCancel?: () => void }) {
+/** `local` keeps the address in the page (for guests) instead of saving it to an account. */
+export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a: Address) => void; onCancel?: () => void; local?: boolean }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [general, setGeneral] = useState("");
@@ -43,6 +44,19 @@ export function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => vo
     setErrors({});
     setGeneral("");
     try {
+      if (local) {
+        const missing: Record<string, string> = {};
+        for (const k of ["recipient_name", "phone", "line1", "city"] as const) if (!form[k].trim()) missing[k] = "This field is required.";
+        if (rules?.region_required && !form.region.trim()) missing.region = "This field is required.";
+        if (rules?.postal_code === "required" && !form.postal_code.trim()) missing.postal_code = "This field is required.";
+        if (Object.keys(missing).length) {
+          setErrors(missing);
+          setGeneral("Check the highlighted fields.");
+          return;
+        }
+        onSaved({ ...form, id: 0 });
+        return;
+      }
       const saved = await api<Address>("/auth/addresses/", { method: "POST", body: form });
       setForm(EMPTY);
       onSaved(saved);
@@ -92,7 +106,7 @@ export function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => vo
         </Field>
       )}
       <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button className="btn" disabled={saving}>{saving ? "Saving…" : "Save address"}</button>
+        <button className="btn" disabled={saving}>{local ? t("guest.useAddress") : saving ? "Saving…" : "Save address"}</button>
         {onCancel && <button type="button" className="btn quiet" onClick={onCancel}>Cancel</button>}
       </div>
     </form>

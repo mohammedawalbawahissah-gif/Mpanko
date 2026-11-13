@@ -125,7 +125,7 @@ export function Layout() {
             ) : (
               <Link to="/login">{t("nav.signIn")}</Link>
             )}
-            <Link to="/bag" className="bag-link" aria-label={`Shopping bag, ${count} items`}>
+            <Link to="/bag" className="bag-link" aria-label={t("nav.bagItems", { count })}>
               {t("nav.bag")} <span className="bag-count">{count}</span>
             </Link>
           </div>

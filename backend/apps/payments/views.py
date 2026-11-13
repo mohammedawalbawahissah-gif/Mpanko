@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, permissions, serializers, status, viewsets
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -39,6 +39,38 @@ class MethodsView(APIView):
         ])
 
 
+def _start_payment(request, order, provider_name):
+    """Start (or idempotently resume) a payment for `order`. The caller has already proven the order is theirs."""
+    if order.status != OrderStatus.PENDING_PAYMENT:
+        raise ValidationError({"order_number": f"Order is '{order.status}' and cannot be paid."})
+    try:
+        provider = get_provider(provider_name)
+    except ProviderError as exc:
+        raise ValidationError({"provider": str(exc)})
+    if not provider.supports_currency(order.currency):
+        raise ValidationError({"provider": f"{provider.name} cannot charge in {order.currency}."})
+
+    key = request.headers.get("Idempotency-Key", "").strip()
+    if key:
+        existing = PaymentAttempt.objects.filter(order=order, idempotency_key=key).first()
+        if existing:
+            return Response(_attempt_payload(existing), status=status.HTTP_200_OK)
+    # Amount comes from the order record on our server, never from the request.
+    attempt = PaymentAttempt(order=order, provider=provider.name, amount=order.grand_total, currency=order.currency, idempotency_key=key)
+    try:
+        result = provider.initiate(attempt, order.contact_email, settings.PAYMENT_RETURN_URL)
+    except ProviderError as exc:
+        raise ValidationError({"detail": str(exc)})
+    attempt.authorization_url = result["authorization_url"]
+    attempt.provider_reference = result.get("provider_reference", "")
+    attempt.raw_response = result.get("raw", {})
+    try:
+        attempt.save()
+    except IntegrityError:  # two simultaneous requests with the same key
+        return Response(_attempt_payload(PaymentAttempt.objects.get(order=order, idempotency_key=key)))
+    return Response(_attempt_payload(attempt), status=status.HTTP_201_CREATED)
+
+
 class InitiateView(APIView):
     """Start (or idempotently resume) a payment for one of the caller's own pending orders."""
 
@@ -47,34 +79,29 @@ class InitiateView(APIView):
         s = InitiateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         order = get_object_or_404(Order, number=s.validated_data["order_number"], user=request.user)
-        if order.status != OrderStatus.PENDING_PAYMENT:
-            raise ValidationError({"order_number": f"Order is '{order.status}' and cannot be paid."})
-        try:
-            provider = get_provider(s.validated_data["provider"])
-        except ProviderError as exc:
-            raise ValidationError({"provider": str(exc)})
-        if not provider.supports_currency(order.currency):
-            raise ValidationError({"provider": f"{provider.name} cannot charge in {order.currency}."})
+        return _start_payment(request, order, s.validated_data["provider"])
 
-        key = request.headers.get("Idempotency-Key", "").strip()
-        if key:
-            existing = PaymentAttempt.objects.filter(order=order, idempotency_key=key).first()
-            if existing:
-                return Response(_attempt_payload(existing), status=status.HTTP_200_OK)
-        # Amount comes from the order record on our server, never from the request.
-        attempt = PaymentAttempt(order=order, provider=provider.name, amount=order.grand_total, currency=order.currency, idempotency_key=key)
-        try:
-            result = provider.initiate(attempt, order.contact_email, settings.PAYMENT_RETURN_URL)
-        except ProviderError as exc:
-            raise ValidationError({"detail": str(exc)})
-        attempt.authorization_url = result["authorization_url"]
-        attempt.provider_reference = result.get("provider_reference", "")
-        attempt.raw_response = result.get("raw", {})
-        try:
-            attempt.save()
-        except IntegrityError:  # two simultaneous requests with the same key
-            return Response(_attempt_payload(PaymentAttempt.objects.get(order=order, idempotency_key=key)))
-        return Response(_attempt_payload(attempt), status=status.HTTP_201_CREATED)
+
+class GuestInitiateSerializer(InitiateSerializer):
+    token = serializers.CharField()
+
+
+class GuestInitiateView(APIView):
+    """Pay for a guest order with the signed link from checkout or the confirmation email."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=GuestInitiateSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        from apps.orders.guest import guest_payment_order
+
+        if not settings.GUEST_CHECKOUT_ENABLED:
+            raise NotFound()
+        s = GuestInitiateSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        order = guest_payment_order(s.validated_data["order_number"], s.validated_data["token"])
+        return _start_payment(request, order, s.validated_data["provider"])
 
 
 def _attempt_payload(attempt):
@@ -84,20 +111,40 @@ def _attempt_payload(attempt):
     }
 
 
+def _verify_attempt(attempt, reference):
+    if attempt.status == AttemptStatus.PENDING:
+        try:
+            v = get_provider(attempt.provider).verify(attempt)
+        except ProviderError as exc:
+            raise ValidationError({"detail": str(exc)})
+        attempt = apply_result(reference, v.status, v.amount, v.currency, v.provider_reference) or attempt
+    attempt.order.refresh_from_db()
+    return Response({"reference": reference, "payment_status": attempt.status, "order_number": attempt.order.number, "order_status": attempt.order.status})
+
+
 class VerifyView(APIView):
     """Customer returns from the provider's page; we ask the provider directly rather than trusting the browser."""
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, reference):
         attempt = get_object_or_404(PaymentAttempt, reference=reference, order__user=request.user)
-        if attempt.status == AttemptStatus.PENDING:
-            try:
-                v = get_provider(attempt.provider).verify(attempt)
-            except ProviderError as exc:
-                raise ValidationError({"detail": str(exc)})
-            attempt = apply_result(reference, v.status, v.amount, v.currency, v.provider_reference) or attempt
-        attempt.order.refresh_from_db()
-        return Response({"reference": reference, "payment_status": attempt.status, "order_number": attempt.order.number, "order_status": attempt.order.status})
+        return _verify_attempt(attempt, reference)
+
+
+class GuestVerifyView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request, reference):
+        from apps.orders.guest import read_token
+
+        if not settings.GUEST_CHECKOUT_ENABLED:
+            raise NotFound()
+        attempt = get_object_or_404(PaymentAttempt, reference=reference, order__user__isnull=True)
+        if not read_token(request.query_params.get("token", ""), attempt.order.number):
+            raise NotFound("This order link is not valid. Ask for a new one.")
+        return _verify_attempt(attempt, reference)
 
 
 class WebhookView(APIView):

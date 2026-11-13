@@ -100,6 +100,9 @@ class VerifyEmailConfirmView(AuthThrottled, APIView):
             raise ValidationError({"token": "This link is invalid or has expired."})
         user.email_verified = True
         user.save(update_fields=["email_verified"])
+        from apps.orders.guest import claim_guest_orders
+
+        claim_guest_orders(user)  # orders placed as a guest with this address now appear in the account
         return Response({"detail": "Email verified."})
 
 
