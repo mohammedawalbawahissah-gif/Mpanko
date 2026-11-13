@@ -28,11 +28,11 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
     setErrors({});
     if (local) {
       const missing: Record<string, string> = {};
-      if (!f.recipient_name.trim()) missing.recipient_name = "Enter the recipient's name.";
-      if (!f.phone.trim()) missing.phone = "Enter a phone number for the courier.";
-      if (f.country.trim().length !== 2) missing.country = "Enter the 2-letter country code.";
-      if (!f.line1.trim()) missing.line1 = "Enter the street address.";
-      if (!f.city.trim()) missing.city = "Enter the town or city.";
+      if (!f.recipient_name.trim()) missing.recipient_name = t("m.errName");
+      if (!f.phone.trim()) missing.phone = t("m.errPhone");
+      if (f.country.trim().length !== 2) missing.country = t("m.errCountry");
+      if (!f.line1.trim()) missing.line1 = t("m.errStreet");
+      if (!f.city.trim()) missing.city = t("m.errCity");
       if (Object.keys(missing).length) return setErrors(missing);
       return onSaved({ id: 0, ...f, country: f.country.toUpperCase(), is_default: false });
     }
@@ -47,17 +47,17 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
   };
   return (
     <View>
-      <Input label="Full name" value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
-      <Input label="Phone number for the courier" value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
-      <Input label="Country (2-letter code, e.g. GH, US, GB)" value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
-      <Input label="Street address" value={f.line1} onChangeText={set("line1")} error={errors.line1} />
-      <Input label="Apartment or landmark (optional)" value={f.line2} onChangeText={set("line2")} error={errors.line2} />
-      <Input label="Town or city" value={f.city} onChangeText={set("city")} error={errors.city} />
+      <Input label={t("m.fullName")} value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
+      <Input label={t("m.phoneCourier")} value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
+      <Input label={t("m.countryCode")} value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
+      <Input label={t("m.street")} value={f.line1} onChangeText={set("line1")} error={errors.line1} />
+      <Input label={t("m.line2")} value={f.line2} onChangeText={set("line2")} error={errors.line2} />
+      <Input label={t("m.city")} value={f.city} onChangeText={set("city")} error={errors.city} />
       <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
       {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
-      <Button title={busy ? "Saving…" : "Save address"} disabled={busy} onPress={save} />
+      <Button title={busy ? t("m.saving") : t("m.saveAddress")} disabled={busy} onPress={save} />
       {onCancel && <View style={{ height: 8 }} />}
-      {onCancel && <Button title="Cancel" kind="quiet" onPress={onCancel} />}
+      {onCancel && <Button title={t("common.cancel")} kind="quiet" onPress={onCancel} />}
     </View>
   );
 }

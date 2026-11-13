@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { fetchWithCache } from "./core/cache";
+import type { MessageKey } from "./core/i18n";
+import { usePrefs } from "./prefs";
 import { color, stripes } from "./theme";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
@@ -119,13 +121,28 @@ export function Art({ seed, height = 120 }: { seed: string; height?: number }) {
 }
 
 export function Pill({ value }: { value: string }) {
+  const { t } = usePrefs();
   const bad = ["failed", "cancelled", "expired", "exception", "declined"].includes(value);
   const good = ["paid", "delivered", "succeeded"].includes(value);
   return (
     <Text style={[s.pill, good && { backgroundColor: "#D6EFE5", color: "#075A40" }, bad && { backgroundColor: "#F9D9E0", color: "#8E0F2B" }]}>
-      {statusLabel(value)}
+      {statusText(t, value)}
     </Text>
   );
+}
+
+/** The status in the shopper's language when we have it, otherwise the readable English form. */
+export function statusText(t: (key: MessageKey) => string, v: string): string {
+  const key = `status.${v}` as MessageKey;
+  const text = t(key);
+  return text === key ? statusLabel(v) : text;
+}
+
+/** How a payment method is named to the shopper. */
+export function methodLabel(t: (key: MessageKey) => string, provider: string, currency: string): string {
+  if (provider === "paystack") return currency === "GHS" ? t("checkout.methodMomo") : t("checkout.methodCard");
+  if (provider === "mock") return t("m.testPayment");
+  return provider;
 }
 
 export function statusLabel(v: string): string {
