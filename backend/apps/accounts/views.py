@@ -6,6 +6,7 @@ from django.utils.http import urlsafe_base64_decode
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -13,11 +14,11 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from . import mfa
+from . import address_rules, mfa, phone as phone_utils
 from .models import Address, AuditLog, User
 from .serializers import (
     AddressSerializer, ChangePasswordSerializer, CodeSerializer, MfaLoginSerializer, MpankoTokenSerializer,
-    PasswordResetConfirmSerializer, PasswordResetRequestSerializer, RegisterSerializer, UidTokenSerializer,
+    PasswordResetConfirmSerializer, PasswordResetRequestSerializer, PhoneCodeSerializer, PhoneSerializer, RegisterSerializer, UidTokenSerializer,
     UserSerializer, tokens_for,
 )
 from .tasks import send_password_reset_email, send_verification_email
@@ -54,6 +55,14 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+    def perform_update(self, serializer):
+        before = self.request.user.marketing_opt_in
+        user = serializer.save()
+        if user.marketing_opt_in != before:
+            from apps.privacy.services import record_consent
+
+            record_consent(user, "marketing", user.marketing_opt_in)
 
 
 class AddressViewSet(viewsets.ModelViewSet):
@@ -234,3 +243,69 @@ class MfaDisableView(AuthThrottled, APIView):
         request.user.totp_device.delete()
         AuditLog.record(request.user, "mfa.disabled", request.user)
         return Response({"detail": "MFA disabled."})
+
+
+# --- Phone: verify a number, sign in with it ------------------------------------------------------------------
+
+class PhoneLoginRequestView(AuthThrottled, APIView):
+    """Send a sign-in code. The reply is identical whether or not an account uses this number."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=PhoneSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        s = PhoneSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            phone_utils.request_login_code(s.validated_data["phone"])
+        except phone_utils.PhoneError as exc:
+            raise ValidationError({"phone": str(exc)})
+        return Response({"detail": "If that number is linked to an account, a code has been sent by SMS."})
+
+
+class PhoneLoginConfirmView(AuthThrottled, APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=PhoneCodeSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        s = PhoneCodeSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        user = phone_utils.login_with_code(s.validated_data["phone"], s.validated_data["code"])
+        if not user:
+            raise AuthenticationFailed("That code is wrong or has expired.")
+        return Response(tokens_for(user))
+
+
+class PhoneVerifyRequestView(AuthThrottled, APIView):
+    @extend_schema(request=PhoneSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        s = PhoneSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            phone = phone_utils.request_verify_code(request.user, s.validated_data["phone"])
+        except phone_utils.PhoneError as exc:
+            raise ValidationError({"phone": str(exc)})
+        return Response({"detail": "We sent a code by SMS.", "phone": phone})
+
+
+class PhoneVerifyConfirmView(AuthThrottled, APIView):
+    @extend_schema(request=PhoneCodeSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        s = PhoneCodeSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            user = phone_utils.confirm_verify_code(request.user, s.validated_data["phone"], s.validated_data["code"])
+        except phone_utils.PhoneError as exc:
+            raise ValidationError({"code": str(exc)})
+        return Response(UserSerializer(user).data)
+
+
+@extend_schema(responses=OpenApiTypes.OBJECT)
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def address_rules_view(request):
+    """What the address form should ask for in a country: postal code (required, optional or none), region label."""
+    country = (request.query_params.get("country") or "").upper()
+    if not address_rules.is_country(country):
+        raise ValidationError({"country": "Provide a 2-letter ISO country code."})
+    return Response(address_rules.describe(country))

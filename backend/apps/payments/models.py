@@ -11,6 +11,8 @@ class AttemptStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
     EXPIRED = "expired", "Expired"
     MISMATCH = "mismatch", "Amount/currency mismatch — needs review"
+    REVERSED = "reversed", "Reversed (money taken back by the bank/provider)"
+    REFUNDED = "refunded", "Refunded in full"
 
 
 def new_reference():
@@ -41,6 +43,20 @@ class PaymentAttempt(models.Model):
 
     def __str__(self):
         return f"{self.reference} ({self.status})"
+
+
+class PaymentStatusEvent(models.Model):
+    """Audit trail: every change of a payment attempt's state, who/what caused it (FR-PAY-05)."""
+
+    attempt = models.ForeignKey(PaymentAttempt, on_delete=models.CASCADE, related_name="status_events")
+    from_status = models.CharField(max_length=12)
+    to_status = models.CharField(max_length=12)
+    source = models.CharField(max_length=30, blank=True, help_text="webhook, verify, refund, order, staff ...")
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
 
 
 class WebhookEvent(models.Model):
@@ -116,3 +132,37 @@ class ReconciliationRecord(models.Model):
 
     class Meta:
         ordering = ["resolved", "kind", "reference"]
+
+
+class Dispute(models.Model):
+    """A customer's bank questioning a charge (chargeback). Opened and updated by provider webhooks (FR-PAY-05)."""
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open — evidence needed"
+        EVIDENCE_SENT = "evidence_sent", "Evidence sent, waiting for the bank"
+        WON = "won", "Won — we keep the money"
+        LOST = "lost", "Lost — money taken back"
+        ACCEPTED = "accepted", "Accepted — refunded to the customer"
+
+    attempt = models.ForeignKey(PaymentAttempt, on_delete=models.PROTECT, related_name="disputes")
+    order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, related_name="disputes")
+    provider = models.CharField(max_length=30)
+    provider_dispute_id = models.CharField(max_length=80)
+    status = models.CharField(max_length=14, choices=Status.choices, default=Status.OPEN, db_index=True)
+    category = models.CharField(max_length=80, blank=True, help_text="Reason the bank gave, as reported by the provider")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3)
+    respond_by = models.DateTimeField(null=True, blank=True, help_text="Deadline to send evidence")
+    provider_status = models.CharField(max_length=60, blank=True)
+    resolution = models.CharField(max_length=60, blank=True)
+    notes = models.TextField(blank=True, help_text="What staff did and sent; kept as the case file")
+    opened_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["status", "respond_by", "-opened_at"]
+        constraints = [models.UniqueConstraint(fields=["provider", "provider_dispute_id"], name="uniq_provider_dispute")]
+
+    def __str__(self):
+        return f"Dispute {self.provider_dispute_id} on {self.order.number}"

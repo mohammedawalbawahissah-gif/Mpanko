@@ -5,17 +5,26 @@ import "@fontsource-variable/bricolage-grotesque";
 import "./styles.css";
 import App from "./App";
 import { AuthProvider, CartProvider, CurrencyProvider } from "./context";
+import { ErrorBoundary } from "./components";
+import { I18nProvider } from "./i18n";
+import { installGlobalErrorReporting } from "./report";
+
+installGlobalErrorReporting();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <CurrencyProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
-        </CurrencyProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <I18nProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <CurrencyProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </I18nProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

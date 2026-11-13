@@ -133,3 +133,20 @@ export interface Page<T> {
 export function idempotencyKey(): string {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
+
+/** Download an authenticated file (an invoice or a data export). */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const tokens = getTokens();
+  const res = await fetch(`${BASE}${path}`, { headers: tokens ? { Authorization: `Bearer ${tokens.access}` } : {} });
+  if (!res.ok) {
+    let data: unknown = null;
+    try { data = await res.json(); } catch { /* not json */ }
+    throw new ApiError(res.status, data);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

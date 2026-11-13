@@ -43,9 +43,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=32, blank=True)
+    phone_verified = models.BooleanField(default=False, help_text="Number confirmed by an SMS code; allows phone sign-in and SMS updates")
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     email_verified = models.BooleanField(default=False)
     marketing_opt_in = models.BooleanField(default=False)
+    notify_order_emails = models.BooleanField(default=True, help_text="Order and shipping updates by email")
+    notify_sms = models.BooleanField(default=False)
+    notify_push = models.BooleanField(default=False)
+    preferred_currency = models.CharField(max_length=3, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # Django admin access
     date_joined = models.DateTimeField(default=timezone.now)
@@ -53,6 +58,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["phone"], condition=models.Q(phone_verified=True), name="uniq_verified_phone")
+        ]
 
     def __str__(self):
         return self.email
@@ -139,3 +149,23 @@ class TOTPDevice(models.Model):
     failed_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class PhoneOTP(models.Model):
+    """A one-time SMS code, stored only as a hash. Used to verify a phone number and to sign in with it."""
+
+    class Purpose(models.TextChoices):
+        VERIFY = "verify", "Verify number"
+        LOGIN = "login", "Sign in"
+
+    phone = models.CharField(max_length=20, db_index=True, help_text="E.164, e.g. +233240000000")
+    purpose = models.CharField(max_length=10, choices=Purpose.choices)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    code_hash = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.expo/
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+e2e/test-results/
+e2e/playwright-report/

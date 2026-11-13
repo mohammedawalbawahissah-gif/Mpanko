@@ -10,7 +10,10 @@ interface AuthState {
   /** Resolves to a ticket when the account (a super admin with an authenticator) needs a 6-digit code next. */
   login: (email: string, password: string) => Promise<{ mfaTicket: string } | null>;
   completeMfa: (ticket: string, code: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
+  /** Ask for an SMS sign-in code. The reply never reveals whether the number has an account. */
+  requestPhoneCode: (phone: string) => Promise<void>;
+  loginWithPhone: (phone: string, code: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, marketing?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -79,9 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [accept],
   );
 
+  const requestPhoneCode = useCallback(async (phone: string) => {
+    await api("/auth/phone/login/", { method: "POST", body: { phone } });
+  }, []);
+
+  const loginWithPhone = useCallback(
+    async (phone: string, code: string) => {
+      accept(await api<LoginResponse>("/auth/phone/login/confirm/", { method: "POST", body: { phone, code } }));
+    },
+    [accept],
+  );
+
   const register = useCallback(
-    async (email: string, password: string, fullName: string) => {
-      await api("/auth/register/", { method: "POST", body: { email, password, full_name: fullName } });
+    async (email: string, password: string, fullName: string, marketing = false) => {
+      await api("/auth/register/", { method: "POST", body: { email, password, full_name: fullName, accept_terms: true, marketing_opt_in: marketing } });
       await login(email, password);
     },
     [login],
@@ -100,7 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, ready, login, completeMfa, register, logout, reload }), [user, ready, login, completeMfa, register, logout, reload]);
+  const value = useMemo(
+    () => ({ user, ready, login, completeMfa, requestPhoneCode, loginWithPhone, register, logout, reload }),
+    [user, ready, login, completeMfa, requestPhoneCode, loginWithPhone, register, logout, reload],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -116,11 +133,18 @@ interface RatesResponse {
   base: string;
   rates: Record<string, string>;
   currencies: string[];
+  names?: Record<string, string>;
+  chargeable?: string[];
 }
 
 interface CurrencyState {
   currency: string;
   currencies: string[];
+  names: Record<string, string>;
+  /** The currency we actually charge in: the shopper's choice if a payment method supports it, else the store currency. */
+  payCurrency: string;
+  /** Convert between any two currencies we hold rates for. */
+  convert: (amount: string | number, from: string, to: string) => number;
   setCurrency: (c: string) => void;
   /** Convert an amount quoted in `from` into the shopper's currency and format it. */
   money: (amount: string | number, from?: string) => string;
@@ -175,6 +199,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return {
       currency,
       currencies: rates.currencies,
+      names: rates.names ?? {},
+      payCurrency: (rates.chargeable ?? [rates.base]).includes(currency) ? currency : rates.base,
+      convert: (amount, from, to) => {
+        const fromRate = rate(from);
+        const toRate = rate(to);
+        const n = Number(amount);
+        return isFinite(fromRate) && isFinite(toRate) ? (n / fromRate) * toRate : n;
+      },
       setCurrency,
       isBase: currency === rates.base,
       toNumber: (amount, from = rates.base) => {

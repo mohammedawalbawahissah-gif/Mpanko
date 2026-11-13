@@ -1,3 +1,5 @@
+import { useSeo } from "./seo";
+import { useT } from "./i18n";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, type Page } from "./api";
@@ -29,6 +31,7 @@ function Loom({ categories }: { categories: Category[] }) {
 }
 
 export function Home() {
+  const { t } = useT();
   const cats = useAsync(() => api<Category[]>("/categories/"), []);
   const products = useAsync(() => api<Page<Product>>("/products/?ordering=-created_at"), []);
   return (
@@ -39,7 +42,7 @@ export function Home() {
             <h1 id="hero-title">Rooted in Africa. Made for the World.</h1>
             <p>Hand-woven textiles, shea, baskets and fashion from African makers, delivered to your door with tracking.</p>
             <div className="hero-actions">
-              <Link to="/shop" className="btn">Shop the collection</Link>
+              <Link to="/shop" className="btn">{t("home.shopCollection")}</Link>
             </div>
           </div>
           <Loom categories={cats.data ?? []} />
@@ -85,6 +88,7 @@ const SORTS = [
 ];
 
 export function Shop() {
+  useSeo("Shop African-made products", "Textiles, beauty, home and fashion made by African makers, shipped worldwide with tracking.");
   const [params, setParams] = useSearchParams();
   const category = params.get("category") ?? "";
   const search = params.get("q") ?? "";
@@ -197,6 +201,7 @@ export function ProductPage() {
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [adding, setAdding] = useState(false);
 
+  useSeo(product?.name, product?.description);
   const variants = useMemo(() => product?.variants.filter((v) => v.is_active) ?? [], [product]);
   useEffect(() => {
     if (!variants.length) return;
@@ -299,6 +304,7 @@ export function countryName(code: string): string {
 /* -------------------------------------------------------------------- bag */
 
 export function Bag() {
+  const { t } = useT();
   const { lines, setQuantity, remove } = useCart();
   const { toNumber, money, currency, exact } = useCurrency();
   const { user } = useAuth();
@@ -317,9 +323,9 @@ export function Bag() {
   if (lines.length === 0) {
     return (
       <div className="wrap page empty">
-        <h1>Your bag is empty</h1>
+        <h1>{t("bag.empty")}</h1>
         <p className="muted">Find something made with care and it will wait for you here.</p>
-        <Link to="/shop" className="btn">Browse the shop</Link>
+        <Link to="/shop" className="btn">{t("common.browse")}</Link>
       </div>
     );
   }
@@ -327,7 +333,7 @@ export function Bag() {
 
   return (
     <div className="wrap page">
-      <h1>Your bag</h1>
+      <h1>{t("bag.title")}</h1>
       {error && <Alert>{error}</Alert>}
       <div className="bag">
         <div>

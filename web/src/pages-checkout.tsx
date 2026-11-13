@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, ApiError, idempotencyKey, type Page } from "./api";
+import { api, ApiError, downloadFile, idempotencyKey, type Page } from "./api";
 import { AddressForm } from "./address";
-import { Alert, Loading, StatusPill, statusLabel, useAsync } from "./components";
+import { Alert, Field, Loading, StatusPill, statusLabel, useAsync } from "./components";
 import { useCart, useCurrency } from "./context";
+import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
-import type { Address, Order, OrderSummary, PaymentMethod, ShippingService } from "./types";
+import { OrderReturns } from "./pages-help";
+import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxEstimate } from "./types";
 
 interface Attempt {
   reference: string;
@@ -16,8 +18,10 @@ interface Attempt {
 /* --------------------------------------------------------------- checkout */
 
 export function Checkout() {
+  const { t } = useT();
   const { lines } = useCart();
-  const { currency, toNumber, exact, money } = useCurrency();
+  const { currency: shown, payCurrency: currency, convert, exact, money } = useCurrency();
+  const toNumber = (amount: string | number, from: string) => convert(amount, from, currency);
   const navigate = useNavigate();
   const addresses = useAsync(() => api<Page<Address>>("/auth/addresses/"), []);
   const [addressId, setAddressId] = useState<number | null>(null);
@@ -27,10 +31,17 @@ export function Checkout() {
   const [serviceCode, setServiceCode] = useState("");
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [provider, setProvider] = useState("");
+  const [terms, setTerms] = useState(false);
+  const [duties, setDuties] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: string; free_shipping: boolean } | null>(null);
+  const [couponError, setCouponError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<Order | null>(null);
   const key = useRef(idempotencyKey());
+  const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
 
   const list = addresses.data?.results ?? [];
   useEffect(() => {
@@ -38,7 +49,7 @@ export function Checkout() {
   }, [list, addressId]);
 
   const address = list.find((a) => a.id === addressId);
-  const slugs = lines.map((l) => l.slug).filter(Boolean).join(",");
+  const slugs = lines.filter((l) => l.slug).map((l) => `${l.slug}:${l.quantity}`).join(",");
 
   // Shipping options depend on the destination (and on any product that cannot go there).
   useEffect(() => {
@@ -46,7 +57,7 @@ export function Checkout() {
     let cancelled = false;
     setServices(null);
     setServiceCode("");
-    api<{ services: ShippingService[]; restricted_products: string[] }>(`/shipping/quote/?country=${address.country}&products=${slugs}`)
+    api<{ services: ShippingService[]; restricted_products: string[] }>(`/shipping/quote/?country=${address.country}&city=${encodeURIComponent(address.city)}&postal_code=${encodeURIComponent(address.postal_code)}&products=${slugs}`)
       .then((r) => {
         if (cancelled) return;
         setServices(r.services);
@@ -71,7 +82,12 @@ export function Checkout() {
   // A changed choice is a different order: use a fresh idempotency key.
   useEffect(() => {
     key.current = idempotencyKey();
-  }, [addressId, serviceCode, currency]);
+  }, [addressId, serviceCode, currency, coupon]);
+
+  // A code was checked against one currency; check again if the charge currency changes.
+  useEffect(() => {
+    setCoupon(null);
+  }, [currency]);
 
   if (lines.length === 0 && !order) {
     return (
@@ -84,7 +100,19 @@ export function Checkout() {
 
   const service = services?.find((s) => s.service_code === serviceCode);
   const itemsTotal = lines.reduce((sum, l) => sum + toNumber(l.unitPrice, l.currency) * l.quantity, 0);
-  const shippingTotal = service ? toNumber(service.price, service.currency) : 0;
+  const shippingTotal = service && !coupon?.free_shipping ? toNumber(service.price, service.currency) : 0;
+  const discount = coupon ? Number(coupon.discount) : 0;
+
+  const applyCoupon = async () => {
+    setCouponError("");
+    try {
+      const r = await api<{ code: string; discount: string; free_shipping: boolean }>("/coupons/check/", { method: "POST", body: { code: couponInput, currency } });
+      setCoupon(r);
+    } catch (e) {
+      setCoupon(null);
+      setCouponError(e instanceof ApiError ? (e.fields().code || e.message) : "Couldn't check that code.");
+    }
+  };
 
   const startPayment = async (o: Order) => {
     const attempt = await api<Attempt>("/payments/initiate/", {
@@ -104,7 +132,10 @@ export function Checkout() {
         order ??
         (await api<Order>("/checkout/", {
           method: "POST",
-          body: { address_id: address.id, shipping_service: service.service_code, currency },
+          body: {
+            address_id: address.id, shipping_service: service.service_code, currency,
+            accept_terms: terms, duties_acknowledged: duties, delivery_notes: notes, ...(coupon ? { coupon_code: coupon.code } : {}),
+          },
           headers: { "Idempotency-Key": key.current },
         }));
       setOrder(o);
@@ -112,22 +143,44 @@ export function Checkout() {
     } catch (e) {
       if (e instanceof ApiError) {
         const f = e.fields();
-        setError(f.cart || f.address || f.shipping_service || f.currency || e.message);
+        setError(f.cart || f.coupon_code || f.address || f.shipping_service || f.currency || f.accept_terms || f.duties_acknowledged || f.phone || e.message);
       } else setError("Something went wrong. Your card was not charged. Try again.");
       setPlacing(false);
     }
   };
 
-  const canPlace = !!address && !!service && !!provider && restricted.length === 0 && !placing;
+  const international = !!address && address.country !== "GH";
+    // Tax and likely import duties for this basket, from the same rules the server applies at checkout.
+  const goodsForTax = Math.max(0, itemsTotal - (coupon && !coupon.free_shipping ? discount : 0));
+  const taxCountry = address?.country;
+  useEffect(() => {
+    if (!taxCountry || !service) {
+      setEstimate(null);
+      return;
+    }
+    let cancelled = false;
+    api<TaxEstimate>(`/tax/estimate/?country=${taxCountry}&currency=${currency}&goods=${goodsForTax.toFixed(2)}&shipping=${shippingTotal.toFixed(2)}`)
+      .then((r) => !cancelled && setEstimate(r))
+      .catch(() => !cancelled && setEstimate(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [taxCountry, service, currency, goodsForTax, shippingTotal]);
+  const tax = estimate ? Number(estimate.tax) : 0;
+  const dutyTotal = estimate?.duties ? Number(estimate.duties.total) : 0;
+  const prepaid = estimate?.duties?.mode === "prepaid";
+  const grandTotal = itemsTotal - discount + shippingTotal + tax + (prepaid ? dutyTotal : 0);
+
+const canPlace = !!address && !!service && !!provider && restricted.length === 0 && !placing && terms && (!international || duties);
 
   return (
     <div className="wrap page">
-      <h1>Checkout</h1>
+      <h1>{t("checkout.title")}</h1>
       {error && <Alert>{error}</Alert>}
       <div className="bag">
         <div style={{ display: "grid", gap: "2.5rem" }}>
           <section aria-labelledby="ship-to">
-            <h2 id="ship-to">Where should we send it?</h2>
+            <h2 id="ship-to">{t("checkout.where")}</h2>
             {addresses.loading && <Loading what="Loading addresses" />}
             {list.length > 0 && !adding && (
               <div className="choice-list" role="radiogroup" aria-labelledby="ship-to">
@@ -158,7 +211,7 @@ export function Checkout() {
 
           {address && (
             <section aria-labelledby="delivery">
-              <h2 id="delivery">Delivery</h2>
+              <h2 id="delivery">{t("checkout.delivery")}</h2>
               {services === null && <Loading what="Finding delivery options" />}
               {restricted.length > 0 && (
                 <Alert>
@@ -183,9 +236,14 @@ export function Checkout() {
           )}
 
           <section aria-labelledby="pay">
-            <h2 id="pay">Payment</h2>
+            <h2 id="pay">{t("checkout.payment")}</h2>
+            {shown !== currency && (
+              <Alert kind="info">
+                You're viewing prices in {shown}, but we take payment in {currency}. The {currency} amounts below are what you'll pay.
+              </Alert>
+            )}
             {methods.length === 0 ? (
-              <Alert kind="info">No payment method is available in {currency}. Switch currency at the top of the page.</Alert>
+              <Alert kind="info">No payment method is available in {currency}. Try again shortly or contact us.</Alert>
             ) : (
               <div className="choice-list" role="radiogroup" aria-labelledby="pay">
                 {methods.map((m) => (
@@ -203,7 +261,7 @@ export function Checkout() {
         </div>
 
         <aside className="summary" aria-label="Order summary">
-          <h2 style={{ fontSize: "1.2rem" }}>Order summary</h2>
+          <h2 style={{ fontSize: "1.2rem" }}>{t("checkout.summary")}</h2>
           {lines.map((l) => (
             <div key={l.key} className="small" style={{ display: "flex", justifyContent: "space-between", gap: "1rem", marginBottom: "0.4rem" }}>
               <span>{l.quantity} × {l.name}</span>
@@ -212,9 +270,43 @@ export function Checkout() {
           ))}
           <dl style={{ marginTop: "1rem" }}>
             <dt>Items</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
-            <dt>Delivery</dt><dd>{service ? exact(shippingTotal.toFixed(2), currency) : "—"}</dd>
-            <dt className="total">Total</dt><dd className="total">{service ? exact((itemsTotal + shippingTotal).toFixed(2), currency) : "—"}</dd>
+            {coupon && !coupon.free_shipping && <><dt>Code {coupon.code}</dt><dd>−{exact(discount.toFixed(2), currency)}</dd></>}
+            <dt>Delivery</dt><dd>{service ? (coupon?.free_shipping ? `Free (${coupon.code})` : exact(shippingTotal.toFixed(2), currency)) : "—"}</dd>
+            {tax > 0 && <><dt>Tax</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
+            {prepaid && dutyTotal > 0 && <><dt>{t("checkout.dutiesTitle")}</dt><dd>{exact(dutyTotal.toFixed(2), currency)}</dd></>}
+            <dt className="total">Total</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
           </dl>
+          <div className="form" style={{ marginTop: "1rem" }}>
+            <Field id="coupon" label="Discount code (optional)" error={couponError}>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input id="coupon" className="input" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} disabled={!!order} />
+                <button type="button" className="btn quiet" onClick={applyCoupon} disabled={!couponInput.trim() || !!order}>Apply</button>
+              </div>
+            </Field>
+            {coupon && <p className="small">{coupon.free_shipping ? "Free delivery applied." : "Discount applied."} <button type="button" className="link-button" onClick={() => { setCoupon(null); setCouponInput(""); }}>Remove</button></p>}
+            <Field id="notes" label="Delivery notes (optional)">
+              <input id="notes" className="input" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Gate code, landmark, best time" />
+            </Field>
+            {international && estimate?.duties && (
+              <p className="small" role="note">
+                <strong>{t("checkout.dutiesTitle")}.</strong>{" "}
+                {estimate.duties.below_threshold
+                  ? t("checkout.dutiesBelow", { country: countryName(estimate.duties.country) })
+                  : prepaid
+                    ? t("checkout.dutiesPrepaid", { amount: exact(dutyTotal.toFixed(2), currency) })
+                    : t("checkout.dutiesEstimate", { amount: exact(dutyTotal.toFixed(2), currency) })}
+                {estimate.duties.note ? ` ${estimate.duties.note}` : ""}
+              </p>
+            )}
+            {international && (
+              <label className="small">
+                <input type="checkbox" checked={duties} onChange={(e) => setDuties(e.target.checked)} /> I understand I may have to pay import duties and taxes in my country.
+              </label>
+            )}
+            <label className="small">
+              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> I accept the terms of sale and the returns policy.
+            </label>
+          </div>
           <button className="btn block" disabled={!canPlace} onClick={place}>
             {placing ? "Taking you to payment…" : "Pay now"}
           </button>
@@ -307,12 +399,13 @@ export function CheckoutComplete() {
 /* ----------------------------------------------------------------- orders */
 
 export function Orders() {
+  const { t } = useT();
   const { currency, exact } = useCurrency();
   const { data, error, loading } = useAsync(() => api<Page<OrderSummary>>("/orders/"), []);
   void currency;
   return (
     <div className="wrap page">
-      <h1>Your orders</h1>
+      <h1>{t("orders.title")}</h1>
       {loading && <Loading what="Loading orders" />}
       {error && <Alert>{error}</Alert>}
       {data && data.results.length === 0 && (
@@ -418,6 +511,7 @@ export function OrderDetail() {
                 </tr>
               ))}
               <tr><td className="muted">Delivery ({order.shipping_service.service_name ?? "standard"})</td><td style={{ textAlign: "right" }}>{exact(order.shipping_total, order.currency)}</td></tr>
+              {Number(order.discount_total ?? 0) > 0 && <tr><td className="muted">Code {order.coupon_code}</td><td style={{ textAlign: "right" }}>−{exact(order.discount_total ?? "0", order.currency)}</td></tr>}
               {Number(order.tax_total) > 0 && <tr><td className="muted">Tax</td><td style={{ textAlign: "right" }}>{exact(order.tax_total, order.currency)}</td></tr>}
               <tr><th scope="row">Total</th><td style={{ textAlign: "right", fontWeight: 700 }}>{exact(order.grand_total, order.currency)}</td></tr>
             </tbody>
@@ -458,6 +552,11 @@ export function OrderDetail() {
           </ol>
         </section>
       </div>
+      {order.status !== "pending_payment" && order.status !== "cancelled" && (
+        <p style={{ marginTop: "1.5rem" }}><button className="btn quiet" onClick={() => downloadFile(`/orders/${order.number}/invoice/`, `invoice-${order.number}.pdf`).catch(() => setActionError("Couldn't download the invoice. Try again shortly."))}>Download invoice (PDF)</button></p>
+      )}
+      <OrderReturns orderNumber={order.number} status={order.status} />
+      {order.status !== "pending_payment" && <p className="small" style={{ marginTop: "1.5rem" }}>Need help with this order? <Link to={`/support/new?order=${order.number}`}>Contact us</Link>.</p>}
     </div>
   );
 }

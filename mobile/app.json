@@ -5,8 +5,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.wolbiroyal.mpanko" },
-    "android": { "package": "com.wolbiroyal.mpanko" },
-    "extra": { "apiUrl": "http://10.0.2.2:8000/api/v1" }
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.wolbiroyal.mpanko"
+    },
+    "android": {
+      "package": "com.wolbiroyal.mpanko"
+    },
+    "extra": {
+      "apiUrl": "http://10.0.2.2:8000/api/v1"
+    },
+    "scheme": "mpanko",
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications"
+    ]
   }
 }

@@ -1,6 +1,8 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { Component, useEffect, useState, type CSSProperties, type ErrorInfo, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, useCart, useCurrency } from "./context";
+import { LanguageSelect, useT } from "./i18n";
+import { reportError } from "./report";
 import type { Product } from "./types";
 
 /* ---------------------------------------------------------------- weave patterns */
@@ -72,7 +74,8 @@ function Mark() {
 export function Layout() {
   const { user, logout } = useAuth();
   const { count } = useCart();
-  const { currency, currencies, setCurrency } = useCurrency();
+  const { currency, currencies, names, setCurrency } = useCurrency();
+  const { t } = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -82,7 +85,7 @@ export function Layout() {
 
   return (
     <>
-      <a className="skip" href="#main">Skip to content</a>
+      <a className="skip" href="#main">{t("nav.skip")}</a>
       <header className="site-header">
         <div className="wrap">
           <Link to="/" className="logo" aria-label="Mpanko home">
@@ -90,23 +93,25 @@ export function Layout() {
             Mpanko
           </Link>
           <nav className="nav" aria-label="Main">
-            <NavLink to="/shop">Shop</NavLink>
-            {user && <NavLink to="/orders">My orders</NavLink>}
+            <NavLink to="/shop">{t("nav.shop")}</NavLink>
+            {user && <NavLink to="/orders">{t("nav.orders")}</NavLink>}
+            {user && <NavLink to="/support">{t("nav.help")}</NavLink>}
           </nav>
           <div className="header-tools">
             {currencies.length > 1 && (
               <label>
-                <span className="sr-only">Currency</span>
+                <span className="sr-only">{t("nav.currency")}</span>
                 <select className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                   {currencies.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{names[c] ? `${c} · ${names[c]}` : c}</option>
                   ))}
                 </select>
               </label>
             )}
+            <LanguageSelect />
             {user ? (
               <>
-                <Link to="/account">Account</Link>
+                <Link to="/account">{t("nav.account")}</Link>
                 <button
                   className="link-button"
                   onClick={async () => {
@@ -114,14 +119,14 @@ export function Layout() {
                     navigate("/");
                   }}
                 >
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </>
             ) : (
-              <Link to="/login">Sign in</Link>
+              <Link to="/login">{t("nav.signIn")}</Link>
             )}
             <Link to="/bag" className="bag-link" aria-label={`Shopping bag, ${count} items`}>
-              Bag <span className="bag-count">{count}</span>
+              {t("nav.bag")} <span className="bag-count">{count}</span>
             </Link>
           </div>
         </div>
@@ -134,20 +139,29 @@ export function Layout() {
         <div className="wrap">
           <div>
             <p className="tag">Rooted in Africa. Made for the World.</p>
-            <p className="small">Every product is made by African makers and shipped with tracking.</p>
+            <p className="small">{t("footer.sub")}</p>
           </div>
           <div>
-            <h3>Shop</h3>
+            <h3>{t("footer.shop")}</h3>
             <ul>
-              <li><Link to="/shop">All products</Link></li>
-              <li><Link to="/bag">Your bag</Link></li>
+              <li><Link to="/shop">{t("footer.allProducts")}</Link></li>
+              <li><Link to="/bag">{t("footer.yourBag")}</Link></li>
             </ul>
           </div>
           <div>
-            <h3>Your account</h3>
+            <h3>{t("footer.account")}</h3>
             <ul>
-              <li><Link to="/account">Profile and addresses</Link></li>
-              <li><Link to="/orders">Track an order</Link></li>
+              <li><Link to="/account">{t("footer.profile")}</Link></li>
+              <li><Link to="/orders">{t("footer.track")}</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h3>{t("footer.policies")}</h3>
+            <ul>
+              <li><Link to="/privacy">{t("footer.privacy")}</Link></li>
+              <li><Link to="/terms">{t("footer.terms")}</Link></li>
+              <li><Link to="/returns-policy">{t("footer.returns")}</Link></li>
+              <li><Link to="/cookies">{t("footer.cookies")}</Link></li>
             </ul>
           </div>
         </div>
@@ -156,16 +170,39 @@ export function Layout() {
   );
 }
 
+/* ------------------------------------------------------------------ crash screen */
+
+export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    reportError(error, info.componentStack ?? "");
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="wrap page empty" role="alert">
+        <h1>Something went wrong on our side</h1>
+        <p>We have been told about it. Reload the page to carry on; your bag is saved.</p>
+        <button className="btn" onClick={() => window.location.reload()}>Reload the page</button>
+      </div>
+    );
+  }
+}
+
 /* ------------------------------------------------------------------ small pieces */
 
 export function ProductTile({ product }: { product: Product }) {
   const { money } = useCurrency();
+  const { t } = useT();
   const inStock = product.variants.some((v) => v.in_stock && v.is_active);
   return (
     <Link to={`/shop/${product.slug}`} className="tile">
       <div className="art">
         <ProductArt product={product} />
-        {!inStock && <span className="badge-out">Sold out</span>}
+        {!inStock && <span className="badge-out">{t("common.soldOut")}</span>}
       </div>
       <span className="name">{product.name}</span>
       {product.maker && <span className="maker">{product.maker}</span>}

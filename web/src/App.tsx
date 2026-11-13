@@ -1,7 +1,9 @@
+import { CookieNotice, Legal } from "./pages-legal";
 import { Route, Routes, Link } from "react-router-dom";
 import { Layout, RequireAuth } from "./components";
 import { Bag, Home, ProductPage, Shop } from "./pages-shop";
 import { Checkout, CheckoutComplete, OrderDetail, Orders } from "./pages-checkout";
+import { ReturnForm, SupportList, SupportNew, SupportThread } from "./pages-help";
 import { Account, Forgot, Login, Register, Reset, VerifyEmail } from "./pages-account";
 
 function NotFound() {
@@ -15,6 +17,7 @@ function NotFound() {
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
@@ -30,9 +33,19 @@ export default function App() {
         <Route path="checkout/complete" element={<RequireAuth><CheckoutComplete /></RequireAuth>} />
         <Route path="orders" element={<RequireAuth><Orders /></RequireAuth>} />
         <Route path="orders/:number" element={<RequireAuth><OrderDetail /></RequireAuth>} />
+        <Route path="orders/:number/return" element={<RequireAuth><ReturnForm /></RequireAuth>} />
+        <Route path="support" element={<RequireAuth><SupportList /></RequireAuth>} />
+        <Route path="support/new" element={<RequireAuth><SupportNew /></RequireAuth>} />
+        <Route path="support/:number" element={<RequireAuth><SupportThread /></RequireAuth>} />
         <Route path="account" element={<RequireAuth><Account /></RequireAuth>} />
+        <Route path="privacy" element={<Legal slug="privacy" />} />
+        <Route path="terms" element={<Legal slug="terms" />} />
+        <Route path="returns-policy" element={<Legal slug="returns" />} />
+        <Route path="cookies" element={<Legal slug="cookies" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    <CookieNotice />
+    </>
   );
 }

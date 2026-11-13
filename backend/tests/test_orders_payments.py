@@ -27,7 +27,7 @@ def test_checkout_totals_are_computed_by_server(customer, address, product):
     c = client_for(customer)
     c.post("/api/v1/cart/items/", {"variant": variant.id, "quantity": 2}, format="json")
     # Client tries to smuggle in its own prices — these fields are ignored.
-    r = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "local-standard", "currency": "USD", "grand_total": "1.00", "unit_price": "0.01"}, format="json", HTTP_IDEMPOTENCY_KEY="k1")
+    r = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "local-standard", "currency": "USD", "grand_total": "1.00", "unit_price": "0.01", "accept_terms": True}, format="json", HTTP_IDEMPOTENCY_KEY="k1")
     assert r.status_code == 201
     assert r.data["subtotal"] == "100.00"          # 2 x 50.00
     assert r.data["shipping_total"] == "10.00"      # 30.00 flat / 3 for Ghana-local
@@ -46,7 +46,7 @@ def test_checkout_in_ghana_cedis_converts_with_recorded_rate(customer, address, 
 def test_repeated_checkout_creates_one_order(customer, address, product):
     _, variant = product
     c, first = place_order(customer, variant, address, key="same")
-    second = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "intl-standard", "currency": "USD"}, format="json", HTTP_IDEMPOTENCY_KEY="same")
+    second = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "intl-standard", "currency": "USD", "accept_terms": True, "duties_acknowledged": True}, format="json", HTTP_IDEMPOTENCY_KEY="same")
     assert first.status_code == 201 and second.status_code == 200
     assert first.data["number"] == second.data["number"]
     assert Order.objects.count() == 1
@@ -56,7 +56,7 @@ def test_repeated_checkout_creates_one_order(customer, address, product):
 def test_checkout_requires_idempotency_key_and_cart(customer, address):
     c = client_for(customer)
     assert c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "intl-standard"}, format="json").status_code == 400
-    r = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "intl-standard"}, format="json", HTTP_IDEMPOTENCY_KEY="k")
+    r = c.post("/api/v1/checkout/", {"address_id": address.id, "shipping_service": "intl-standard", "accept_terms": True, "duties_acknowledged": True}, format="json", HTTP_IDEMPOTENCY_KEY="k")
     assert r.status_code == 400 and "cart" in r.data
 
 

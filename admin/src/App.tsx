@@ -4,17 +4,32 @@ import { Login } from "./login";
 import { Loading } from "./ui";
 import { Dashboard, OrderDetail, Orders, ShipmentDetail, Shipments } from "./pages-ops";
 import { Products, Stock } from "./pages-catalog";
-import { Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
+import { Emails } from "./pages-emails";
+import { ShippingRules } from "./pages-shipping";
+import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Returns, StaffPage, Support, SupportDetail } from "./pages-store";
+import { Chargebacks, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
+import { TaxAndDuties } from "./pages-tax";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
 const NAV: { to: string; name: string; roles: string[] }[] = [
   { to: "/", name: "Dashboard", roles: ALL_STAFF },
   { to: "/orders", name: "Orders", roles: ALL_STAFF },
   { to: "/shipments", name: "Shipments", roles: ["super_admin", "store_admin", "fulfillment", "carrier"] },
+  { to: "/shipping-rules", name: "Shipping rules", roles: ["super_admin", "store_admin", "fulfillment"] },
+  { to: "/returns", name: "Returns", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"] },
+  { to: "/support", name: "Support", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"] },
+  { to: "/customers", name: "Customers", roles: ["super_admin", "store_admin", "support"] },
+  { to: "/coupons", name: "Promotions", roles: ["super_admin", "store_admin"] },
+  { to: "/pages", name: "Policy pages", roles: ["super_admin", "store_admin"] },
   { to: "/products", name: "Products", roles: ["super_admin", "store_admin"] },
   { to: "/stock", name: "Stock", roles: ["super_admin", "store_admin", "fulfillment"] },
   { to: "/reports", name: "Reports", roles: ["super_admin", "store_admin", "finance", "fulfillment"] },
+  { to: "/emails", name: "Emails", roles: ["super_admin", "store_admin"] },
   { to: "/reconciliation", name: "Reconciliation", roles: ["super_admin", "store_admin", "finance"] },
+  { to: "/chargebacks", name: "Chargebacks", roles: ["super_admin", "store_admin", "finance"] },
+  { to: "/tax", name: "Tax and duties", roles: ["super_admin", "store_admin", "finance"] },
+  { to: "/staff", name: "Staff", roles: ["super_admin", "store_admin"] },
+  { to: "/audit", name: "Activity log", roles: ["super_admin", "store_admin"] },
 ];
 
 function Shell() {
@@ -66,11 +81,25 @@ export default function App() {
             <Route index element={<Home />} />
             <Route path="orders" element={route("/orders", <Orders />)} />
             <Route path="orders/:number" element={route("/orders", <OrderDetail />)} />
+            <Route path="returns" element={route("/returns", <Returns />)} />
+            <Route path="returns/:number" element={route("/returns", <ReturnDetail />)} />
+            <Route path="support" element={route("/support", <Support />)} />
+            <Route path="support/:number" element={route("/support", <SupportDetail />)} />
+            <Route path="customers" element={route("/customers", <Customers />)} />
+            <Route path="customers/:id" element={route("/customers", <CustomerDetail />)} />
+            <Route path="coupons" element={route("/coupons", <Coupons />)} />
+            <Route path="pages" element={route("/pages", <Pages />)} />
+            <Route path="staff" element={route("/staff", <StaffPage />)} />
+            <Route path="audit" element={route("/audit", <AuditLog />)} />
             <Route path="shipments" element={route("/shipments", <Shipments />)} />
             <Route path="shipments/:id" element={route("/shipments", <ShipmentDetail />)} />
+            <Route path="shipping-rules" element={route("/shipping-rules", <ShippingRules />)} />
             <Route path="products" element={route("/products", <Products />)} />
             <Route path="stock" element={route("/stock", <Stock />)} />
             <Route path="reports" element={route("/reports", <Reports />)} />
+            <Route path="emails" element={route("/emails", <Emails />)} />
+            <Route path="chargebacks" element={route("/chargebacks", <Chargebacks />)} />
+            <Route path="tax" element={route("/tax", <TaxAndDuties />)} />
             <Route path="reconciliation" element={route("/reconciliation", <Reconciliation />)} />
             <Route path="reconciliation/:id" element={route("/reconciliation", <RunPage />)} />
             <Route path="*" element={<p>That page doesn't exist.</p>} />

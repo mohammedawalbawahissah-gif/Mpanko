@@ -1,21 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useNavigation, useFocusEffect, type NavigationProp } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback } from "react";
 import { api, ApiError, idempotencyKey, type Page } from "./api";
 import { useAuth } from "./auth";
+import { fieldHints, type AddressRules } from "./core/addressRules";
+import { usePrefs } from "./prefs";
 import { color } from "./theme";
-import type { Address, Order, OrderSummary, PaymentMethod, ShippingService } from "./types";
+import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxEstimate } from "./types";
+import { OrderReturns } from "./screens-help";
 import { Busy, Button, Input, Notice, Pill, s, statusLabel, useAsync } from "./ui";
 
-export type RootParams = { Tabs: undefined; Checkout: undefined; OrderDetail: { number: string } };
+export type RootParams = {
+  Tabs: undefined; Checkout: undefined; OrderDetail: { number: string }; Return: { number: string };
+  Profile: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
+};
 type Nav = NavigationProp<RootParams>;
 
 /* ------------------------------------------------------------------- bag */
 
 export function BagScreen() {
   const { user, cart, setQuantity, removeItem, refreshCart } = useAuth();
+  const { money } = usePrefs();
   const nav = useNavigation<Nav>();
   const [err, setErr] = useState("");
   useFocusEffect(useCallback(() => { if (user) refreshCart(); }, [user, refreshCart]));
@@ -41,7 +48,7 @@ export function BagScreen() {
       {cart.map((i) => (
         <View key={i.id} style={[s.card, s.cardPad]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{i.product_name}</Text>
-          <Text style={s.muted}>{i.currency} {i.unit_price} each</Text>
+          <Text style={s.muted}>{money(i.unit_price, i.currency)} each</Text>
           <View style={[s.row, { marginTop: 8 }]}>
             <View style={[s.row, { gap: 8 }]}>
               <Button title="−" kind="quiet" onPress={() => guard(() => (i.quantity > 1 ? setQuantity(i.id, i.quantity - 1) : removeItem(i.id)))} />
@@ -52,7 +59,7 @@ export function BagScreen() {
           </View>
         </View>
       ))}
-      {Object.entries(byCurrency).map(([c, t]) => <Text key={c} style={{ fontWeight: "700", fontSize: 18, color: color.ink, marginVertical: 4 }}>Items: {c} {t.toFixed(2)}</Text>)}
+      {Object.entries(byCurrency).map(([c, total]) => <Text key={c} style={{ fontWeight: "700", fontSize: 18, color: color.ink, marginVertical: 4 }}>Items: {money(total, c)}</Text>)}
       <Text style={[s.muted, { marginBottom: 16 }]}>Delivery is added at checkout.</Text>
       <Button title="Check out" onPress={() => nav.navigate("Checkout")} />
     </ScrollView>
@@ -62,7 +69,7 @@ export function BagScreen() {
 /* -------------------------------------------------------------- checkout */
 
 interface Quote { services: ShippingService[]; restricted_products: string[] }
-interface Rates { base: string; rates: Record<string, string> }
+interface Rates { base: string; rates: Record<string, string>; chargeable?: string[] }
 interface Attempt { reference: string; authorization_url: string; status: string }
 
 export function CheckoutScreen() {
@@ -80,6 +87,13 @@ export function CheckoutScreen() {
   const [rates, setRates] = useState<Rates | null>(null);
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
+  const [terms, setTerms] = useState(false);
+  const [duties, setDuties] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: string; free_shipping: boolean } | null>(null);
+  const [codeError, setCodeError] = useState("");
+  const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
   const orderRef = useRef<Order | null>(null);
   const keyRef = useRef(idempotencyKey());
 
@@ -87,7 +101,7 @@ export function CheckoutScreen() {
     if (addressId === null && list.length) setAddressId((list.find((a) => a.is_default) ?? list[0]).id);
   }, [list, addressId]);
   const address = list.find((a) => a.id === addressId);
-  const slugs = cart.map((i) => i.product_slug).join(",");
+  const slugs = cart.map((i) => `${i.product_slug}:${i.quantity}`).join(",");
 
   useEffect(() => {
     api<Rates>("/currency/rates/").then(setRates).catch(() => setRates(null));
@@ -98,7 +112,7 @@ export function CheckoutScreen() {
     let cancelled = false;
     setQuote(null);
     setService("");
-    api<{ services: ShippingService[]; restricted_products: string[] }>(`/shipping/quote/?country=${address.country}&products=${encodeURIComponent(slugs)}`)
+    api<{ services: ShippingService[]; restricted_products: string[] }>(`/shipping/quote/?country=${address.country}&city=${encodeURIComponent(address.city)}&postal_code=${encodeURIComponent(address.postal_code)}&products=${encodeURIComponent(slugs)}`)
       .then((r) => {
         if (cancelled) return;
         setQuote(r);
@@ -126,8 +140,43 @@ export function CheckoutScreen() {
 
   const svc = quote?.services.find((x) => x.service_code === service);
   const items = cart.reduce((sum, i) => sum + convert(i.unit_price, i.currency) * i.quantity, 0);
-  const ship = svc ? convert(svc.price, svc.currency) : 0;
+  const ship = svc && !coupon?.free_shipping ? convert(svc.price, svc.currency) : 0;
+  const discount = coupon ? Number(coupon.discount) : 0;
   const restricted = quote?.restricted_products ?? [];
+
+  // Tax and likely import duties, from the same rules the server applies when the order is placed.
+  const goodsForTax = Math.max(0, items - (coupon && !coupon.free_shipping ? discount : 0));
+  const taxCountry = address?.country;
+  useEffect(() => {
+    if (!taxCountry || !svc) {
+      setEstimate(null);
+      return;
+    }
+    let cancelled = false;
+    api<TaxEstimate>(`/tax/estimate/?country=${taxCountry}&currency=${currency}&goods=${goodsForTax.toFixed(2)}&shipping=${ship.toFixed(2)}`)
+      .then((r) => !cancelled && setEstimate(r))
+      .catch(() => !cancelled && setEstimate(null));
+    return () => { cancelled = true; };
+  }, [taxCountry, svc?.service_code, currency, goodsForTax, ship]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tax = estimate ? Number(estimate.tax) : 0;
+  const dutyTotal = estimate?.duties ? Number(estimate.duties.total) : 0;
+  const prepaid = estimate?.duties?.mode === "prepaid";
+  const grandTotal = items - discount + ship + tax + (prepaid ? dutyTotal : 0);
+
+  // A code is checked for one charge currency; check again if it changes.
+  useEffect(() => {
+    setCoupon(null);
+  }, [currency]);
+
+  const applyCode = async () => {
+    setCodeError("");
+    try {
+      setCoupon(await api<{ code: string; discount: string; free_shipping: boolean }>("/coupons/check/", { method: "POST", body: { code: codeInput, currency } }));
+    } catch (e) {
+      setCoupon(null);
+      setCodeError(e instanceof ApiError ? (e.fields().code || e.message) : "Couldn't check that code.");
+    }
+  };
 
   const pay = async () => {
     if (!address || !svc || !provider) return;
@@ -136,7 +185,7 @@ export function CheckoutScreen() {
     try {
       const order = orderRef.current ?? (await api<Order>("/checkout/", {
         method: "POST",
-        body: { address_id: address.id, shipping_service: svc.service_code, currency },
+        body: { address_id: address.id, shipping_service: svc.service_code, currency, accept_terms: terms, duties_acknowledged: duties, delivery_notes: notes, ...(coupon ? { coupon_code: coupon.code } : {}) },
         headers: { "Idempotency-Key": keyRef.current },
       }));
       orderRef.current = order;
@@ -151,7 +200,7 @@ export function CheckoutScreen() {
     } catch (e) {
       if (e instanceof ApiError) {
         const f = e.fields();
-        setError(f.cart || f.address || f.shipping_service || f.currency || e.message);
+        setError(f.cart || f.coupon_code || f.address || f.shipping_service || f.currency || f.accept_terms || f.duties_acknowledged || f.phone || e.message);
       } else setError("Something went wrong. You haven't been charged. Try again.");
     } finally {
       setPlacing(false);
@@ -193,7 +242,7 @@ export function CheckoutScreen() {
 
       <Text style={s.h2}>Pay in</Text>
       <View style={[s.row, { justifyContent: "flex-start" }]}>
-        {["USD", "GHS"].map((c) => <Button key={c} title={c} kind={currency === c ? "primary" : "quiet"} onPress={() => setCurrency(c)} />)}
+        {(rates?.chargeable?.length ? rates.chargeable : ["USD", "GHS"]).map((c) => <Button key={c} title={c} kind={currency === c ? "primary" : "quiet"} onPress={() => setCurrency(c)} />)}
       </View>
       <Text style={s.h2}>Payment method</Text>
       {methods.length === 0 && <Notice kind="info">No payment method is available in {currency}. Pick another currency.</Notice>}
@@ -206,11 +255,41 @@ export function CheckoutScreen() {
 
       <View style={[s.card, s.cardPad, { marginTop: 16 }]}>
         <View style={s.row}><Text>Items</Text><Text>{currency} {items.toFixed(2)}</Text></View>
-        <View style={s.row}><Text>Delivery</Text><Text>{svc ? `${currency} ${ship.toFixed(2)}` : "—"}</Text></View>
-        <View style={s.row}><Text style={{ fontWeight: "800" }}>Total</Text><Text style={{ fontWeight: "800" }}>{svc ? `${currency} ${(items + ship).toFixed(2)}` : "—"}</Text></View>
+        {coupon && !coupon.free_shipping && <View style={s.row}><Text>Code {coupon.code}</Text><Text>−{currency} {discount.toFixed(2)}</Text></View>}
+        <View style={s.row}><Text>Delivery</Text><Text>{svc ? (coupon?.free_shipping ? `Free (${coupon.code})` : `${currency} ${ship.toFixed(2)}`) : "—"}</Text></View>
+        {tax > 0 && <View style={s.row}><Text>Tax</Text><Text>{currency} {tax.toFixed(2)}</Text></View>}
+        {prepaid && dutyTotal > 0 && <View style={s.row}><Text>Import duties and taxes</Text><Text>{currency} {dutyTotal.toFixed(2)}</Text></View>}
+        <View style={s.row}><Text style={{ fontWeight: "800" }}>Total</Text><Text style={{ fontWeight: "800" }}>{svc ? `${currency} ${grandTotal.toFixed(2)}` : "—"}</Text></View>
+        {address && address.country !== "GH" && estimate?.duties && (
+          <Text style={[s.muted, { marginTop: 8, fontSize: 13 }]}>
+            {estimate.duties.below_threshold
+              ? `Imports to ${estimate.duties.country} under the duty-free limit usually carry no duty.`
+              : prepaid
+                ? `Import duties of ${currency} ${dutyTotal.toFixed(2)} are included in the total, so nothing is collected at your door.`
+                : `You may be asked to pay about ${currency} ${dutyTotal.toFixed(2)} in import duties and taxes on delivery.`}
+            {estimate.duties.note ? ` ${estimate.duties.note}` : ""}
+          </Text>
+        )}
         <Text style={[s.muted, { marginTop: 8, fontSize: 12 }]}>The exact total is calculated on our server when you pay, at today's exchange rate. You're charged the total we confirm.</Text>
       </View>
-      <Button title={placing ? "Taking you to payment…" : "Pay now"} disabled={placing || !address || !svc || !provider || restricted.length > 0} onPress={pay} />
+      <Input label="Discount code (optional)" value={codeInput} onChangeText={setCodeInput} autoCapitalize="characters" error={codeError} />
+      <View style={[s.row, { justifyContent: "flex-start", marginBottom: 8 }]}>
+        <Button title="Apply code" kind="quiet" disabled={!codeInput.trim() || !!orderRef.current} onPress={applyCode} />
+        {coupon && <Button title="Remove" kind="quiet" onPress={() => { setCoupon(null); setCodeInput(""); }} />}
+      </View>
+      {coupon && <Notice kind="info">{coupon.free_shipping ? "Free delivery applied." : "Discount applied."}</Notice>}
+      <Input label="Delivery notes (optional)" value={notes} onChangeText={setNotes} maxLength={300} />
+      {address && address.country !== "GH" && (
+        <View style={[s.row, { marginBottom: 8 }]}>
+          <Text style={{ flex: 1, color: color.ink }}>I understand I may have to pay import duties and taxes in my country.</Text>
+          <Switch value={duties} onValueChange={setDuties} accessibilityLabel="Accept import duties and taxes" />
+        </View>
+      )}
+      <View style={[s.row, { marginBottom: 12 }]}>
+        <Text style={{ flex: 1, color: color.ink }}>I accept the terms of sale and the returns policy.</Text>
+        <Switch value={terms} onValueChange={setTerms} accessibilityLabel="Accept terms of sale" />
+      </View>
+      <Button title={placing ? "Taking you to payment…" : "Pay now"} disabled={placing || !address || !svc || !provider || restricted.length > 0 || !terms || (address.country !== "GH" && !duties)} onPress={pay} />
     </ScrollView>
   );
 }
@@ -222,6 +301,16 @@ function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => void; onC
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof BLANK) => (v: string) => setF((x) => ({ ...x, [k]: v }));
+  const [rules, setRules] = useState<AddressRules | null>(null);
+  const cc = f.country.toUpperCase();
+  useEffect(() => {
+    if (cc.length !== 2) return;
+    let cancelled = false;
+    api<AddressRules>(`/auth/address-rules/?country=${cc}`).then((r) => !cancelled && setRules(r)).catch(() => !cancelled && setRules(null));
+    return () => { cancelled = true; };
+  }, [cc]);
+  const hints = fieldHints(rules);
+  const { t } = usePrefs();
   const save = async () => {
     setBusy(true);
     setErrors({});
@@ -241,8 +330,8 @@ function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => void; onC
       <Input label="Street address" value={f.line1} onChangeText={set("line1")} error={errors.line1} />
       <Input label="Apartment or landmark (optional)" value={f.line2} onChangeText={set("line2")} error={errors.line2} />
       <Input label="Town or city" value={f.city} onChangeText={set("city")} error={errors.city} />
-      <Input label="Region or state" value={f.region} onChangeText={set("region")} error={errors.region} />
-      <Input label="Postal code" value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} />
+      <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
+      {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
       <Button title={busy ? "Saving…" : "Save address"} disabled={busy} onPress={save} />
       {onCancel && <View style={{ height: 8 }} />}
       {onCancel && <Button title="Cancel" kind="quiet" onPress={onCancel} />}
@@ -276,6 +365,7 @@ export function OrdersScreen() {
 
 export function OrderDetailScreen({ route }: { route: { params: { number: string } } }) {
   const { number } = route.params;
+  const nav = useNavigation<Nav>();
   const { data: o, error, loading, reload } = useAsync(() => api<Order>(`/orders/${number}/`), [number]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [busy, setBusy] = useState(false);
@@ -345,6 +435,8 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
           ))}
         </View>
       ))}
+      <OrderReturns orderNumber={o.number} status={o.status} />
+      {o.status !== "pending_payment" && <View style={{ marginTop: 12 }}><Button title="Contact us about this order" kind="quiet" onPress={() => nav.navigate("SupportNew", { order: o.number })} /></View>}
     </ScrollView>
   );
 }

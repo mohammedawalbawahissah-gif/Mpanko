@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, downloadCsv } from "./api";
 import { Alert, Field, Loading, Pill, errText, label, useAsync, when } from "./ui";
@@ -183,5 +183,103 @@ export function ReconciliationRun({ id }: { id: string }) {
         </table>
       </div>
     </>
+  );
+}
+
+/* ------------------------------------------------------------ chargebacks */
+
+interface DisputeRow {
+  id: number; order_number: string; payment_reference: string; status: string; category: string; amount: string; currency: string;
+  respond_by: string | null; provider_status: string; resolution: string; notes: string; opened_at: string; resolved_at: string | null;
+}
+
+const DISPUTE_STATUS: Record<string, string> = {
+  open: "Evidence needed", evidence_sent: "Evidence sent", won: "Won", lost: "Lost", accepted: "Accepted",
+};
+
+/** Days left to send evidence; negative once the deadline has passed. */
+export function daysLeft(respondBy: string | null, now = new Date()): number | null {
+  if (!respondBy) return null;
+  return Math.ceil((new Date(respondBy).getTime() - now.getTime()) / 86_400_000);
+}
+
+export function Chargebacks() {
+  const [filter, setFilter] = useState("open");
+  const list = useAsync(() => api<{ results: DisputeRow[] }>(`/payments/disputes/${filter ? `?status=${filter}` : ""}`), [filter]);
+  const [openId, setOpenId] = useState<number | null>(null);
+  return (
+    <>
+      <h1>Chargebacks</h1>
+      <p className="muted">
+        A chargeback is a customer's bank asking for a payment back. Send your evidence (tracking, proof of delivery, messages) in your
+        payment provider's dashboard before the deadline, then note what you sent here. If the bank rules against us, the payment is
+        reversed and the order shows as refunded.
+      </p>
+      <p>
+        <label className="small">Show{" "}
+          <select className="select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="open">Evidence needed</option>
+            <option value="evidence_sent">Evidence sent</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+            <option value="">All</option>
+          </select>
+        </label>
+      </p>
+      {list.loading && <Loading />}
+      {list.error && <Alert>{list.error}</Alert>}
+      {list.data && (
+        <table className="table">
+          <thead><tr><th>Order</th><th className="num">Amount</th><th>Reason</th><th>Status</th><th>Respond by</th><th></th></tr></thead>
+          <tbody>
+            {list.data.results.map((d) => {
+              const left = d.status === "open" ? daysLeft(d.respond_by) : null;
+              return (
+                <Fragment key={d.id}>
+                  <tr>
+                    <td>{d.order_number}<div className="small muted">{d.payment_reference}</div></td>
+                    <td className="num">{d.currency} {d.amount}</td>
+                    <td>{d.category || "Not given"}</td>
+                    <td>{DISPUTE_STATUS[d.status] ?? d.status}</td>
+                    <td>{d.respond_by ? new Date(d.respond_by).toLocaleDateString() : "—"}{left !== null && <div className={`small ${left <= 2 ? "warn" : "muted"}`}>{left < 0 ? "Deadline passed" : `${left} day${left === 1 ? "" : "s"} left`}</div>}</td>
+                    <td><button className="link-button" onClick={() => setOpenId(openId === d.id ? null : d.id)}>{openId === d.id ? "Close" : "Open case"}</button></td>
+                  </tr>
+                  {openId === d.id && <tr><td colSpan={6}><DisputeCase dispute={d} onSaved={list.reload} /></td></tr>}
+                </Fragment>
+              );
+            })}
+            {list.data.results.length === 0 && <tr><td colSpan={6} className="muted">Nothing here.</td></tr>}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
+}
+
+function DisputeCase({ dispute, onSaved }: { dispute: DisputeRow; onSaved: () => void }) {
+  const [notes, setNotes] = useState(dispute.notes);
+  const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const save = async (status?: string) => {
+    setMsg(null);
+    try {
+      await api(`/payments/disputes/${dispute.id}/`, { method: "PATCH", body: { notes, ...(status ? { status } : {}) } });
+      setMsg({ kind: "ok", text: status ? "Marked as evidence sent." : "Notes saved." });
+      onSaved();
+    } catch (e) {
+      setMsg({ kind: "error", text: e instanceof Error ? e.message : "Something went wrong." });
+    }
+  };
+  return (
+    <div className="card">
+      {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      <p className="small">Opened {new Date(dispute.opened_at).toLocaleString()}. Provider status: {dispute.provider_status || "unknown"}{dispute.resolution && `, outcome: ${dispute.resolution}`}.</p>
+      <Field id={`dn-${dispute.id}`} label="What you sent and when">
+        <textarea id={`dn-${dispute.id}`} rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      <div className="row">
+        <button className="btn quiet" onClick={() => save()}>Save notes</button>
+        {dispute.status === "open" && <button className="btn" onClick={() => save("evidence_sent")}>Mark evidence as sent</button>}
+      </div>
+    </div>
   );
 }

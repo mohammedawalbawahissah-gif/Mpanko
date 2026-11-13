@@ -13,6 +13,7 @@ def _settings(settings):
     settings.PAYMENT_PROVIDERS_ENABLED = ["mock"]
     settings.BASE_CURRENCY = "USD"
     settings.SUPPORTED_CURRENCIES = ["USD", "GHS"]
+    settings.FX_AUTO_REFRESH = False
     settings.MANUAL_FX_RATES = {"GHS": "10"}
     settings.SHIPPING_FLAT_RATE = "30.00"
     settings.TAX_RATE = "0"
@@ -122,6 +123,6 @@ def place_order(user, variant, address, qty=1, currency="USD", service=None, key
     c = client_for(user)
     c.post("/api/v1/cart/items/", {"variant": variant.id, "quantity": qty}, format="json")
     return c, c.post(
-        "/api/v1/checkout/", {"address_id": address.id, "shipping_service": service, "currency": currency},
+        "/api/v1/checkout/", {"address_id": address.id, "shipping_service": service, "currency": currency, "accept_terms": True, "duties_acknowledged": True},
         format="json", HTTP_IDEMPOTENCY_KEY=key,
     )

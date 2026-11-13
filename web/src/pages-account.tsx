@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { api, ApiError, type Page } from "./api";
+import { api, ApiError, downloadFile, type Page } from "./api";
 import { AddressForm } from "./address";
 import { Alert, Field, Loading, PasswordInput, useAsync } from "./components";
-import { useAuth } from "./context";
+import { useAuth, useCurrency } from "./context";
+import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
 import type { Address } from "./types";
 
@@ -31,18 +32,32 @@ function useSubmit() {
 }
 
 export function Login() {
-  const { login, completeMfa } = useAuth();
+  const { login, completeMfa, requestPhoneCode, loginWithPhone } = useAuth();
+  const { t } = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get("next") || "/";
+  const [mode, setMode] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [smsSent, setSmsSent] = useState(false);
   const [ticket, setTicket] = useState("");
   const [code, setCode] = useState("");
   const { errors, message, busy, run } = useSubmit();
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
+      if (mode === "phone") {
+        if (!smsSent) {
+          await requestPhoneCode(phone);
+          setSmsSent(true);
+        } else {
+          await loginWithPhone(phone, code);
+          navigate(next, { replace: true });
+        }
+        return;
+      }
       if (ticket) {
         await completeMfa(ticket, code);
         navigate(next, { replace: true });
@@ -53,17 +68,37 @@ export function Login() {
       else navigate(next, { replace: true });
     });
   };
+  const switchMode = (m: "email" | "phone") => {
+    setMode(m);
+    setSmsSent(false);
+    setCode("");
+  };
   return (
     <div className="wrap page narrow">
-      <h1>{ticket ? "Enter your code" : "Sign in"}</h1>
+      <h1>{ticket ? t("login.mfaTitle") : t("login.title")}</h1>
       {message && <Alert>{message}</Alert>}
       <form className="form" onSubmit={submit} noValidate>
-        {!ticket ? (
+        {mode === "phone" ? (
           <>
-            <Field id="email" label="Email" error={errors.email}>
+            <Field id="phone" label={t("login.phone")} error={errors.phone}>
+              <input id="phone" className="input" type="tel" autoComplete="tel" value={phone} disabled={smsSent} onChange={(e) => setPhone(e.target.value)} required />
+            </Field>
+            {!smsSent && <p className="small">{t("login.phoneHint")}</p>}
+            {smsSent && (
+              <>
+                <Alert kind="info">{t("login.codeSent")}</Alert>
+                <Field id="sms-code" label={t("login.smsCode")} error={errors.code}>
+                  <input id="sms-code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus required />
+                </Field>
+              </>
+            )}
+          </>
+        ) : !ticket ? (
+          <>
+            <Field id="email" label={t("login.email")} error={errors.email}>
               <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
-            <Field id="password" label="Password" error={errors.password}>
+            <Field id="password" label={t("login.password")} error={errors.password}>
               <PasswordInput id="password" autoComplete="current-password" value={password} onChange={setPassword} required />
             </Field>
           </>
@@ -72,47 +107,64 @@ export function Login() {
             <input id="code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus required />
           </Field>
         )}
-        <button className="btn" disabled={busy}>{busy ? "Signing in…" : ticket ? "Verify" : "Sign in"}</button>
+        <button className="btn" disabled={busy}>
+          {busy ? t("login.submitting") : mode === "phone" ? (smsSent ? t("login.verify") : t("login.sendCode")) : ticket ? t("login.verify") : t("login.submit")}
+        </button>
       </form>
-      {!ticket && <p className="small"><Link to="/forgot-password">Forgot your password?</Link></p>}
-      {!ticket && <p className="small">New to Mpanko? <Link to={`/register?next=${encodeURIComponent(next)}`}>Create an account</Link></p>}
+      {!ticket && (
+        <p className="small">
+          <button type="button" className="link-button" onClick={() => switchMode(mode === "email" ? "phone" : "email")}>
+            {mode === "email" ? t("login.usePhone") : t("login.useEmail")}
+          </button>
+        </p>
+      )}
+      {!ticket && mode === "email" && <p className="small"><Link to="/forgot-password">{t("login.forgot")}</Link></p>}
+      {!ticket && <p className="small">{t("login.new")} <Link to={`/register?next=${encodeURIComponent(next)}`}>{t("login.create")}</Link></p>}
     </div>
   );
 }
 
 export function Register() {
   const { register } = useAuth();
+  const { t } = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get("next") || "/";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agree, setAgree] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const { errors, message, busy, run } = useSubmit();
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
-      await register(email, password, fullName);
+      if (!agree) throw new ApiError(400, { accept_terms: "Please accept the terms and privacy policy to create an account." });
+      await register(email, password, fullName, marketing);
       navigate(next, { replace: true });
     });
   };
   return (
     <div className="wrap page narrow">
-      <h1>Create your account</h1>
+      <h1>{t("register.title")}</h1>
       {message && <Alert>{message}</Alert>}
       <form className="form" onSubmit={submit} noValidate>
-        <Field id="name" label="Full name" error={errors.full_name}>
+        <Field id="name" label={t("register.name")} error={errors.full_name}>
           <input id="name" className="input" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         </Field>
-        <Field id="email" label="Email" error={errors.email}>
+        <Field id="email" label={t("register.email")} error={errors.email}>
           <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
-        <Field id="password" label="Password (at least 8 characters)" error={errors.password}>
+        <Field id="password" label={t("register.password")} error={errors.password}>
           <PasswordInput id="password" autoComplete="new-password" value={password} onChange={setPassword} required />
         </Field>
-        <button className="btn" disabled={busy}>{busy ? "Creating account…" : "Create account"}</button>
+        <Field id="agree" label="" error={errors.accept_terms}>
+          <label className="small"><input id="agree" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> {t("register.agree")} <Link to="/terms">{t("register.terms")}</Link> {t("register.and")} <Link to="/privacy">{t("register.privacy")}</Link></label>
+        </Field>
+        <label className="small"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} /> {t("register.marketing")}</label>
+        <button className="btn" disabled={busy}>{busy ? t("register.creating") : t("register.create")}</button>
       </form>
-      <p className="small">Already have an account? <Link to={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link></p>
+      <p className="small">{t("register.have")} <Link to={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link></p>
     </div>
   );
 }
@@ -209,8 +261,98 @@ export function VerifyEmail() {
   );
 }
 
+function PhonePanel({ onVerified }: { onVerified: () => void | Promise<void> }) {
+  const { user } = useAuth();
+  const { t } = useT();
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [done, setDone] = useState(false);
+  const f = useSubmit();
+  const verified = !!user?.phone_verified && !sent;
+  const send = (e: FormEvent) => {
+    e.preventDefault();
+    f.run(async () => {
+      await api("/auth/phone/verify/", { method: "POST", body: { phone } });
+      setSent(true);
+      setDone(false);
+    });
+  };
+  const confirm = (e: FormEvent) => {
+    e.preventDefault();
+    f.run(async () => {
+      await api("/auth/phone/verify/confirm/", { method: "POST", body: { phone, code } });
+      setSent(false);
+      setCode("");
+      setDone(true);
+      await onVerified();
+    });
+  };
+  return (
+    <section aria-labelledby="phone-title" style={{ margin: "2rem 0" }}>
+      <h2 id="phone-title">{t("phone.title")}</h2>
+      <p className="small">{t("phone.intro")} <strong>{verified || done ? t("phone.verified") : t("phone.notVerified")}</strong></p>
+      {f.message && <Alert>{f.message}</Alert>}
+      {done && <Alert kind="ok">{t("phone.done")}</Alert>}
+      <form className="form" onSubmit={sent ? confirm : send} noValidate>
+        <Field id="vp-phone" label={t("phone.number")} error={f.errors.phone}>
+          <input id="vp-phone" className="input" type="tel" autoComplete="tel" value={phone} disabled={sent} onChange={(e) => setPhone(e.target.value)} />
+        </Field>
+        {sent && (
+          <Field id="vp-code" label={t("phone.code")} error={f.errors.code}>
+            <input id="vp-code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.trim())} autoFocus />
+          </Field>
+        )}
+        <button className="btn" disabled={f.busy || !phone.trim() || (sent && code.length < 6)}>{sent ? t("phone.confirm") : t("phone.send")}</button>
+      </form>
+    </section>
+  );
+}
+
+function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
+  const { user } = useAuth();
+  const { currencies, names } = useCurrency();
+  const [name, setName] = useState(user?.full_name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [orderEmails, setOrderEmails] = useState(user?.notify_order_emails ?? true);
+  const [marketing, setMarketing] = useState(user?.marketing_opt_in ?? false);
+  const [sms, setSms] = useState(user?.notify_sms ?? false);
+  const [currency, setCurrency] = useState(user?.preferred_currency ?? "");
+  const f = useSubmit();
+  const save = (e: FormEvent) => {
+    e.preventDefault();
+    f.run(async () => {
+      await api("/auth/me/", {
+        method: "PATCH",
+        body: { full_name: name, phone, notify_order_emails: orderEmails, marketing_opt_in: marketing, notify_sms: sms, preferred_currency: currency },
+      });
+      await onSaved();
+    });
+  };
+  return (
+    <form className="form" onSubmit={save} noValidate>
+      {f.message && <Alert>{f.message}</Alert>}
+      <Field id="pf-name" label="Full name" error={f.errors.full_name}><input id="pf-name" className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></Field>
+      <Field id="pf-phone" label="Phone" error={f.errors.phone}><input id="pf-phone" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" /></Field>
+      <Field id="pf-cur" label="Show prices in" error={f.errors.preferred_currency}>
+        <select id="pf-cur" className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+          <option value="">Not set</option>
+          {currencies.map((c) => <option key={c} value={c}>{names[c] ? `${c} · ${names[c]}` : c}</option>)}
+        </select>
+      </Field>
+      <fieldset style={{ border: 0, padding: 0, margin: "0 0 1rem" }}>
+        <legend className="small">Contact me about</legend>
+        <label className="small"><input type="checkbox" checked={orderEmails} onChange={(e) => setOrderEmails(e.target.checked)} /> Shipping and delivery updates by email</label><br />
+        <label className="small"><input type="checkbox" checked={sms} onChange={(e) => setSms(e.target.checked)} /> Text messages about my orders</label><br />
+        <label className="small"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} /> News and offers</label>
+      </fieldset>
+      <button className="btn" disabled={f.busy}>Save details</button>
+    </form>
+  );
+}
+
 export function Account() {
-  const { user, logout } = useAuth();
+  const { user, logout, reload } = useAuth();
   const navigate = useNavigate();
   const addresses = useAsync(() => api<Page<Address>>("/auth/addresses/"), []);
   const [adding, setAdding] = useState(false);
@@ -250,7 +392,9 @@ export function Account() {
       <div className="two">
         <section aria-labelledby="me">
           <h2 id="me">Details</h2>
-          <p>{user.full_name}<br />{user.email}</p>
+          <p>{user.email}</p>
+          <ProfileForm key={`${user.id}-${user.phone}`} onSaved={async () => { await reload(); setNote("Details saved."); }} />
+          <PhonePanel key={`p-${user.phone}-${user.phone_verified}`} onVerified={reload} />
           {!user.email_verified && (
             <Alert kind="info">
               Your email isn't verified yet. <button className="link-button" onClick={resend}>Send the verification email</button>
@@ -291,6 +435,49 @@ export function Account() {
           )}
         </section>
       </div>
+      <PrivacyPanel onDeleted={async () => { await logout(); navigate("/"); }} />
     </div>
+  );
+}
+
+function PrivacyPanel({ onDeleted }: { onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [note, setNote] = useState("");
+  const del = useSubmit();
+  const exportData = async () => {
+    try {
+      await downloadFile("/me/export/", "mpanko-my-data.json");
+    } catch {
+      setNote("Couldn't download your data. Try again shortly.");
+    }
+  };
+  const remove = (e: FormEvent) => {
+    e.preventDefault();
+    del.run(async () => {
+      await api("/me/delete/", { method: "POST", body: { password } });
+      onDeleted();
+    });
+  };
+  return (
+    <section aria-labelledby="priv" style={{ marginTop: "3rem" }}>
+      <h2 id="priv">Your data</h2>
+      {note && <Alert>{note}</Alert>}
+      <p>Download a copy of everything we hold about you, or delete your account. See our <Link to="/privacy">privacy policy</Link>.</p>
+      <button className="btn quiet" onClick={exportData}>Download my data</button>
+      {open ? (
+        <form className="form" onSubmit={remove} noValidate style={{ marginTop: "1.5rem" }}>
+          <Alert kind="info">Deleting your account removes your details, addresses and messages. We keep order records without your personal details, as the law requires. This can't be undone.</Alert>
+          {del.message && <Alert>{del.message}</Alert>}
+          <Field id="delpw" label="Enter your password to confirm" error={del.errors.password}>
+            <PasswordInput id="delpw" autoComplete="current-password" value={password} onChange={setPassword} />
+          </Field>
+          <button className="btn" disabled={del.busy}>Delete my account</button>{" "}
+          <button type="button" className="btn quiet" onClick={() => setOpen(false)}>Keep my account</button>
+        </form>
+      ) : (
+        <p><button className="link-button" onClick={() => setOpen(true)}>Delete my account</button></p>
+      )}
+    </section>
   );
 }

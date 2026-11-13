@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "./api";
 import { Alert, Field } from "./components";
-import type { Address } from "./types";
+import { useT } from "./i18n";
+import type { Address, AddressRules } from "./types";
 
 export const COUNTRIES: [string, string][] = [
   ["GH", "Ghana"], ["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"], ["NG", "Nigeria"],
@@ -21,6 +22,20 @@ export function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => vo
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof EMPTY, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const { t } = useT();
+  const [rules, setRules] = useState<AddressRules | null>(null);
+
+  // Ask the server what this country needs, so the form labels and hints match what it will accept.
+  useEffect(() => {
+    let cancelled = false;
+    api<AddressRules>(`/auth/address-rules/?country=${form.country}`)
+      .then((r) => !cancelled && setRules(r))
+      .catch(() => !cancelled && setRules(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [form.country]);
+  const postalLabel = !rules ? t("address.postalOptional") : rules.postal_code === "required" ? t("address.postalRequired") : rules.postal_code === "none" ? t("address.postalNone") : t("address.postalOptional");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,13 +82,15 @@ export function AddressForm({ onSaved, onCancel }: { onSaved: (a: Address) => vo
         <Field id="a-city" label="Town or city" error={errors.city}>
           <input id="a-city" className="input" autoComplete="address-level2" value={form.city} onChange={(e) => set("city", e.target.value)} required />
         </Field>
-        <Field id="a-region" label="Region or state" error={errors.region}>
-          <input id="a-region" className="input" autoComplete="address-level1" value={form.region} onChange={(e) => set("region", e.target.value)} />
+        <Field id="a-region" label={rules?.region_required ? rules.region_label : `${rules?.region_label ?? "Region or state"} (optional)`} error={errors.region}>
+          <input id="a-region" className="input" autoComplete="address-level1" value={form.region} onChange={(e) => set("region", e.target.value)} required={!!rules?.region_required} />
         </Field>
       </div>
-      <Field id="a-post" label="Postal code (if your country uses one)" error={errors.postal_code}>
-        <input id="a-post" className="input" autoComplete="postal-code" value={form.postal_code} onChange={(e) => set("postal_code", e.target.value)} />
-      </Field>
+      {rules?.postal_code !== "none" && (
+        <Field id="a-post" label={postalLabel} error={errors.postal_code}>
+          <input id="a-post" className="input" autoComplete="postal-code" value={form.postal_code} placeholder={rules?.postal_example ? t("address.example", { example: rules.postal_example }) : undefined} onChange={(e) => set("postal_code", e.target.value)} required={rules?.postal_code === "required"} />
+        </Field>
+      )}
       <div style={{ display: "flex", gap: "0.75rem" }}>
         <button className="btn" disabled={saving}>{saving ? "Saving…" : "Save address"}</button>
         {onCancel && <button type="button" className="btn quiet" onClick={onCancel}>Cancel</button>}

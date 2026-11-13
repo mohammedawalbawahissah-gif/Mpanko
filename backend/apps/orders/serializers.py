@@ -39,6 +39,11 @@ class CheckoutSerializer(serializers.Serializer):
     address_id = serializers.IntegerField()
     shipping_service = serializers.CharField(max_length=60)
     currency = serializers.CharField(max_length=3, required=False)
+    phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
+    delivery_notes = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    coupon_code = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    accept_terms = serializers.BooleanField(required=False, default=False)
+    duties_acknowledged = serializers.BooleanField(required=False, default=False)
     # Deliberately no price/total fields: anything a client sends about money is ignored.
 
 
@@ -62,8 +67,8 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = (
-            "number", "status", "currency", "subtotal", "shipping_total", "tax_total", "duties_total", "grand_total",
-            "fx_rate_note", "shipping_address", "shipping_service", "contact_email", "expires_at", "paid_at",
+            "number", "status", "currency", "subtotal", "shipping_total", "tax_total", "duties_total", "discount_total", "coupon_code", "grand_total",
+            "fx_rate_note", "shipping_address", "shipping_service", "contact_email", "contact_phone", "delivery_notes", "duties_acknowledged", "expires_at", "paid_at",
             "created_at", "items", "events", "shipments",
         )
 

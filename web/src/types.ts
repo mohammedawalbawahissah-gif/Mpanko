@@ -43,6 +43,12 @@ export interface User {
   phone: string;
   role: string;
   email_verified: boolean;
+  marketing_opt_in?: boolean;
+  notify_order_emails?: boolean;
+  notify_sms?: boolean;
+  phone_verified?: boolean;
+  notify_push?: boolean;
+  preferred_currency?: string;
 }
 
 export interface Address {
@@ -112,6 +118,8 @@ export interface Order {
   subtotal: string;
   shipping_total: string;
   tax_total: string;
+  discount_total?: string;
+  coupon_code?: string;
   grand_total: string;
   fx_rate_note: string;
   shipping_address: Record<string, string>;
@@ -135,4 +143,26 @@ export interface OrderSummary {
 export interface PaymentMethod {
   provider: string;
   currencies: string[];
+}
+
+export interface TaxEstimate {
+  tax: string;
+  duties: null | {
+    country: string;
+    currency: string;
+    duty: string;
+    vat: string;
+    total: string;
+    below_threshold: boolean;
+    note: string;
+    mode: "estimate" | "prepaid";
+  };
+}
+
+export interface AddressRules {
+  country: string;
+  postal_code: "required" | "optional" | "none";
+  region_required: boolean;
+  region_label: string;
+  postal_example: string;
 }

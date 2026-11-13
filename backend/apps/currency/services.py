@@ -6,6 +6,7 @@ import requests
 from django.conf import settings
 from django.utils import timezone
 
+from . import catalog
 from .models import ExchangeRate
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def lookup(currency):
 
 def refresh_live_rates():
     """
-    Pull current rates for SUPPORTED_CURRENCIES. On any failure the previous rates simply age out
+    Pull current rates for every supported currency the feed carries. On any failure the previous rates simply age out
     (then pricing falls back to MANUAL_FX_RATES); a bad response never overwrites good data.
     Returns the number of rates stored.
     """
@@ -47,7 +48,7 @@ def refresh_live_rates():
         return 0
     now = timezone.now()
     stored = 0
-    for quote in {c.upper() for c in settings.SUPPORTED_CURRENCIES} - {base}:
+    for quote in set(catalog.supported()) - {base}:
         raw = rates.get(quote)
         try:
             value = Decimal(str(raw))
@@ -58,3 +59,19 @@ def refresh_live_rates():
         ExchangeRate.objects.create(base=base, quote=quote, rate=value, source=ExchangeRate.Source.LIVE, fetched_at=now)
         stored += 1
     return stored
+
+
+def refresh_if_stale():
+    """
+    Fetch live rates when none are fresh, at most once an hour per server. This keeps a new or Redis-less
+    deployment working without a scheduler. The scheduled task still does the regular refresh.
+    """
+    from django.core.cache import cache
+
+    if not getattr(settings, "FX_AUTO_REFRESH", True):
+        return
+    cutoff = timezone.now() - timedelta(hours=settings.FX_MAX_AGE_HOURS)
+    if ExchangeRate.objects.filter(source=ExchangeRate.Source.LIVE, fetched_at__gte=cutoff).exists():
+        return
+    if cache.add("fx-refresh-attempt", 1, timeout=3600):
+        refresh_live_rates()

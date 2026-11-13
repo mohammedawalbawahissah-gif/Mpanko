@@ -9,7 +9,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_register_login_and_me(api):
-    r = api.post("/api/v1/auth/register/", {"email": "New@Example.com", "password": "Str0ng-pass-123", "full_name": "New Buyer"}, format="json")
+    r = api.post("/api/v1/auth/register/", {"email": "New@Example.com", "password": "Str0ng-pass-123", "full_name": "New Buyer", "accept_terms": True}, format="json")
     assert r.status_code == 201
     login = api.post("/api/v1/auth/login/", {"email": "new@example.com", "password": "Str0ng-pass-123"}, format="json")
     assert login.status_code == 200 and login.data["user"]["role"] == "customer"
@@ -18,7 +18,7 @@ def test_register_login_and_me(api):
 
 
 def test_registration_cannot_grant_staff_role(api):
-    r = api.post("/api/v1/auth/register/", {"email": "evil@example.com", "password": "Str0ng-pass-123", "role": "super_admin"}, format="json")
+    r = api.post("/api/v1/auth/register/", {"email": "evil@example.com", "password": "Str0ng-pass-123", "role": "super_admin", "accept_terms": True}, format="json")
     assert r.status_code == 201
     assert User.objects.get(email="evil@example.com").role == Role.CUSTOMER
 

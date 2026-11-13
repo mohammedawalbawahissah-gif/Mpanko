@@ -4,7 +4,14 @@ export interface Product {
   origin_country: string; maker: string; base_price: string; currency: string; variants: Variant[];
 }
 export interface Category { id: number; name: string; slug: string }
-export interface User { id: number; email: string; full_name: string; role: string; email_verified: boolean }
+export interface User {
+  id: number; email: string; full_name: string; role: string; email_verified: boolean; phone?: string; phone_verified?: boolean;
+  notify_order_emails?: boolean; notify_sms?: boolean; notify_push?: boolean; marketing_opt_in?: boolean; preferred_currency?: string;
+}
+export interface TaxEstimate {
+  tax: string;
+  duties: null | { country: string; currency: string; duty: string; vat: string; total: string; below_threshold: boolean; note: string; mode: "estimate" | "prepaid" };
+}
 export interface Address {
   id: number; recipient_name: string; phone: string; line1: string; line2: string; city: string; region: string; postal_code: string; country: string; is_default: boolean;
 }

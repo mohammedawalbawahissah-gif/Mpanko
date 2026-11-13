@@ -53,6 +53,9 @@ def transition(order, to_status, actor=None, note=""):
     OrderStatusEvent.objects.create(order=order, from_status=previous, to_status=to_status, actor=actor, note=note)
     if to_status in STOCK_RELEASING:
         _release_stock(order, actor)
+        from apps.payments.services import close_pending_attempts
+
+        close_pending_attempts(order, "expired" if to_status == OrderStatus.EXPIRED else "cancelled", note)
     return order
 
 
@@ -89,15 +92,31 @@ def _cart_lines(cart, country):
 
 
 @transaction.atomic
-def checkout(user, address, shipping_service_code, currency, idempotency_key=""):
+def checkout(user, address, shipping_service_code, currency, idempotency_key="", declarations=None):
     """
     Create exactly one order per idempotency key. Prices, shipping, tax and totals are all recomputed here
     from the database; nothing the client sends about money is trusted.
     Returns (order, created).
     """
+    d = declarations or {}
+    if not d.get("accept_terms"):
+        raise CheckoutError("Please accept the terms of sale to continue.", "accept_terms")
+    phone = (d.get("phone") or address.phone or "").strip()
+    if not phone:
+        raise CheckoutError("A phone number is needed so the carrier can reach you.", "phone")
+    international = address.country.upper() != getattr(settings, "STORE_COUNTRY", "GH").upper()
+    if international and not d.get("duties_acknowledged"):
+        raise CheckoutError("Please confirm you are responsible for any import duties and taxes in your country.", "duties_acknowledged")
     currency = (currency or settings.BASE_CURRENCY).upper()
-    if currency not in {c.upper() for c in settings.SUPPORTED_CURRENCIES}:
+    from apps.currency import catalog
+    from apps.payments.providers import chargeable_currencies
+
+    if currency not in catalog.supported():
         raise CheckoutError(f"Currency {currency} is not supported.", "currency")
+    if currency not in chargeable_currencies():
+        raise CheckoutError(
+            f"We can't take payment in {currency} yet. Choose one of: {', '.join(sorted(chargeable_currencies()))}.", "currency"
+        )
 
     if idempotency_key:
         existing = Order.objects.filter(user=user, idempotency_key=idempotency_key).first()
@@ -110,9 +129,18 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="")
     country = address.country.upper()
     lines = _cart_lines(cart, country)
 
-    weight = sum(p.weight_grams * i.quantity for i, _v, p in lines)
-    rate = shipping_providers.find_rate(country, shipping_service_code, weight)
+    from apps.shipping.parcel import from_lines
+
+    parcel = from_lines([(p, i.quantity) for i, _v, p in lines])
+    rate = shipping_providers.find_rate(
+        country, shipping_service_code, parcel.chargeable_grams, destination=address.snapshot(), dims=parcel.dims_cm, dangerous=parcel.dangerous,
+    )
     if not rate:
+        if parcel.dangerous:
+            raise CheckoutError(
+                "Your cart includes dangerous goods (such as batteries or aerosols). Choose a service cleared to carry them, or remove those items.",
+                "shipping_service",
+            )
         raise CheckoutError("That shipping service is not available for this destination.", "shipping_service")
 
     try:
@@ -120,20 +148,39 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="")
         priced = []
         for item, variant, product in lines:
             unit = pricing.convert(variant.price, product.currency, currency)
-            line_total = pricing.q(unit * item.quantity)
+            line_total = pricing.q(unit * item.quantity, currency)
             subtotal += line_total
             priced.append((item, variant, product, unit, line_total))
         shipping_total = pricing.convert(rate.price, settings.BASE_CURRENCY, currency)
-        tax_total = pricing.tax_for(subtotal, country)
         note = pricing.fx_note(currency)
     except pricing.PricingError as exc:
         raise CheckoutError(str(exc), "currency")
-    grand_total = subtotal + shipping_total + tax_total
+    coupon, discount = None, Decimal("0")
+    if (d.get("coupon_code") or "").strip():
+        from apps.promotions import services as promo
+
+        try:
+            coupon = promo.find(d["coupon_code"], lock=True)
+            discount = promo.discount_for(coupon, user, subtotal, shipping_total, currency)
+        except (promo.CouponError, pricing.PricingError) as exc:
+            raise CheckoutError(str(exc), "coupon_code")
+    item_discount = discount if coupon and coupon.kind != "free_shipping" else Decimal("0")
+    tax_total = pricing.tax_for(subtotal - item_discount, country, currency, shipping=shipping_total)
+    grand_total = subtotal - discount + shipping_total + tax_total
+    from apps.tax.services import estimate_duties
+
+    duties = estimate_duties(subtotal - item_discount, country, currency)
+    duties_total = duties["total"] if duties else Decimal("0")
+    if duties and settings.DUTIES_MODE == "prepaid":
+        grand_total += duties_total  # DDP: collected now and remitted on the buyer's behalf
 
     order = Order.objects.create(
         user=user, currency=currency, subtotal=subtotal, shipping_total=shipping_total, tax_total=tax_total,
+        discount_total=discount, coupon_code=coupon.code if coupon else "", duties_total=duties_total,
         grand_total=grand_total, fx_rate_note=note, shipping_address=address.snapshot(),
         shipping_service=rate.as_dict(), contact_email=user.email, idempotency_key=idempotency_key,
+        contact_phone=phone[:32], delivery_notes=(d.get("delivery_notes") or "")[:300],
+        terms_accepted_at=timezone.now(), duties_acknowledged=bool(d.get("duties_acknowledged")),
         expires_at=timezone.now() + timedelta(minutes=settings.STOCK_RESERVATION_MINUTES),
     )
     # Reserve stock; sorted by variant id above so concurrent checkouts lock rows in the same order.
@@ -146,6 +193,10 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="")
             order=order, variant=variant, product_name=product.name, variant_name=variant.name, sku=variant.sku,
             unit_price=unit, quantity=item.quantity, line_total=line_total,
         )
+    if coupon:
+        from apps.promotions.models import CouponRedemption
+
+        CouponRedemption.objects.create(coupon=coupon, order=order, user=user, amount=discount)
     OrderStatusEvent.objects.create(order=order, from_status="", to_status=order.status, actor=user, note="Order placed")
     cart.items.all().delete()
     return order, True

@@ -5,7 +5,7 @@ from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, serializers, status
+from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,7 +14,7 @@ from apps.accounts.models import AuditLog
 from apps.accounts.permissions import FinanceStaff
 from apps.orders.models import Order, OrderStatus
 
-from .models import AttemptStatus, PaymentAttempt, ReconciliationRecord, ReconciliationRun, Refund, WebhookEvent
+from .models import AttemptStatus, Dispute, PaymentAttempt, ReconciliationRecord, ReconciliationRun, Refund, WebhookEvent
 from .providers import InvalidSignature, ProviderError, enabled_providers, get_provider
 from .services import apply_result, issue_refund, reconcile
 
@@ -126,7 +126,12 @@ class WebhookView(APIView):
         )
         if not created and record.processed:
             return Response({"detail": "Already processed."})  # duplicate delivery: acknowledge, do nothing
-        apply_result(event.reference, event.status, event.amount, event.currency, event.provider_reference, raw={"event": event.event_type})
+        if event.dispute:
+            from .disputes import record_dispute
+
+            record_dispute(provider, event.dispute, event.reference)
+        else:
+            apply_result(event.reference, event.status, event.amount, event.currency, event.provider_reference, raw={"event": event.event_type})
         record.processed = True
         record.save(update_fields=["processed"])
         return Response({"detail": "ok"})
@@ -226,3 +231,37 @@ class ReconciliationResolveView(APIView):
         record.save()
         AuditLog.record(request.user, "payment.reconcile.resolve", record, note=record.resolution_note)
         return Response(ReconciliationRecordSerializer(record).data)
+
+
+class DisputeSerializer(serializers.ModelSerializer):
+    order_number = serializers.CharField(source="order.number", read_only=True)
+    payment_reference = serializers.CharField(source="attempt.reference", read_only=True)
+
+    class Meta:
+        model = Dispute
+        fields = ("id", "order_number", "payment_reference", "provider", "provider_dispute_id", "status", "category", "amount", "currency",
+                  "respond_by", "provider_status", "resolution", "notes", "opened_at", "resolved_at")
+        read_only_fields = ("id", "provider", "provider_dispute_id", "category", "amount", "currency", "respond_by", "provider_status",
+                            "resolution", "opened_at", "resolved_at")
+
+    def validate_status(self, value):
+        # Staff can only say "we sent the evidence". Won/lost/accepted come from the provider.
+        if self.instance and value not in {Dispute.Status.EVIDENCE_SENT, self.instance.status}:
+            raise serializers.ValidationError("Only the payment provider can mark a dispute won, lost or accepted.")
+        return value
+
+
+class DisputeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """Chargebacks. Finance can read them, add notes and mark evidence as sent (?status=open for the to-do list)."""
+
+    permission_classes = [FinanceStaff]
+    serializer_class = DisputeSerializer
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_queryset(self):
+        qs = Dispute.objects.select_related("order", "attempt")
+        return qs.filter(status=self.request.query_params["status"]) if self.request.query_params.get("status") else qs
+
+    def perform_update(self, serializer):
+        obj = serializer.save()
+        AuditLog.record(self.request.user, "dispute.update", obj, status=obj.status)

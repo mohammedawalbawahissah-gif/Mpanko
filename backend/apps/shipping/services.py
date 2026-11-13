@@ -3,6 +3,9 @@ from django.utils import timezone
 
 from .models import Shipment, ShipmentStatus, TrackingEvent
 
+IN_MOTION = {ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY}
+INACTIVE = {ShipmentStatus.DECLINED, ShipmentStatus.RETURNED}
+
 # Delivered/returned are terminal; late or duplicate events can never move a shipment backwards.
 TERMINAL = {ShipmentStatus.DELIVERED, ShipmentStatus.RETURNED}
 
@@ -28,10 +31,46 @@ def record_event(shipment, status, actor=None, description="", location="", exte
 
     latest = shipment.events.order_by("-occurred_at", "-id").first()
     if shipment.status not in TERMINAL and latest and latest.status != shipment.status:
+        previous = shipment.status
         shipment.status = latest.status
-        shipment.save(update_fields=["status", "updated_at"])
+        update = ["status", "updated_at"]
+        if shipment.status == ShipmentStatus.DELIVERED and not shipment.delivered_at:
+            shipment.delivered_at = latest.occurred_at
+            update.append("delivered_at")
+        shipment.save(update_fields=update)
         _sync_order(shipment)
+        if shipment.status in IN_MOTION and previous not in IN_MOTION:
+            _queue_email(shipment, "shipment_dispatched")
     return shipment, True
+
+
+def _queue_email(shipment, key):
+    from apps.orders.tasks import send_shipment_email
+
+    transaction.on_commit(lambda: send_shipment_email.delay(shipment.pk, key))
+
+
+def remaining_quantities(order, exclude_shipment=None):
+    """{order_item_id: units not yet in an active shipment}. A shipment with no item rows (made before split
+    shipments existed) is treated as carrying the whole order."""
+    remaining = {i.pk: i.quantity for i in order.items.all()}
+    for sh in order.shipments.exclude(status__in=[s.value for s in INACTIVE]).prefetch_related("items"):
+        if exclude_shipment and sh.pk == exclude_shipment.pk:
+            continue
+        rows = list(sh.items.all())
+        if not rows:
+            return {k: 0 for k in remaining}
+        for r in rows:
+            remaining[r.order_item_id] = remaining.get(r.order_item_id, 0) - r.quantity
+    return {k: max(v, 0) for k, v in remaining.items()}
+
+
+def order_fully_delivered(order):
+    """True when every unit has left in a shipment and every active shipment is delivered."""
+    active = list(order.shipments.exclude(status__in=[s.value for s in INACTIVE]))
+    if not active or any(sh.status != ShipmentStatus.DELIVERED for sh in active):
+        return False
+    return sum(remaining_quantities(order).values()) == 0
 
 
 def _sync_order(shipment):
@@ -47,6 +86,8 @@ def _sync_order(shipment):
     if not target:
         return
     order = shipment.order
+    if target == OrderStatus.DELIVERED and not order_fully_delivered(order):
+        target = OrderStatus.SHIPPED  # other parcels of this order are still on their way
     if order.status == OrderStatus.PAID:
         try:
             transition(order, OrderStatus.PROCESSING, actor=None, note="Auto: shipment created")
@@ -58,7 +99,9 @@ def _sync_order(shipment):
     try:
         transition(order, target, actor=None, note=f"Auto: shipment {shipment.status}")
     except InvalidTransition:
-        pass
+        return
+    if target == OrderStatus.DELIVERED:
+        _queue_email(shipment, "order_delivered")
 
 
 def sync_shipment(shipment):

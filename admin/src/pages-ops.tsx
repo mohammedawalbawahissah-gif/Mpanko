@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, type Page } from "./api";
+import { api, downloadFile, type Page } from "./api";
 import { useAuth } from "./auth";
 import { Alert, Field, Loading, Pill, Stat, errText, label, useAsync, when } from "./ui";
 
@@ -162,6 +162,9 @@ export function OrderDetail() {
             </tbody>
           </table>
           {o.fx_rate_note && <p className="small muted">{o.fx_rate_note}</p>}
+          {o.status !== "pending_payment" && o.status !== "cancelled" && (
+            <p><button className="btn quiet" onClick={() => downloadFile(`/orders/${o.number}/invoice/`, `invoice-${o.number}.pdf`).catch((e) => setMsg({ kind: "error", text: errText(e) }))}>Download invoice (PDF)</button></p>
+          )}
           <h2>Customer</h2>
           <p>
             {o.contact_email}<br />
@@ -285,6 +288,9 @@ function ShipmentForm({ orderNumber, chosen, onDone }: { orderNumber: string; ch
 interface ShipmentRow {
   id: number; order_number: string; carrier_name: string | null; service_name: string; tracking_number: string; status: string; created_at: string;
   events: { id: number; status: string; description: string; location: string; occurred_at: string }[];
+  items?: { order_item: number; sku: string; product_name: string; quantity: number }[];
+  pod_recipient?: string; pod_note?: string; pod_photo?: string; delivered_at?: string | null;
+  has_label?: boolean; service_code?: string; label_reference?: string;
 }
 
 export function Shipments() {
@@ -332,9 +338,24 @@ export function ShipmentDetail() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [reason, setReason] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [podNote, setPodNote] = useState("");
+  const [podPhoto, setPodPhoto] = useState<File | null>(null);
   if (loading) return <Loading />;
   if (error || !s) return <Alert>{error || "Shipment not found."}</Alert>;
   const isCarrier = user?.role === "carrier";
+
+  const act = async (path: string, body: object, done: string) => {
+    setMsg(null);
+    try {
+      await api(`/shipments/${s.id}/${path}/`, { method: "POST", body });
+      setMsg({ kind: "ok", text: done });
+      reload();
+    } catch (err) {
+      setMsg({ kind: "error", text: errText(err) });
+    }
+  };
 
   const add = async (e: FormEvent) => {
     e.preventDefault();
@@ -359,6 +380,24 @@ export function ShipmentDetail() {
       setMsg({ kind: "error", text: errText(err) });
     }
   };
+  const [labelService, setLabelService] = useState("");
+  const createLabel = async () => {
+    setMsg(null);
+    try {
+      await api(`/shipments/${s.id}/label/`, { method: "POST", body: labelService ? { service_code: labelService.trim() } : {} });
+      setMsg({ kind: "ok", text: "Label created and tracking number saved." });
+      reload();
+    } catch (err) {
+      setMsg({ kind: "error", text: errText(err) });
+    }
+  };
+  const getLabel = async () => {
+    try {
+      await downloadFile(`/shipments/${s.id}/label/`, `label-${s.order_number}`);
+    } catch (err) {
+      setMsg({ kind: "error", text: errText(err) });
+    }
+  };
   const options = isCarrier
     ? ["accepted", "declined", "in_transit", "out_for_delivery", "delivered", "exception"]
     : ["pending", "assigned", "accepted", "declined", "in_transit", "out_for_delivery", "delivered", "exception", "returned"];
@@ -369,6 +408,69 @@ export function ShipmentDetail() {
       <h1>Shipment #{s.id} <Pill value={s.status} /></h1>
       <p>Order {s.order_number} · {s.carrier_name ?? "No carrier"} · {s.service_name || "—"} · Tracking {s.tracking_number || "—"}</p>
       {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      {s.items && s.items.length > 0 && (
+        <p className="small">In this parcel: {s.items.map((i) => `${i.quantity} × ${i.product_name}`).join(", ")}</p>
+      )}
+      {!isCarrier && (
+        <section className="card" style={{ marginBottom: "1rem" }}>
+          <h2 style={{ marginTop: 0 }}>Shipping label</h2>
+          {s.has_label ? (
+            <div className="row">
+              <p className="small" style={{ margin: 0 }}>Label created for {s.service_code || "this service"}.</p>
+              <button className="btn quiet" onClick={getLabel}>Download label</button>
+            </div>
+          ) : (
+            <div className="row">
+              <Field id="l-s" label="Carrier service code">
+                <input id="l-s" className="input" placeholder="dhl:P, fedex:INTERNATIONAL_PRIORITY or ups:65" value={labelService} onChange={(e) => setLabelService(e.target.value)} />
+              </Field>
+              <button className="btn" onClick={createLabel}>Create label</button>
+              <p className="small" style={{ margin: 0 }}>Works for DHL, FedEx and UPS carriers. Leave the code blank to use the service the customer chose.</p>
+            </div>
+          )}
+        </section>
+      )}
+      {s.status === "assigned" && (
+        <section className="card" style={{ marginBottom: "1rem" }}>
+          <h2 style={{ marginTop: 0 }}>New delivery job</h2>
+          <div className="row">
+            <button className="btn" onClick={() => act("accept", {}, "Job accepted.")}>Accept job</button>
+            <Field id="d-r" label="Reason, if declining"><input id="d-r" className="input" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+            <button className="btn quiet" disabled={!reason.trim()} onClick={() => act("decline", { reason }, "Job declined.")}>Decline job</button>
+          </div>
+        </section>
+      )}
+      {["accepted", "in_transit", "out_for_delivery", "exception", "assigned"].includes(s.status) && (
+        <section className="card" style={{ marginBottom: "1rem" }}>
+          <h2 style={{ marginTop: 0 }}>Proof of delivery</h2>
+          <form className="row" onSubmit={(e) => {
+            e.preventDefault();
+            let body: object = { recipient_name: recipient, note: podNote };
+            if (podPhoto) {
+              const form = new FormData();
+              form.append("recipient_name", recipient);
+              form.append("note", podNote);
+              form.append("photo", podPhoto);
+              body = form;
+            }
+            void act("proof", body, "Marked delivered.");
+          }}>
+            <Field id="p-r" label="Received by"><input id="p-r" className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} required /></Field>
+            <Field id="p-n" label="Note"><input id="p-n" className="input" value={podNote} onChange={(e) => setPodNote(e.target.value)} /></Field>
+            <Field id="p-ph" label="Photo of the parcel or signed slip (optional)">
+              <input id="p-ph" className="input" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+                onChange={(e) => setPodPhoto(e.target.files?.[0] ?? null)} />
+            </Field>
+            <button className="btn">Mark delivered</button>
+          </form>
+        </section>
+      )}
+      {s.status === "delivered" && s.pod_recipient && (
+        <p className="small">
+          Delivered {when(s.delivered_at)}. Received by {s.pod_recipient}{s.pod_note && ` · ${s.pod_note}`}
+          {s.pod_photo && <> · <a href={s.pod_photo} target="_blank" rel="noreferrer">View delivery photo</a></>}
+        </p>
+      )}
       <div className="two">
         <section>
           <h2 style={{ marginTop: 0 }}>Add an update</h2>

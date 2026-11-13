@@ -10,8 +10,12 @@ class PricingError(Exception):
     pass
 
 
-def q(amount):
-    return Decimal(amount).quantize(CENT, rounding=ROUND_HALF_UP)
+def q(amount, currency=None):
+    """Round to the currency's real unit: whole numbers for yen, won, CFA francs and so on; two places otherwise."""
+    from apps.currency.catalog import digits
+
+    unit = Decimal("1") if currency and digits(currency) == 0 else CENT
+    return Decimal(amount).quantize(unit, rounding=ROUND_HALF_UP)
 
 
 def _resolve(currency):
@@ -36,9 +40,9 @@ def rate(currency):
 
 def convert(amount, from_currency, to_currency):
     if from_currency.upper() == to_currency.upper():
-        return q(amount)
+        return q(amount, to_currency)
     in_base = Decimal(amount) / rate(from_currency)
-    return q(in_base * rate(to_currency))
+    return q(in_base * rate(to_currency), to_currency)
 
 
 def plain(value):
@@ -54,7 +58,8 @@ def fx_note(currency):
     return f"1 {settings.BASE_CURRENCY} = {plain(value)} {currency.upper()} ({description})"
 
 
-def tax_for(subtotal, country):
-    """Placeholder tax hook (FR-TAX-01). Configure TAX_RATE (e.g. '0.125') once tax advice is in."""
-    tax_rate = Decimal(str(getattr(settings, "TAX_RATE", "0")))
-    return q(Decimal(subtotal) * tax_rate)
+def tax_for(subtotal, country, currency=None, shipping=0):
+    """Tax on the discounted goods (and shipping where the country's rule says so); see apps.tax (FR-TAX-01)."""
+    from apps.tax.services import tax_for as _tax_for
+
+    return _tax_for(subtotal, shipping, country, currency)

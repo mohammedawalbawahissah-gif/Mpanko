@@ -25,7 +25,7 @@ class InvalidSignature(Exception):
 
 @dataclass
 class Verification:
-    status: str  # "succeeded" | "failed" | "pending"
+    status: str  # "succeeded" | "failed" | "cancelled" | "expired" | "reversed" | "pending"
     amount: Decimal | None = None
     currency: str = ""
     provider_reference: str = ""
@@ -41,6 +41,7 @@ class WebhookEventData:
     currency: str
     provider_reference: str
     payload: dict
+    dispute: dict | None = None  # set for chargeback events: id, status, category, amount, currency, respond_by, resolution
 
 
 class PaymentProvider:
@@ -61,6 +62,22 @@ class PaymentProvider:
     def parse_webhook(self, raw_body, headers):
         """Validate the signature and return WebhookEventData, or raise InvalidSignature."""
         raise NotImplementedError
+
+    @staticmethod
+    def _dispute_event(payload, event, d):
+        """charge.dispute.create / remind / resolve. Field names follow Paystack's docs; confirm with a sandbox dispute."""
+        txn = d.get("transaction") or {}
+        amount = d.get("refund_amount", txn.get("amount"))
+        return WebhookEventData(
+            event_id=f"{event}:{d.get('id', '')}:{d.get('status', '')}", event_type=event, reference=txn.get("reference", ""),
+            status="pending", amount=None, currency="", provider_reference=str(txn.get("id", "")), payload=payload,
+            dispute={
+                "id": str(d.get("id", "")), "status": d.get("status", ""), "category": d.get("category", "") or d.get("reason", ""),
+                "amount": _from_minor(amount) if amount is not None else None,
+                "currency": (d.get("currency") or txn.get("currency") or "").upper(), "respond_by": d.get("due_at", ""),
+                "resolution": d.get("resolution", ""), "resolved": event.endswith(".resolve"),
+            },
+        )
 
     def refund(self, attempt, amount, reason=""):
         """Return provider refund reference, or raise ProviderError."""
@@ -120,7 +137,7 @@ class PaystackProvider(PaymentProvider):
         if not resp.ok or not data.get("status"):
             return Verification("pending")
         d = data["data"]
-        status = {"success": "succeeded", "failed": "failed", "abandoned": "failed", "reversed": "failed"}.get(d.get("status"), "pending")
+        status = {"success": "succeeded", "failed": "failed", "abandoned": "cancelled", "reversed": "reversed"}.get(d.get("status"), "pending")
         return Verification(status, _from_minor(d.get("amount", 0)), (d.get("currency") or "").upper(), str(d.get("id", "")))
 
     def parse_webhook(self, raw_body, headers):
@@ -131,6 +148,8 @@ class PaystackProvider(PaymentProvider):
         payload = json.loads(raw_body)
         d = payload.get("data", {})
         event = payload.get("event", "")
+        if event.startswith("charge.dispute."):
+            return self._dispute_event(payload, event, d)
         status = "succeeded" if event == "charge.success" else "failed" if event == "charge.failed" else "pending"
         return WebhookEventData(
             event_id=f"{event}:{d.get('id', d.get('reference', ''))}",
@@ -169,7 +188,7 @@ class PaystackProvider(PaymentProvider):
             if not resp.ok or not data.get("status"):
                 raise ProviderError(data.get("message", "Could not list Paystack transactions."))
             for t in data.get("data", []):
-                status = {"success": "succeeded", "failed": "failed", "abandoned": "failed", "reversed": "failed"}.get(t.get("status"), "pending")
+                status = {"success": "succeeded", "failed": "failed", "abandoned": "cancelled", "reversed": "reversed"}.get(t.get("status"), "pending")
                 out.append({"reference": t.get("reference", ""), "status": status, "amount": _from_minor(t.get("amount", 0)), "currency": (t.get("currency") or "").upper()})
             if page >= int(data.get("meta", {}).get("pageCount", 1) or 1):
                 return out
@@ -200,7 +219,7 @@ class MockProvider(PaymentProvider):
         return WebhookEventData(
             event_id=p["event_id"], event_type=p.get("type", "payment"), reference=p["reference"], status=p["status"],
             amount=Decimal(str(p["amount"])) if "amount" in p else None, currency=p.get("currency", ""),
-            provider_reference=p.get("provider_reference", ""), payload=p,
+            provider_reference=p.get("provider_reference", ""), payload=p, dispute=p.get("dispute"),
         )
 
     def refund(self, attempt, amount, reason=""):
@@ -218,6 +237,25 @@ _REGISTRY = {"paystack": PaystackProvider, "mock": MockProvider}
 
 def enabled_providers():
     return {name: _REGISTRY[name]() for name in settings.PAYMENT_PROVIDERS_ENABLED if name in _REGISTRY}
+
+
+def chargeable_currencies():
+    """Currencies at least one enabled gateway can charge, and that we hold a usable exchange rate for."""
+    from apps.orders import pricing
+
+    base = settings.BASE_CURRENCY.upper()
+    out = set()
+    for provider in enabled_providers().values():
+        for code in provider.currencies:
+            if code == base:
+                out.add(code)
+                continue
+            try:
+                pricing.rate(code)
+            except pricing.PricingError:
+                continue
+            out.add(code)
+    return out
 
 
 def get_provider(name):

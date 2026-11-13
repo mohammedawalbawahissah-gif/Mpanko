@@ -61,6 +61,18 @@ Scan the QR code with the Expo Go app on your phone (phone and computer on the s
 - `mobile/`: use EAS Build (`npx eas build`) for store builds. You need Apple and Google developer accounts.
 - API deployment steps are in `backend/README.md`.
 
+## Tests
+
+- API: `cd backend && python -m pytest -p no:warnings -q tests` (set `DEBUG=true` first).
+- Web and admin: `npx vitest run` in each folder. Mobile: `npx vitest run` (platform-free logic) and `npx tsc --noEmit`.
+- Browser tests: see `e2e/`.
+
+## Languages, phone sign-in and error reports
+
+- The web and mobile apps ship English, French and Spanish for the main screens (`web/src/locales.ts`, `mobile/src/core/locales.ts`; keep the two files identical). Anything not translated falls back to English. Have a native speaker review the French and Spanish before launch.
+- Customers can verify a mobile number in their profile and then sign in with a texted code. In development `SMS_BACKEND=log` prints the code in the API console.
+- Crashes in the web, admin and mobile apps are posted to `/api/v1/client-errors/`; set `SENTRY_DSN` on the API for server-side tracking. See `docs/GO-LIVE.md` sections 5b to 5e.
+
 ## Known limits
 
 - After paying on the web page opened from the mobile app, the in-app browser lands on the storefront's confirmation

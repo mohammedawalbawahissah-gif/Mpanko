@@ -1,3 +1,4 @@
+import { refreshPushRegistration, unregisterDevice } from "./push";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, getTokens, setSignedOutHandler, setTokens, type Tokens } from "./api";
 import type { CartItem, User } from "./types";
@@ -7,7 +8,12 @@ interface Ctx {
   ready: boolean;
   cart: CartItem[];
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
+  /** Ask for an SMS sign-in code; the reply never reveals whether the number has an account. */
+  requestPhoneCode: (phone: string) => Promise<void>;
+  loginWithPhone: (phone: string, code: string) => Promise<void>;
+  /** Re-read the signed-in customer, after a profile change. */
+  refreshUser: () => Promise<void>;
+  register: (email: string, password: string, fullName: string, marketing?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshCart: () => Promise<void>;
   addToCart: (variantId: number, quantity: number) => Promise<void>;
@@ -42,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           setUser(await api<User>("/auth/me/"));
           await refreshCart();
+          refreshPushRegistration().catch(() => undefined);
         } catch {
           setUser(null);
         }
@@ -56,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setTokens({ access: r.access, refresh: r.refresh });
     setUser(r.user);
     await refreshCart();
+    refreshPushRegistration().catch(() => undefined);
   };
 
   const value: Ctx = {
@@ -63,11 +71,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ready,
     cart,
     login: async (email, password) => accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password } })),
-    register: async (email, password, fullName) => {
-      await api("/auth/register/", { method: "POST", body: { email, password, full_name: fullName } });
+    requestPhoneCode: async (phone) => {
+      await api("/auth/phone/login/", { method: "POST", body: { phone } });
+    },
+    loginWithPhone: async (phone, code) => accept(await api<LoginResult>("/auth/phone/login/confirm/", { method: "POST", body: { phone, code } })),
+    refreshUser: async () => {
+      setUser(await api<User>("/auth/me/"));
+    },
+    register: async (email, password, fullName, marketing = false) => {
+      await api("/auth/register/", { method: "POST", body: { email, password, full_name: fullName, accept_terms: true, marketing_opt_in: marketing } });
       await accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password } }));
     },
     logout: async () => {
+      await unregisterDevice().catch(() => undefined);
       const t = await getTokens();
       try {
         if (t) await api("/auth/logout/", { method: "POST", body: { refresh: t.refresh } });

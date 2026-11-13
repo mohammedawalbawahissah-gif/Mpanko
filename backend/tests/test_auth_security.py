@@ -21,12 +21,12 @@ def link_params(body):
 
 def test_registration_sends_verification_and_link_verifies_once(api, django_capture_on_commit_callbacks):
     with django_capture_on_commit_callbacks(execute=True):
-        r = api.post("/api/v1/auth/register/", {"email": "ama@example.com", "password": "Str0ng-pass-123"}, format="json")
+        r = api.post("/api/v1/auth/register/", {"email": "ama@example.com", "password": "Str0ng-pass-123", "accept_terms": True}, format="json")
     assert r.status_code == 201 and len(mail.outbox) == 1
     uid, token = link_params(mail.outbox[0].body)
     assert api.post("/api/v1/auth/verify-email/confirm/", {"uid": uid, "token": "bad"}, format="json").status_code == 400
     assert api.post("/api/v1/auth/verify-email/confirm/", {"uid": uid, "token": token}, format="json").status_code == 200
-    login = api.post("/api/v1/auth/login/", {"email": "ama@example.com", "password": "Str0ng-pass-123"}, format="json")
+    login = api.post("/api/v1/auth/login/", {"email": "ama@example.com", "password": "Str0ng-pass-123", "accept_terms": True}, format="json")
     assert login.data["user"]["email_verified"] is True
     assert api.post("/api/v1/auth/verify-email/confirm/", {"uid": uid, "token": token}, format="json").status_code == 400  # one-time
 

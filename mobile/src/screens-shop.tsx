@@ -3,6 +3,7 @@ import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-na
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError, type Page } from "./api";
 import { useAuth } from "./auth";
+import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
 import { Art, Busy, Button, Notice, s, useAsync } from "./ui";
@@ -11,6 +12,7 @@ export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
 
 export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List">) {
+  const { t, money, currency } = usePrefs();
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<number | null>(null);
@@ -24,8 +26,8 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
     <View style={s.screen}>
       <View style={{ padding: 12, paddingBottom: 4 }}>
         <TextInput
-          accessibilityLabel="Search products"
-          placeholder="Search products"
+          accessibilityLabel={t("shop.search")}
+          placeholder={t("shop.search")}
           placeholderTextColor={color.muted}
           returnKeyType="search"
           value={q}
@@ -34,6 +36,11 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
           style={[s.input]}
         />
       </View>
+      {!!currency && (
+        <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.indigo, fontWeight: "600", paddingHorizontal: 14, paddingBottom: 2 }}>
+          {t("shop.pricesIn", { currency })}
+        </Text>
+      )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
         {[{ id: null as number | null, name: "All" }, ...list].map((c) => (
           <Pressable key={String(c.id)} onPress={() => setCat(c.id)} accessibilityRole="button" accessibilityState={{ selected: cat === c.id }}
@@ -52,12 +59,12 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         columnWrapperStyle={{ gap: 8 }}
         ListEmptyComponent={products.loading ? null : <Text style={[s.muted, { padding: 16 }]}>Nothing matches. Try a different search.</Text>}
         renderItem={({ item }) => (
-          <Pressable style={[s.card, { flex: 1 }]} accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.currency} ${item.base_price}`} onPress={() => navigation.navigate("Product", { slug: item.slug })}>
+          <Pressable style={[s.card, { flex: 1 }]} accessibilityRole="button" accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`} onPress={() => navigation.navigate("Product", { slug: item.slug })}>
             <Art seed={item.slug} />
             <View style={s.cardPad}>
               <Text style={{ fontWeight: "700", color: color.ink }} numberOfLines={2}>{item.name}</Text>
               <Text style={s.muted} numberOfLines={1}>{item.maker || item.origin_country}</Text>
-              <Text style={{ fontWeight: "700", color: color.ink, marginTop: 4 }}>{item.currency} {item.base_price}</Text>
+              <Text style={{ fontWeight: "700", color: color.ink, marginTop: 4 }}>{money(item.base_price, item.currency)}</Text>
             </View>
           </Pressable>
         )}
@@ -68,6 +75,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
 
 export function ProductScreen({ route, navigation }: NativeStackScreenProps<ShopStack, "Product">) {
   const { user, addToCart } = useAuth();
+  const { money } = usePrefs();
   const { data: p, error, loading } = useAsync(() => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
   const [variantId, setVariantId] = useState<number | null>(null);
   const [qty, setQty] = useState(1);
@@ -103,7 +111,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
       <View style={s.pad}>
         <Text style={s.h1}>{p.name}</Text>
         <Text style={s.muted}>{p.maker ? `Made by ${p.maker}` : ""}{p.maker && p.origin_country ? " · " : ""}{p.origin_country}</Text>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: color.ink, marginVertical: 12 }}>{chosen?.price ?? p.base_price} {p.currency}</Text>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: color.ink, marginVertical: 12 }}>{money(chosen?.price ?? p.base_price, p.currency)}</Text>
         <Text style={{ color: color.ink, lineHeight: 22 }}>{p.description}</Text>
         {variants.length > 1 && (
           <>

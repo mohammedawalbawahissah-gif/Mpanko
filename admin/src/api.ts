@@ -92,7 +92,8 @@ interface Options {
 
 export async function api<T = unknown>(path: string, opts: Options = {}, retry = true): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(opts.headers ?? {}) };
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  if (opts.body !== undefined && !isForm) headers["Content-Type"] = "application/json"; // a browser sets the multipart boundary itself
   const tokens = getTokens();
   if (tokens) headers.Authorization = `Bearer ${tokens.access}`;
 
@@ -101,7 +102,7 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retry =
     res = await fetch(`${BASE}${path}`, {
       method: opts.method ?? "GET",
       headers,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
     });
   } catch {
     throw new ApiError(0, { detail: "Can't reach Mpanko right now. Check your connection and try again." });
@@ -132,6 +133,19 @@ export interface Page<T> {
 
 export function idempotencyKey(): string {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/** Download an authenticated file (such as a shipping label). */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const tokens = getTokens();
+  const res = await fetch(`${BASE}${path}`, { headers: tokens ? { Authorization: `Bearer ${tokens.access}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, null);
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /** Download a CSV export (needs the Authorization header, so a plain link won't work). */

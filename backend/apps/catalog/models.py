@@ -42,6 +42,15 @@ class Product(models.Model):
     currency = models.CharField(max_length=3, default=settings.BASE_CURRENCY)
     status = models.CharField(max_length=10, choices=ProductStatus.choices, default=ProductStatus.DRAFT)
     weight_grams = models.PositiveIntegerField(default=0)
+    # Packed size of one unit, in millimetres. 0 = not measured yet; carriers then get the store's default box.
+    length_mm = models.PositiveIntegerField(default=0)
+    width_mm = models.PositiveIntegerField(default=0)
+    height_mm = models.PositiveIntegerField(default=0)
+    # Dangerous goods (batteries, aerosols, perfumes with alcohol, ...): only services cleared for them are offered.
+    is_dangerous_goods = models.BooleanField(default=False)
+    dg_class = models.CharField(max_length=10, blank=True, help_text="UN hazard class, e.g. 9 (batteries), 2.1 (aerosols), 3 (flammable liquids)")
+    un_number = models.CharField(max_length=10, blank=True, help_text="e.g. UN3481")
+    hs_code = models.CharField(max_length=12, blank=True, help_text="Customs tariff code, printed on invoices for international parcels")
     # Shipping restrictions (FR-SHP-09): empty list = no restriction
     restricted_countries = models.JSONField(default=list, blank=True, help_text='e.g. ["KP", "IR"]')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -153,9 +162,27 @@ def adjust_stock(variant_id, delta, reason, actor=None, note="", order_ref="", e
     new_qty = inv.quantity + delta
     if enforce and new_qty < 0 and not inv.allow_backorder:
         raise OutOfStock(inv.variant.sku)
+    was_low = inv.is_low
     inv.quantity = new_qty
     inv.save(update_fields=["quantity"])
     StockMovement.objects.create(
         variant_id=variant_id, delta=delta, reason=reason, actor=actor, note=note, order_ref=order_ref
     )
+    if inv.is_low and not was_low:  # only the moment stock crosses the line, not on every sale after it
+        transaction.on_commit(lambda: alert_low_stock(inv.variant_id))
     return inv
+
+
+def alert_low_stock(variant_id):
+    """Email store admins (and STAFF_ALERT_EMAILS) that a variant has reached its low-stock level (FR-CAT-06)."""
+    from django.conf import settings
+
+    from apps.accounts.models import Role, User
+    from apps.notifications.services import send_notification
+
+    inv = Inventory.objects.select_related("variant__product").get(variant_id=variant_id)
+    ctx = {"product": inv.variant.product.name, "sku": inv.variant.sku, "quantity": inv.quantity, "threshold": inv.low_stock_threshold}
+    people = set(User.objects.filter(role__in=[Role.STORE_ADMIN], is_active=True).values_list("email", flat=True))
+    people |= set(getattr(settings, "STAFF_ALERT_EMAILS", []))
+    for email in sorted(people):
+        send_notification("low_stock_alert", email, ctx, ref=f"{inv.variant.sku}-{inv.quantity}", dedupe=False)

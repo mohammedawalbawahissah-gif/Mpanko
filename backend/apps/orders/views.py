@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
@@ -83,7 +84,8 @@ class CheckoutView(APIView):
         address = get_object_or_404(Address, pk=s.validated_data["address_id"], user=request.user)
         try:
             order, created = checkout(
-                request.user, address, s.validated_data["shipping_service"], s.validated_data.get("currency"), key
+                request.user, address, s.validated_data["shipping_service"], s.validated_data.get("currency"), key,
+                declarations={k: s.validated_data.get(k) for k in ("phone", "delivery_notes", "accept_terms", "duties_acknowledged", "coupon_code")},
             )
         except CheckoutError as exc:
             raise ValidationError({exc.field: exc.message})
@@ -107,6 +109,17 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         qs = Order.objects.prefetch_related("items", "events", "shipments__events", "shipments__carrier")
         user = self.request.user
         return qs if user.is_staff_role else qs.filter(user=user)
+
+    @action(detail=True, methods=["get"])
+    def invoice(self, request, number=None):
+        from .invoice import UNPAID, build_invoice
+
+        order = self.get_object()
+        if order.status in UNPAID or not order.paid_at:
+            raise ValidationError({"detail": "An invoice is available once the order is paid."})
+        resp = HttpResponse(build_invoice(order), content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="invoice-{order.number}.pdf"'
+        return resp
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, number=None):

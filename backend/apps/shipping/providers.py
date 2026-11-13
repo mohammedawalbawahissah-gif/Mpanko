@@ -18,6 +18,7 @@ class Rate:
     price: Decimal  # always in settings.BASE_CURRENCY
     eta_days_min: int | None = None
     eta_days_max: int | None = None
+    dangerous_goods: bool = False  # cleared to carry dangerous goods
 
     def as_dict(self):
         return {
@@ -28,6 +29,7 @@ class Rate:
             "currency": settings.BASE_CURRENCY,
             "eta_days_min": self.eta_days_min,
             "eta_days_max": self.eta_days_max,
+            "dangerous_goods": self.dangerous_goods,
         }
 
 
@@ -64,7 +66,53 @@ class ManualProvider(ShippingProvider):
         ]
 
 
+class TableProvider(ShippingProvider):
+    """
+    Rates from the zone tables staff maintain. A destination only gets the services of the zone it belongs to
+    (its own country first, then the "*" rest-of-world zone), within each service's weight limits.
+    """
+
+    name = "table"
+
+    @staticmethod
+    def has_rates():
+        from .models import ShippingRate
+
+        return ShippingRate.objects.filter(is_active=True, zone__is_active=True).exists()
+
+    def get_rates(self, destination_country, weight_grams, origin_country=None):
+        import math
+
+        from .models import ShippingZone
+
+        dest = (destination_country or "").upper()
+        zones = list(ShippingZone.objects.filter(is_active=True).prefetch_related("rates"))
+        zone = next((z for z in zones if dest in {c.upper() for c in z.countries}), None) or next(
+            (z for z in zones if "*" in z.countries), None
+        )
+        if not zone:
+            return []
+        kg = Decimal(math.ceil((weight_grams or 0) / 1000))
+        out = []
+        for r in zone.rates.all():
+            if not r.is_active or (weight_grams or 0) < r.min_weight_grams:
+                continue
+            if r.max_weight_grams is not None and (weight_grams or 0) > r.max_weight_grams:
+                continue
+            price = (r.base_price + r.price_per_kg * kg).quantize(Decimal("0.01"))
+            out.append(Rate("table", r.service_code, r.service_name, price, r.eta_days_min, r.eta_days_max, r.allows_dangerous_goods))
+        return sorted(out, key=lambda x: x.price)
+
+
+def blocked_reason(country):
+    from .models import BlockedDestination
+
+    row = BlockedDestination.objects.filter(country=(country or "").upper()).first()
+    return None if row is None else (row.reason or "We can't ship to this country.")
+
+
 PROVIDERS = {"manual": ManualProvider()}
+TABLE = TableProvider()
 
 
 # --- Carrier tracking adapters -----------------------------------------------------------------------------
@@ -131,15 +179,92 @@ class DHLTracking:
 TRACKING = {"dhl": DHLTracking()}
 
 
-def get_rates(destination_country, weight_grams=0, origin_country=None):
-    rates = []
-    for provider in PROVIDERS.values():
-        rates.extend(provider.get_rates(destination_country, weight_grams, origin_country))
-    return rates
+class _LiveTracking:
+    """Adapts a LiveCarrier's tracking() to the fetch_tracking() interface used by sync_shipment."""
+
+    def __init__(self, code):
+        self.name = code
+
+    def fetch_tracking(self, shipment):
+        from .carriers import LIVE_CARRIERS, CarrierError
+
+        carrier = LIVE_CARRIERS[self.name]
+        if not carrier.configured():
+            raise TrackingError(f"{carrier.label} credentials are not configured.")
+        try:
+            return carrier.tracking(shipment)
+        except CarrierError as exc:
+            raise TrackingError(str(exc))
 
 
-def find_rate(destination_country, service_code, weight_grams=0):
-    for rate in get_rates(destination_country, weight_grams):
+TRACKING.update({"fedex": _LiveTracking("fedex"), "ups": _LiveTracking("ups")})
+
+
+def live_rates(destination, weight_grams, dims=None):
+    """
+    Quotes from every connected carrier (DHL Express, FedEx, UPS), converted to the store's base currency. Results are
+    cached briefly so the price a customer saw is the price checkout charges. A failing carrier is skipped, never fatal.
+    """
+    import logging
+
+    from django.core.cache import cache
+
+    from apps.orders import pricing
+
+    from .carriers import CarrierError, active_carriers
+
+    carriers = active_carriers()
+    if not carriers or not (destination or {}).get("country"):
+        return []
+    out = []
+    for c in carriers:
+        key = "liverates:{}:{}:{}:{}:{}".format(
+            c.code, destination["country"].upper(), (destination.get("postal_code") or "").upper(), (destination.get("city") or "").lower(), weight_grams or 0
+        ) + (":" + "x".join(str(d) for d in dims) if dims else "")
+        quotes = cache.get(key)
+        if quotes is None:
+            try:
+                quotes = c.rates(destination, weight_grams or 0, dims)
+            except CarrierError as exc:
+                logging.getLogger(__name__).warning("Carrier %s quote failed: %s", c.code, exc)
+                continue
+            except Exception:  # never let an adapter bug take checkout down
+                logging.getLogger(__name__).exception("Carrier %s quote crashed", c.code)
+                continue
+            cache.set(key, quotes, settings.CARRIER_QUOTE_CACHE_SECONDS)
+        for qt in quotes:
+            try:
+                price = pricing.convert(qt.price, qt.currency, settings.BASE_CURRENCY)
+            except Exception:
+                continue
+            out.append(Rate(c.code, f"{c.code}:{qt.service_code}", qt.service_name, price, qt.eta_min, qt.eta_max, c.code in settings.DANGEROUS_GOODS_CARRIERS))
+    return out
+
+
+def get_rates(destination_country, weight_grams=0, origin_country=None, destination=None, dims=None, dangerous=False):
+    """
+    Blocked countries get nothing. Staff rate tables (or the flat-rate fallback before any exist) are always offered;
+    live carrier quotes are added when a carrier is connected and an address is known. Parcels holding dangerous
+    goods only see services cleared to carry them. `dims` is the packed box in cm, (length, width, height).
+    """
+    if blocked_reason(destination_country):
+        return []
+    if TABLE.has_rates():
+        rates = TABLE.get_rates(destination_country, weight_grams, origin_country)
+    else:
+        rates = []
+        for provider in PROVIDERS.values():
+            rates.extend(provider.get_rates(destination_country, weight_grams, origin_country))
+    dest = dict(destination or {})
+    dest["country"] = (destination_country or "").upper()
+    rates.extend(live_rates(dest, weight_grams, dims))
+    if dangerous:
+        rates = [r for r in rates if r.dangerous_goods]
+    return sorted(rates, key=lambda r: r.price)
+
+
+def find_rate(destination_country, service_code, weight_grams=0, destination=None, dims=None, dangerous=False):
+    for rate in get_rates(destination_country, weight_grams, destination=destination, dims=dims, dangerous=dangerous):
         if rate.service_code == service_code:
             return rate
     return None
