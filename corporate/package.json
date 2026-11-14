@@ -1,0 +1,17 @@
+{
+  "name": "mpanko-corporate",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The business's own website: who we are, what we sell, how an order travels, how to reach us. Static; no framework.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node server.mjs",
+    "dev": "node scripts/build.mjs && node server.mjs",
+    "test": "node --test scripts/build.test.mjs scripts/server.test.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.1.0",
+    "@fontsource-variable/public-sans": "^5.1.0"
+  }
+}

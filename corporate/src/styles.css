@@ -1,0 +1,104 @@
+/* Mpanko corporate site. Indigo, raffia and limewash; one woven strip is the only decoration. */
+@font-face { font-family: "Bricolage Grotesque Variable"; font-style: normal; font-display: swap; font-weight: 200 800; src: url("fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2-variations"); }
+@font-face { font-family: "Public Sans Variable"; font-style: normal; font-display: swap; font-weight: 100 900; src: url("fonts/public-sans-latin-wght-normal.woff2") format("woff2-variations"); }
+
+:root {
+  --indigo: #1b2455;
+  --indigo-deep: #121a42;
+  --raffia: #c98e2b;
+  --raffia-soft: #e8c377;
+  --limewash: #eef0ea;
+  --ink: #14172a;
+  --mist: #cfd4c9;
+  --muted: #4a4f63;
+  --display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans Variable", "Segoe UI", system-ui, sans-serif;
+  --pad: clamp(1.25rem, 5vw, 4rem);
+  --measure: 38rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; font: 400 1.0625rem/1.65 var(--body); color: var(--ink); background: var(--limewash); overflow-x: clip; }
+img, svg { max-width: 100%; }
+a { color: inherit; text-underline-offset: 0.2em; }
+:focus-visible { outline: 3px solid var(--raffia); outline-offset: 3px; }
+
+.skip { position: absolute; left: var(--pad); top: -4rem; background: var(--limewash); color: var(--ink); padding: 0.6rem 1rem; z-index: 10; }
+.skip:focus { top: 0.75rem; }
+
+/* Header */
+.top { background: var(--indigo); color: var(--limewash); }
+.top { padding: 0 var(--pad); }
+.top-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 2rem; padding: 1rem 0; max-width: 80rem; margin: 0 auto; }
+.brand { font: 700 1.5rem/1 var(--display); letter-spacing: -0.01em; text-decoration: none; }
+.top nav ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; list-style: none; margin: 0; padding: 0; }
+.top nav a { text-decoration: none; padding: 0.4rem 0; display: inline-block; }
+.top nav a:hover { text-decoration: underline; }
+
+/* Buttons */
+.btn { display: inline-block; font: 600 1rem/1 var(--body); padding: 0.95rem 1.4rem; background: var(--raffia); color: var(--indigo-deep); text-decoration: none; border: 2px solid var(--raffia); }
+.btn:hover { background: var(--raffia-soft); border-color: var(--raffia-soft); }
+.btn.quiet { background: transparent; color: inherit; border-color: currentColor; }
+.btn.quiet:hover { background: rgb(255 255 255 / 0.1); }
+
+/* Hero */
+.hero { background: var(--indigo); color: var(--limewash); display: grid; grid-template-columns: minmax(0, 1fr) clamp(5rem, 16vw, 15rem); }
+.hero-copy { padding: clamp(3rem, 9vw, 7.5rem) var(--pad) clamp(3rem, 8vw, 6.5rem) max(var(--pad), calc((100vw - 80rem) / 2)); max-width: 100%; }
+.hero h1 { font: 750 clamp(2.6rem, 8.2vw, 6.4rem)/0.98 var(--display); letter-spacing: -0.035em; margin: 0 0 1.5rem; max-width: 11em; text-wrap: balance; }
+.hero p { font-size: clamp(1.1rem, 2.1vw, 1.35rem); max-width: 34rem; margin: 0 0 2.25rem; color: #d9dcec; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+
+/* The woven strip: strips of different widths, as on a narrow loom. The only decoration on the page. */
+.weave { background:
+  linear-gradient(90deg,
+    var(--raffia) 0 9%, var(--indigo-deep) 9% 16%, var(--limewash) 16% 19%, var(--indigo-deep) 19% 30%,
+    var(--raffia-soft) 30% 41%, var(--indigo) 41% 47%, var(--raffia) 47% 52%, var(--indigo) 52% 58%,
+    var(--limewash) 58% 70%, var(--indigo-deep) 70% 74%, var(--raffia) 74% 87%, var(--indigo-deep) 87% 92%, var(--raffia-soft) 92% 100%);
+}
+.weave-cross { background-image: repeating-linear-gradient(0deg, transparent 0 22px, rgb(18 26 66 / 0.55) 22px 26px, transparent 26px 70px, rgb(238 240 234 / 0.45) 70px 72px); height: 100%; }
+
+/* Sections */
+section { padding: clamp(3rem, 8vw, 6rem) var(--pad); }
+.wrap { max-width: 80rem; margin: 0 auto; display: grid; gap: 1rem clamp(2rem, 6vw, 6rem); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 56rem) { .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+h2 { font: 700 clamp(1.9rem, 4vw, 3rem)/1.05 var(--display); letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0.75rem 0 0; max-width: 24rem; }
+.prose p { margin: 0 0 1.1rem; max-width: var(--measure); }
+
+/* Product rows: ruled, not boxed */
+.rows { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+.rows li { display: grid; gap: 0.25rem 2rem; padding: 1.25rem 0; border-bottom: 1px solid var(--mist); }
+@media (min-width: 40rem) { .rows li { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); } }
+.rows h3 { font: 650 1.35rem/1.2 var(--display); margin: 0; letter-spacing: -0.01em; }
+.rows p { margin: 0; color: var(--muted); max-width: var(--measure); }
+
+/* Journey: a real sequence, so it is numbered */
+.band { background: var(--indigo); color: var(--limewash); }
+.band .lede { color: #c8cce2; }
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; border-top: 2px solid var(--raffia); }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0 1rem; padding: 1.25rem 0; border-bottom: 1px solid rgb(238 240 234 / 0.25); }
+.steps li::before { content: counter(step); font: 700 1.75rem/1.1 var(--display); color: var(--raffia-soft); grid-row: span 2; }
+.steps h3 { font: 650 1.3rem/1.2 var(--display); margin: 0; }
+.steps p { margin: 0.2rem 0 0; color: #d3d6e8; max-width: var(--measure); }
+
+.page-title { font: 700 clamp(2rem, 5vw, 3.5rem)/1.05 var(--display); letter-spacing: -0.025em; margin: 0; }
+
+/* Contact */
+.contact dl { margin: 0; display: grid; gap: 0.25rem 2rem; grid-template-columns: max-content minmax(0, 1fr); font-size: 1.15rem; }
+.contact dt { color: var(--muted); }
+.contact dd { margin: 0; overflow-wrap: anywhere; }
+.contact .btn { margin-top: 1.75rem; }
+
+footer { background: var(--indigo-deep); color: #d3d6e8; padding: 2.25rem var(--pad); }
+.foot-inner { max-width: 80rem; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; justify-content: space-between; align-items: center; }
+footer ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; list-style: none; margin: 0; padding: 0; }
+footer a { display: inline-block; padding: 0.35rem 0; }
+footer p { margin: 0; }
+
+@media (max-width: 40rem) {
+  .hero { grid-template-columns: minmax(0, 1fr) 2.25rem; }
+  .actions .btn { flex: 1 1 100%; text-align: center; }
+}
+@media print { .top, .weave, .actions, footer ul { display: none; } body { background: #fff; } .hero, .band { background: none; color: #000; } }

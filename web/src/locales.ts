@@ -344,6 +344,10 @@ const en = {
   "m.loading": "Loading",
   "m.show": "Show",
   "m.hide": "Hide",
+  "checkout.methodCash": "Cash",
+  "checkout.manualHint": "You'll see how to pay on the next page. We confirm your order when your payment arrives.",
+  "done.manualTitle": "Pay to finish your order",
+  "done.manualBody": "We're holding your order. We'll confirm it and email you as soon as your payment arrives.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -683,6 +687,10 @@ const fr: Dict = {
   "m.loading": "Chargement",
   "m.show": "Afficher",
   "m.hide": "Masquer",
+  "checkout.methodCash": "Espèces",
+  "checkout.manualHint": "Vous verrez comment payer sur la page suivante. Nous confirmons votre commande dès que votre paiement arrive.",
+  "done.manualTitle": "Payez pour finaliser votre commande",
+  "done.manualBody": "Nous gardons votre commande. Nous la confirmerons et vous écrirons dès que votre paiement arrivera.",
 };
 
 const es: Dict = {
@@ -1019,6 +1027,10 @@ const es: Dict = {
   "m.loading": "Cargando",
   "m.show": "Mostrar",
   "m.hide": "Ocultar",
+  "checkout.methodCash": "Efectivo",
+  "checkout.manualHint": "En la siguiente página verás cómo pagar. Confirmamos tu pedido cuando llegue tu pago.",
+  "done.manualTitle": "Paga para terminar tu pedido",
+  "done.manualBody": "Estamos reservando tu pedido. Lo confirmaremos y te escribiremos en cuanto llegue tu pago.",
 };
 
 // Hausa. Written without a native reviewer: have a Hausa speaker read it before launch.
@@ -1356,6 +1368,10 @@ const ha: Dict = {
   "m.loading": "Ana lodi",
   "m.show": "Nuna",
   "m.hide": "Boye",
+  "checkout.methodCash": "Kuɗi hannu",
+  "checkout.manualHint": "Za ka ga yadda ake biya a shafi na gaba. Za mu tabbatar da odarka idan biyan ya iso.",
+  "done.manualTitle": "Biya don kammala odarka",
+  "done.manualBody": "Muna riƙe odarka. Za mu tabbatar da ita mu aiko maka imel da zarar biyan ya iso.",
 };
 
 export const MESSAGES: Record<string, Dict> = { en, fr, es, ha };

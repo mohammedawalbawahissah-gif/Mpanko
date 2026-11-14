@@ -45,6 +45,17 @@ jobs:
       - run: npx vitest run
       - run: npm run build
 
+  corporate:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: corporate } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: corporate/package-lock.json }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
   mobile:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: mobile } }
@@ -80,8 +91,16 @@ jobs:
       - name: Install the admin app
         working-directory: admin
         run: npm ci
+      - name: Build and start the corporate site
+        working-directory: corporate
+        run: |
+          npm ci
+          npm run build
+          PORT=5175 nohup node server.mjs > ../corporate.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf http://localhost:5175/healthz && break; sleep 1; done
       - name: Run the browser tests
         working-directory: e2e
+        env: { E2E_CORPORATE_URL: "http://localhost:5175" }
         run: |
           npm ci
           npx playwright install --with-deps chromium

@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    DisputeViewSet, GuestInitiateView, GuestVerifyView, InitiateView, MethodsView, ReconciliationDetailView, ReconciliationResolveView, ReconciliationRunView, RefundView,
+    ConfirmManualView, DisputeViewSet, GuestInitiateView, GuestVerifyView, InitiateView, ManualPaymentsView, MethodsView, ReconciliationDetailView, ReconciliationResolveView, ReconciliationRunView, RefundView,
     VerifyView, WebhookView,
 )
 
@@ -16,6 +16,8 @@ urlpatterns = [
     path("guest/verify/<str:reference>/", GuestVerifyView.as_view(), name="payment-guest-verify"),
     path("verify/<str:reference>/", VerifyView.as_view(), name="payment-verify"),
     path("webhooks/<str:provider>/", WebhookView.as_view(), name="payment-webhook"),
+    path("manual/", ManualPaymentsView.as_view(), name="payment-manual-list"),
+    path("manual/<str:reference>/confirm/", ConfirmManualView.as_view(), name="payment-manual-confirm"),
     path("refunds/", RefundView.as_view(), name="payment-refund"),
     path("reconciliation/", ReconciliationRunView.as_view(), name="reconciliation-runs"),
     path("reconciliation/<int:run_id>/", ReconciliationDetailView.as_view(), name="reconciliation-detail"),

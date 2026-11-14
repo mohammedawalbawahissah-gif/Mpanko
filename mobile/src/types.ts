@@ -18,7 +18,7 @@ export interface Address {
 }
 export interface CartItem { id: number; variant: number; sku: string; product_slug: string; product_name: string; unit_price: string; currency: string; quantity: number }
 export interface ShippingService { service_code: string; service_name: string; price: string; currency: string; eta_days_min: number | null; eta_days_max: number | null }
-export interface PaymentMethod { provider: string; currencies: string[] }
+export interface PaymentMethod { provider: string; currencies: string[]; manual?: boolean }
 export interface TrackingEvent { id: number; status: string; description: string; location: string; occurred_at: string }
 export interface Shipment { id: number; carrier_name: string | null; tracking_number: string; status: string; events: TrackingEvent[] }
 export interface OrderItem { sku: string; product_name: string; variant_name: string; quantity: number; line_total: string }

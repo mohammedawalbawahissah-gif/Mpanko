@@ -255,7 +255,7 @@ export function GuestCheckout() {
                 {methods.map((m) => (
                   <label className="choice" key={m.provider}>
                     <input type="radio" name="provider" checked={m.provider === provider} onChange={() => setProvider(m.provider)} />
-                    <span><strong>{providerName(m.provider, currency, t)}</strong><br /><span className="muted small">{t("checkout.finishSecure")}</span></span>
+                    <span><strong>{providerName(m.provider, currency, t)}</strong><br /><span className="muted small">{m.manual ? t("checkout.manualHint") : t("checkout.finishSecure")}</span></span>
                   </label>
                 ))}
               </div>

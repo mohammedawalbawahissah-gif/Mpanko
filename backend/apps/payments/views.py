@@ -1,7 +1,10 @@
 import logging
 
 from django.conf import settings
+from datetime import timedelta
+
 from django.db import IntegrityError
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -33,7 +36,7 @@ class MethodsView(APIView):
     def get(self, request):
         currency = request.query_params.get("currency", "").upper()
         return Response([
-            {"provider": name, "currencies": sorted(p.currencies)}
+            {"provider": name, "currencies": sorted(p.currencies), "manual": p.manual}
             for name, p in enabled_providers().items()
             if not currency or p.supports_currency(currency)
         ])
@@ -66,6 +69,11 @@ def _start_payment(request, order, provider_name):
     attempt.raw_response = result.get("raw", {})
     try:
         attempt.save()
+        if provider.manual:
+            # A person confirms this payment, which takes longer than a gateway: hold the stock for longer than usual.
+            hold = timezone.now() + timedelta(hours=settings.MANUAL_PAYMENT_HOLD_HOURS)
+            if order.expires_at is None or order.expires_at < hold:
+                Order.objects.filter(pk=order.pk).update(expires_at=hold)
     except IntegrityError:  # two simultaneous requests with the same key
         return Response(_attempt_payload(PaymentAttempt.objects.get(order=order, idempotency_key=key)))
     return Response(_attempt_payload(attempt), status=status.HTTP_201_CREATED)
@@ -108,6 +116,7 @@ def _attempt_payload(attempt):
     return {
         "reference": attempt.reference, "provider": attempt.provider, "status": attempt.status,
         "amount": str(attempt.amount), "currency": attempt.currency, "authorization_url": attempt.authorization_url,
+        "manual": bool(attempt.raw_response.get("manual")), "instructions": attempt.raw_response.get("instructions", ""),
     }
 
 
@@ -119,7 +128,11 @@ def _verify_attempt(attempt, reference):
             raise ValidationError({"detail": str(exc)})
         attempt = apply_result(reference, v.status, v.amount, v.currency, v.provider_reference) or attempt
     attempt.order.refresh_from_db()
-    return Response({"reference": reference, "payment_status": attempt.status, "order_number": attempt.order.number, "order_status": attempt.order.status})
+    manual = bool(attempt.raw_response.get("manual"))
+    return Response({
+        "reference": reference, "payment_status": attempt.status, "order_number": attempt.order.number, "order_status": attempt.order.status,
+        "manual": manual, "instructions": attempt.raw_response.get("instructions", "") if manual else "",
+    })
 
 
 class VerifyView(APIView):
@@ -182,6 +195,52 @@ class WebhookView(APIView):
         record.processed = True
         record.save(update_fields=["processed"])
         return Response({"detail": "ok"})
+
+
+class ManualPaymentsView(APIView):
+    """Cash and Zelle payments still waiting for finance to confirm that the money arrived."""
+
+    permission_classes = [FinanceStaff]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        names = [n for n, p in enabled_providers().items() if p.manual]
+        qs = PaymentAttempt.objects.filter(provider__in=names, status=AttemptStatus.PENDING, order__status=OrderStatus.PENDING_PAYMENT).select_related("order").order_by("created_at")
+        return Response([
+            {"reference": a.reference, "order_number": a.order.number, "provider": a.provider, "amount": str(a.amount), "currency": a.currency,
+             "contact_email": a.order.contact_email, "created_at": a.created_at, "expires_at": a.order.expires_at}
+            for a in qs[:200]
+        ])
+
+
+class ConfirmManualSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class ConfirmManualView(APIView):
+    """Finance confirms that a Cash or Zelle payment arrived. The amount received must match the order exactly."""
+
+    permission_classes = [FinanceStaff]
+
+    @extend_schema(request=ConfirmManualSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, reference):
+        s = ConfirmManualSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        attempt = get_object_or_404(PaymentAttempt, reference=reference)
+        try:
+            manual = get_provider(attempt.provider).manual
+        except ProviderError:
+            manual = False
+        if not manual:
+            raise ValidationError({"detail": "Only Cash and Zelle payments are confirmed by hand."})
+        if attempt.status != AttemptStatus.PENDING:
+            raise ValidationError({"detail": f"This payment is already '{attempt.status}'."})
+        if s.validated_data["amount"] != attempt.amount:
+            raise ValidationError({"amount": f"The order is for {attempt.currency} {attempt.amount}. Confirm only when exactly that has arrived."})
+        attempt = apply_result(reference, "succeeded", attempt.amount, attempt.currency, raw={"confirmed_by": request.user.email}, source="staff")
+        AuditLog.record(request.user, "payment.confirm_manual", attempt, provider=attempt.provider, amount=str(attempt.amount))
+        attempt.order.refresh_from_db()
+        return Response({"reference": reference, "payment_status": attempt.status, "order_status": attempt.order.status})
 
 
 class RefundSerializer(serializers.Serializer):

@@ -146,6 +146,7 @@ export interface OrderSummary {
 export interface PaymentMethod {
   provider: string;
   currencies: string[];
+  manual?: boolean;
 }
 
 export interface TaxEstimate {

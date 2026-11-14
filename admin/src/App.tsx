@@ -7,7 +7,7 @@ import { Products, Stock } from "./pages-catalog";
 import { Emails } from "./pages-emails";
 import { ShippingRules } from "./pages-shipping";
 import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Returns, StaffPage, Support, SupportDetail } from "./pages-store";
-import { Chargebacks, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
+import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
 import { Security } from "./pages-security";
 
@@ -15,6 +15,7 @@ const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "supp
 const NAV: { to: string; name: string; roles: string[] }[] = [
   { to: "/", name: "Dashboard", roles: ALL_STAFF },
   { to: "/orders", name: "Orders", roles: ALL_STAFF },
+  { to: "/manual-payments", name: "Manual payments", roles: ["super_admin", "store_admin", "finance"] },
   { to: "/shipments", name: "Shipments", roles: ["super_admin", "store_admin", "fulfillment", "carrier"] },
   { to: "/shipping-rules", name: "Shipping rules", roles: ["super_admin", "store_admin", "fulfillment"] },
   { to: "/returns", name: "Returns", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"] },
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="stock" element={route("/stock", <Stock />)} />
             <Route path="reports" element={route("/reports", <Reports />)} />
             <Route path="emails" element={route("/emails", <Emails />)} />
+            <Route path="manual-payments" element={route("/manual-payments", <ManualPayments />)} />
             <Route path="chargebacks" element={route("/chargebacks", <Chargebacks />)} />
             <Route path="tax" element={route("/tax", <TaxAndDuties />)} />
             <Route path="reconciliation" element={route("/reconciliation", <Reconciliation />)} />

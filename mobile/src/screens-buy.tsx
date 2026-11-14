@@ -253,7 +253,7 @@ export function CheckoutScreen() {
       {methods.map((m) => (
         <Pressable key={m.provider} onPress={() => setProvider(m.provider)} accessibilityRole="radio" accessibilityState={{ selected: m.provider === provider }} style={[s.choice, m.provider === provider && s.choiceOn]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{methodLabel(t, m.provider, currency)}</Text>
-          <Text style={s.muted}>{t("checkout.finishSecure")}</Text>
+          <Text style={s.muted}>{m.manual ? t("checkout.manualHint") : t("checkout.finishSecure")}</Text>
         </Pressable>
       ))}
 
