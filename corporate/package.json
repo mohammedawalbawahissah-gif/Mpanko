@@ -8,7 +8,7 @@
     "build": "node scripts/build.mjs",
     "start": "node server.mjs",
     "dev": "node scripts/build.mjs && node server.mjs",
-    "test": "node --test scripts/build.test.mjs scripts/server.test.mjs"
+    "test": "node --test scripts/render.test.mjs scripts/server.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.1.0",

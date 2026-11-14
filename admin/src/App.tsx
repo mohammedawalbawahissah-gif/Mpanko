@@ -10,6 +10,7 @@ import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Retu
 import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
 import { Security } from "./pages-security";
+import { Businesses, Enquiries, SiteDetails } from "./pages-corporate";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
 const NAV: { to: string; name: string; roles: string[] }[] = [
@@ -30,6 +31,9 @@ const NAV: { to: string; name: string; roles: string[] }[] = [
   { to: "/reconciliation", name: "Reconciliation", roles: ["super_admin", "store_admin", "finance"] },
   { to: "/chargebacks", name: "Chargebacks", roles: ["super_admin", "store_admin", "finance"] },
   { to: "/tax", name: "Tax and duties", roles: ["super_admin", "store_admin", "finance"] },
+  { to: "/businesses", name: "Businesses", roles: ["super_admin", "store_admin"] },
+  { to: "/site-details", name: "Site details", roles: ["super_admin", "store_admin"] },
+  { to: "/enquiries", name: "Enquiries", roles: ["super_admin", "store_admin", "support"] },
   { to: "/staff", name: "Staff", roles: ["super_admin", "store_admin"] },
   { to: "/audit", name: "Activity log", roles: ["super_admin", "store_admin"] },
   { to: "/security", name: "Security", roles: ALL_STAFF },
@@ -92,6 +96,9 @@ export default function App() {
             <Route path="customers/:id" element={route("/customers", <CustomerDetail />)} />
             <Route path="coupons" element={route("/coupons", <Coupons />)} />
             <Route path="pages" element={route("/pages", <Pages />)} />
+            <Route path="businesses" element={route("/businesses", <Businesses />)} />
+            <Route path="site-details" element={route("/site-details", <SiteDetails />)} />
+            <Route path="enquiries" element={route("/enquiries", <Enquiries />)} />
             <Route path="staff" element={route("/staff", <StaffPage />)} />
             <Route path="audit" element={route("/audit", <AuditLog />)} />
             <Route path="security" element={route("/security", <Security />)} />

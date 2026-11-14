@@ -74,7 +74,7 @@ h2 { font: 700 clamp(1.9rem, 4vw, 3rem)/1.05 var(--display); letter-spacing: -0.
 .rows h3 { font: 650 1.35rem/1.2 var(--display); margin: 0; letter-spacing: -0.01em; }
 .rows p { margin: 0; color: var(--muted); max-width: var(--measure); }
 
-/* Journey: a real sequence, so it is numbered */
+/* Dark band; the numbered list is for real sequences only */
 .band { background: var(--indigo); color: var(--limewash); }
 .band .lede { color: #c8cce2; }
 .steps { list-style: none; margin: 0; padding: 0; counter-reset: step; border-top: 2px solid var(--raffia); }
@@ -96,6 +96,66 @@ footer { background: var(--indigo-deep); color: #d3d6e8; padding: 2.25rem var(--
 footer ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; list-style: none; margin: 0; padding: 0; }
 footer a { display: inline-block; padding: 0.35rem 0; }
 footer p { margin: 0; }
+
+
+/* Pages */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.page-head { padding-bottom: 0; padding-top: clamp(2.5rem, 6vw, 4.5rem); }
+.page-head + section { padding-top: clamp(2rem, 5vw, 3.5rem); }
+.wrap.one { grid-template-columns: minmax(0, 1fr); }
+.page-title { font: 750 clamp(2.2rem, 6vw, 4.2rem)/1 var(--display); letter-spacing: -0.03em; margin: 0; text-wrap: balance; }
+.lede.big { font-size: clamp(1.15rem, 2.2vw, 1.5rem); max-width: 40rem; margin-top: 1rem; }
+.crumb { margin: 0 0 1.25rem; }
+.meta { margin: 0.1rem 0 0.35rem; color: var(--muted); font-size: 0.95rem; }
+.textlink { font-weight: 600; }
+.top nav a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--raffia); text-decoration-thickness: 3px; text-underline-offset: 0.35em; }
+.prose .actions { margin-top: 1.75rem; }
+.btn.quiet.dark { color: var(--ink); }
+.btn.quiet.dark:hover { background: rgb(20 23 42 / 0.07); }
+.empty { margin: 0; color: var(--muted); max-width: var(--measure); }
+
+/* Businesses: logo, then words. The whole row is one link. */
+.rows.biz li { position: relative; grid-template-columns: 4rem minmax(0, 1fr); gap: 0 1.25rem; align-items: start; }
+.rows.biz h3 { margin-bottom: 0.1rem; }
+.rows.biz li:hover h3 a { text-decoration: underline; text-decoration-color: var(--raffia); text-decoration-thickness: 3px; }
+.stretch { text-decoration: none; }
+.stretch::after { content: ""; position: absolute; inset: 0; }
+.logo { display: block; width: 4rem; height: 4rem; object-fit: contain; background: #fff; border: 1px solid var(--mist); }
+.logo.mono { display: grid; place-items: center; background: var(--indigo); border-color: var(--indigo); color: var(--raffia-soft); font: 700 1.7rem/1 var(--display); }
+.logo.lg { width: 5.5rem; height: 5.5rem; }
+.logo.mono.lg { font-size: 2.4rem; }
+.biz-head { display: flex; align-items: center; gap: 1.25rem; }
+
+/* Plain list of businesses on the About page (inside the dark band) */
+.steps.plain li { grid-template-columns: minmax(0, 1fr); }
+.steps.plain li::before { content: none; }
+.steps.plain a { color: var(--limewash); }
+
+/* Call to action */
+.cta { background: var(--raffia-soft); color: var(--indigo-deep); }
+.cta .lede { color: #2a2f4a; max-width: 30rem; }
+.cta .btn { background: var(--indigo); border-color: var(--indigo); color: var(--limewash); }
+.cta .btn:hover { background: var(--indigo-deep); border-color: var(--indigo-deep); }
+.cta :focus-visible { outline-color: var(--indigo); }
+
+/* Contact form */
+.direct { margin: 1.5rem 0 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.35rem 1.25rem; }
+.direct dt { color: var(--muted); }
+.direct dd { margin: 0; overflow-wrap: anywhere; }
+.form { display: grid; gap: 1.25rem; max-width: 36rem; }
+.field { display: grid; gap: 0.35rem; }
+.field label { font-weight: 600; }
+.field input, .field select, .field textarea { font: inherit; padding: 0.8rem 0.9rem; border: 2px solid #6d7287; background: #fff; color: var(--ink); border-radius: 0; width: 100%; }
+.field textarea { resize: vertical; min-height: 9rem; }
+.field input[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #a3261b; }
+.field-error { margin: 0; color: #a3261b; font-weight: 600; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.form .btn { cursor: pointer; }
+.notice { border-left: 6px solid var(--raffia); background: #fff; padding: 1rem 1.25rem; max-width: 36rem; margin-bottom: 1.25rem; }
+.notice.bad { border-color: #a3261b; }
+.notice h3 { margin: 0 0 0.25rem; font: 650 1.25rem/1.2 var(--display); }
+.notice p { margin: 0.25rem 0; }
+.foot-name { font-weight: 600; }
 
 @media (max-width: 40rem) {
   .hero { grid-template-columns: minmax(0, 1fr) 2.25rem; }

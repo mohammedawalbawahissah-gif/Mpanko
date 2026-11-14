@@ -36,4 +36,11 @@ class Command(BaseCommand):
                     if role == Role.SUPER_ADMIN:
                         user.is_staff = user.is_superuser = True
                         user.save()
+            from apps.corporate.models import Business
+
+            for name, sector, summary, featured in [
+                ("Demo shop", "Retail", "A placeholder business, so the corporate site has something to list in development.", True),
+                ("Demo foods", "Food", "A second placeholder business for local testing.", False),
+            ]:
+                Business.objects.get_or_create(name=name, defaults=dict(sector=sector, summary=summary, description=summary, is_published=True, is_featured=featured))
             self.stdout.write("Demo logins (DEBUG only): admin@mpanko.test / customer@mpanko.test, password Mpanko-demo-123")

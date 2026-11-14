@@ -96,7 +96,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          PORT=5175 nohup node server.mjs > ../corporate.log 2>&1 &
+          API_URL=http://localhost:8000 PORT=5175 nohup node server.mjs > ../corporate.log 2>&1 &
           for i in $(seq 1 20); do curl -sf http://localhost:5175/healthz && break; sleep 1; done
       - name: Run the browser tests
         working-directory: e2e

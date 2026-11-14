@@ -109,6 +109,13 @@ DEFAULTS = {
         "Open Payments, then Chargebacks, in the admin app to see the case.\n",
         {"order_number": "MP-1001", "amount": "USD 70.00", "category": "fraudulent", "respond_by": "30 Nov 2026"},
     ),
+    "corporate_enquiry": (
+        "Website enquiry (staff)",
+        "New enquiry from {{ name }} about {{ about }}",
+        "{{ name }} wrote to you through the corporate website.\n\nEmail: {{ email }}\nPhone: {{ phone }}\nAbout: {{ about }}\n\n{{ message }}\n\n"
+        "Reply to them directly at {{ email }}, then open Enquiries in the admin app and mark it handled.\n",
+        {"name": "Ama Mensah", "email": "ama@example.com", "phone": "+233200000000", "about": "Mpanko", "message": "Do you ship to Canada?"},
+    ),
     "low_stock_alert": (
         "Low stock alert (staff)",
         "Low stock: {{ sku }}",

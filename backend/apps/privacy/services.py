@@ -121,6 +121,10 @@ def apply_retention(now=None):
         u.delete()
     done["email_logs"] = NotificationLog.objects.filter(created_at__lt=now - timedelta(days=settings.RETENTION_LOG_DAYS)).delete()[0]
     done["closed_support"] = SupportCase.objects.filter(status="closed", updated_at__lt=now - timedelta(days=settings.RETENTION_CLOSED_SUPPORT_DAYS)).delete()[0]
+    from apps.corporate.models import ContactMessage
+
+    done["handled_enquiries"] = ContactMessage.objects.filter(
+        status=ContactMessage.Status.HANDLED, handled_at__lt=now - timedelta(days=settings.RETENTION_HANDLED_ENQUIRY_DAYS)).delete()[0]
     cutoff = now - timedelta(days=365 * settings.RETENTION_ORDER_YEARS)
     done["old_orders"] = 0
     for o in list(Order.objects.filter(created_at__lt=cutoff)):

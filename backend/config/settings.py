@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.promotions",
     "apps.privacy",
     "apps.tax",
+    "apps.corporate",
 ]
 
 MIDDLEWARE = [
@@ -164,7 +165,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ),
-    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "1000/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "client_errors": "30/hour", "guest_checkout": "30/hour"},
+    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "1000/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "client_errors": "30/hour", "guest_checkout": "30/hour", "corporate_contact": os.environ.get("THROTTLE_CORPORATE_CONTACT", "200/hour")},
 }
 
 SIMPLE_JWT = {
@@ -260,6 +261,7 @@ STORE_TAX_ID = os.environ.get("STORE_TAX_ID", "")  # printed on invoices; client
 RETENTION_UNVERIFIED_DAYS = int(os.environ.get("RETENTION_UNVERIFIED_DAYS", "30"))
 RETENTION_LOG_DAYS = int(os.environ.get("RETENTION_LOG_DAYS", "180"))
 RETENTION_CLOSED_SUPPORT_DAYS = int(os.environ.get("RETENTION_CLOSED_SUPPORT_DAYS", "730"))
+RETENTION_HANDLED_ENQUIRY_DAYS = int(os.environ.get("RETENTION_HANDLED_ENQUIRY_DAYS", "730"))  # corporate site enquiries, once handled
 RETENTION_ORDER_YEARS = int(os.environ.get("RETENTION_ORDER_YEARS", "7"))  # confirm with the client's accountant
 
 # --- Returns ------------------------------------------------------------------
