@@ -104,10 +104,21 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
   const api = createApi({ apiUrl, ...(fetchImpl ? { fetchImpl } : {}) });
   const site = { url: siteUrl, shopUrl };
 
+  // Each contact detail: the one entered under Site details, else the shop's own setting. While developing, a
+  // placeholder stands in so the layout can be checked; production shows nothing until a real one is set.
+  const dev = process.env.NODE_ENV !== "production";
+  const pick = (placeholder, ...candidates) => candidates.find((c) => c && String(c).trim()) || (dev ? placeholder : "");
+  const contactFrom = (profile, shop) => ({
+    ...profile,
+    contact_email: pick("help@mpanko.example", profile.contact_email, shop.support_email),
+    phone: pick("+233 00 000 0000", profile.phone, shop.support_phone),
+    whatsapp_number: pick("233000000000", shop.whatsapp_number),
+  });
+
   async function context() {
     const res = await api.site();
-    if (res.status === "ok") return { site, profile: { ...res.data.profile, whatsapp_number: res.data.whatsapp_number || "" }, businesses: res.data.businesses, live: true };
-    return { site, profile: { ...fallbackProfile, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER || "" }, businesses: fallbackBusinesses, live: false };
+    if (res.status === "ok") return { site, profile: contactFrom(res.data.profile, res.data), businesses: res.data.businesses, live: true };
+    return { site, profile: contactFrom(fallbackProfile, { support_email: process.env.SUPPORT_EMAIL_ADDRESS, support_phone: process.env.SUPPORT_PHONE_NUMBER, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER }), businesses: fallbackBusinesses, live: false };
   }
 
   const send = (req, res, status, html, extra = {}) => {

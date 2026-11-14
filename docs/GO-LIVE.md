@@ -181,6 +181,7 @@ Set these as variables on Railway (backend service):
 | `GUEST_CHECKOUT_ENABLED` | `true` | Lets people buy without an account. |
 | `WHATSAPP_SUPPORT_NUMBER` | digits only, with country code, for example `233241234567` | Shows "Chat on WhatsApp" in the shop, the app and the corporate site. Hidden while blank. |
 | `SUPPORT_PHONE_NUMBER` | with the country code, for example `+233240000000` | Shows a "Call us" link in the shop footer and a call button in the app. Tapping it starts a phone call. Hidden while blank. |
+| `SUPPORT_EMAIL_ADDRESS` | for example `help@yourdomain.com` | Shows an "Email us" link beside Call and WhatsApp in the shop, the apps and the corporate site. Hidden while blank. |
 | `PAYMENT_PROVIDERS_ENABLED` | add `mtn_momo` | Turns on native MTN Mobile Money for Ghana (GHS). |
 | `MTN_MOMO_API_USER`, `MTN_MOMO_API_KEY`, `MTN_MOMO_SUBSCRIPTION_KEY` | from the MTN MoMo developer portal | Credentials. |
 | `MTN_MOMO_ENVIRONMENT`, `MTN_MOMO_BASE_URL`, `MTN_MOMO_CURRENCY` | `mtnghana`, MTN's live address, `GHS` | Switch from sandbox to live after MTN approves the business. |

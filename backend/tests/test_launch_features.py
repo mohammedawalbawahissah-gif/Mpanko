@@ -76,6 +76,13 @@ def test_config_exposes_a_dialable_support_phone(api, settings):
     assert api.get("/api/v1/config/").data["support_phone"] == ""
 
 
+def test_config_exposes_the_support_email(api, settings):
+    settings.SUPPORT_EMAIL_ADDRESS = "help@example.com"
+    assert api.get("/api/v1/config/").data["support_email"] == "help@example.com"
+    settings.SUPPORT_EMAIL_ADDRESS = ""
+    assert api.get("/api/v1/config/").data["support_email"] == ""
+
+
 def test_address_rules_offer_region_lists(api):
     gh = api.get("/api/v1/auth/address-rules/?country=GH").data
     assert "Northern" in gh["regions"] and len(gh["regions"]) == 16

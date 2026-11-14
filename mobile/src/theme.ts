@@ -8,9 +8,10 @@ export const color = {
   muted: "#4A6462",
   ok: "#0E7C5A",
   bad: "#C2183A",
+  gold: "#E9A820",
 };
 // Product art: a deterministic woven stripe pattern (no photos are needed to browse).
-const PALETTE = ["#0E7F74", "#12B5AE", "#0B6A61", "#0A2B29", "#7FD9D3", "#E3F1EF", "#4A6462"];
+const PALETTE = ["#0E7F74", "#12B5AE", "#0B6A61", "#0A2B29", "#E9A820", "#E3F1EF", "#C2183A"];
 export function stripes(seed: string): string[] {
   let h = 0;
   for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

@@ -73,7 +73,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
     : "";
   const contactBits = [
     profile.contact_email ? `<a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a>` : "",
-    profile.phone ? `<a href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a>` : "",
+    profile.phone ? `<a class="call-link" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">Call us: <span class="nowrap">${esc(profile.phone)}</span></a>` : "",
     profile.whatsapp_number ? `<a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a>` : "",
     profile.address ? esc(profile.address) : "",
   ].filter(Boolean);
@@ -236,7 +236,7 @@ export function contactPage(ctx, form = {}) {
   const attrs = (f) => (errors[f] ? ` aria-invalid="true" aria-describedby="${f}-err"` : "");
   const direct = [
     profile.contact_email ? `<dt>Email</dt><dd><a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a></dd>` : "",
-    profile.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a></dd>` : "",
+    profile.phone ? `<dt>Call us</dt><dd><a class="call-link" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a></dd>` : "",
     profile.whatsapp_number ? `<dt>WhatsApp</dt><dd><a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a></dd>` : "",
     profile.address ? `<dt>Address</dt><dd>${esc(profile.address)}</dd>` : "",
   ].join("");

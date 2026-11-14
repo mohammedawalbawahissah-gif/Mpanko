@@ -85,12 +85,33 @@ function Shell() {
             </div>
           ))}
           <div className="who">
+            <SupportContacts />
             {user.full_name || user.email}<br />{ROLE_LABEL[user.role] ?? user.role}
             <div><button className="btn quiet" onClick={logout}>Sign out</button></div>
           </div>
         </div>
       </nav>
       <main className="main"><Outlet /></main>
+    </div>
+  );
+}
+
+/** Email, call and WhatsApp links for the shop's support contacts (placeholders while developing; hidden in production until set). */
+function SupportContacts() {
+  const [c, setC] = useState<{ support_email?: string; support_phone?: string; whatsapp_number?: string }>({});
+  useEffect(() => {
+    api<{ support_email?: string; support_phone?: string; whatsapp_number?: string }>("/config/").then(setC).catch(() => undefined);
+  }, []);
+  const dev = import.meta.env.DEV;
+  const mail = (c.support_email ?? "").trim() || (dev ? "help@mpanko.example" : "");
+  const phone = (c.support_phone ?? "").trim() || (dev ? "+233 00 000 0000" : "");
+  const wa = (c.whatsapp_number ?? "").replace(/\D/g, "") || (dev ? "233000000000" : "");
+  if (!mail && !phone && !wa) return null;
+  return (
+    <div className="support-contacts">
+      {mail && <a className="call-support" href={`mailto:${mail}`}>Email: <span className="nowrap">{mail}</span></a>}
+      {phone && <a className="call-support" href={`tel:${phone.replace(/[^+\d]/g, "")}`}>Call: <span className="nowrap">{phone}</span></a>}
+      {wa && <a className="call-support" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
     </div>
   );
 }

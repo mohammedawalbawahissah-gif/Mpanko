@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, s, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, WhatsAppButton, s, useAsync, usePullRefresh } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -128,6 +128,8 @@ export function SupportListScreen() {
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={pull.control}>
       <Button title={t("m.askUs")} onPress={() => nav.navigate("SupportNew", {})} />
+      <View style={{ height: 8 }} />
+      <WhatsAppButton />
       <View style={{ height: 12 }} />
       {loading && !data && <Busy />}
       {!!error && <ErrorRetry message={error} onRetry={reload} />}
@@ -166,6 +168,9 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
   return (
     <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("m.askUs")}</Text>
+      <Text style={s.muted}>{t("callus.prefer")}</Text>
+      <WhatsAppButton />
+      <View style={{ height: 12 }} />
       {!!problem && <Notice>{problem}</Notice>}
       <Text style={s.label}>{t("m.whatAbout")}</Text>
       <TextInput accessibilityLabel={t("m.subject")} style={s.input} maxLength={150} value={subject} onChangeText={setSubject} />

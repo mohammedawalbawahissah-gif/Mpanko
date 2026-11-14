@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, type Page } from "./api";
-import { Alert, Field, Loading, StatusPill, useAsync } from "./components";
+import { Alert, ContactUs, Field, Loading, StatusPill, useAsync } from "./components";
 import { useCurrency } from "./context";
 
 /* ---------------------------------------------------------------- returns */
@@ -119,6 +119,7 @@ export function SupportList() {
     <div className="wrap page">
       <h1>Help and support</h1>
       <p><Link className="btn" to="/support/new">Ask us something</Link></p>
+      <ContactUs />
       {loading && <Loading />}
       {error && <Alert>{error}</Alert>}
       {data && data.results.length === 0 && <p className="muted">You haven't contacted us yet.</p>}
@@ -162,6 +163,7 @@ export function SupportNew() {
   return (
     <div className="wrap page narrow">
       <h1>Ask us something</h1>
+      <ContactUs />
       <form className="form" onSubmit={submit}>
         {problem && <Alert>{problem}</Alert>}
         <Field id="sub" label="What is it about?"><input id="sub" className="input" maxLength={150} value={subject} onChange={(e) => setSubject(e.target.value)} required /></Field>

@@ -7,7 +7,7 @@ import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { Busy, Button, ErrorRetry, Notice, Photo, s, useCachedAsync, usePullRefresh } from "./ui";
+import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, usePullRefresh } from "./ui";
 
 export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
@@ -40,6 +40,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
   });
   return (
     <View style={s.screen}>
+      <KenteBand />
       <View style={{ padding: 12, paddingBottom: 4 }}>
         <TextInput
           accessibilityLabel={t("shop.search")}
@@ -60,7 +61,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
         {[{ id: 0, slug: null as string | null, name: t("m.all") }, ...tops].map((c) => (
           <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: topOfChosen ? topOfChosen.slug === c.slug : c.slug === null }}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? color.ink : "#fff", borderWidth: 1, borderColor: color.line }}>
             <Text style={{ color: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
           </Pressable>
         ))}
@@ -69,8 +70,8 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
           {[{ id: -1, slug: topOfChosen!.slug, name: t("m.all") }, ...subs].map((c) => (
             <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: cat === c.slug }}
-              style={{ paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.slug ? color.ink : "#fff", borderWidth: 1, borderColor: color.line }}>
-              <Text style={{ color: cat === c.slug ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
+              style={{ paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.slug ? color.gold : "#fff", borderWidth: 1, borderColor: cat === c.slug ? color.gold : color.line }}>
+              <Text style={{ color: color.ink, fontWeight: "700" }}>{c.name}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -81,18 +82,34 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
       <FlatList
         data={products.data?.results ?? []}
         keyExtractor={(p) => p.slug}
-        numColumns={2}
         refreshControl={pull.control}
-        contentContainerStyle={{ padding: 8 }}
-        columnWrapperStyle={{ gap: 8 }}
+        contentContainerStyle={{ padding: 12 }}
         ListEmptyComponent={products.loading ? undefined : <Text style={[s.muted, { padding: 16 }]}>{t("m.nothingMatches")}</Text>}
+        ListFooterComponent={
+          products.data && products.data.results.length > 0 ? (
+            <View style={{ backgroundColor: color.ink, borderRadius: 16, padding: 16, marginTop: 4, marginBottom: 24 }}>
+              <Text accessibilityRole="header" style={{ color: "#fff", fontWeight: "800", fontSize: 18, marginBottom: 4 }}>{t("shop.askTitle")}</Text>
+              <Text style={{ color: "#C5DAD6", marginBottom: 12 }}>{t("shop.askBody")}</Text>
+              <Button title={t("m.askUs")} kind="gold" onPress={() => navigation.getParent()?.getParent()?.navigate("SupportNew" as never)} />
+            </View>
+          ) : undefined
+        }
         renderItem={({ item }) => (
-          <Pressable style={[s.card, { flex: 1 }]} accessibilityRole="button" accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`} onPress={() => navigation.navigate("Product", { slug: item.slug })}>
-            <Photo photo={mainPhoto(item.images)} seed={item.slug} name={item.name} />
-            <View style={s.cardPad}>
-              <Text style={{ fontWeight: "700", color: color.ink }} numberOfLines={2}>{item.name}</Text>
-              <Text style={s.muted} numberOfLines={1}>{item.maker || item.origin_country}</Text>
-              <Text style={{ fontWeight: "700", color: color.ink, marginTop: 4 }}>{money(item.base_price, item.currency)}</Text>
+          <Pressable
+            style={[s.card, { flexDirection: "row", height: 108, marginBottom: 10 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`}
+            onPress={() => navigation.navigate("Product", { slug: item.slug })}
+          >
+            <Photo photo={mainPhoto(item.images)} seed={item.slug} name={item.name} width={112} height={106} />
+            <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10 }}>
+              <Text style={{ fontWeight: "700", color: color.ink, fontSize: 15 }} numberOfLines={2}>{item.name}</Text>
+              <Text style={[s.muted, { fontSize: 13 }]} numberOfLines={1}>{item.maker || item.origin_country}</Text>
+              <View style={{ flex: 1 }} />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <Text style={{ fontWeight: "800", color: color.ink }}>{money(item.base_price, item.currency)}</Text>
+                {!!item.category_name && <Text numberOfLines={1} style={[s.pill, { flexShrink: 1, color: "#0B6A61" }]}>{item.category_name}</Text>}
+              </View>
             </View>
           </Pressable>
         )}

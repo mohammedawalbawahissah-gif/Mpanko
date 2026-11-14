@@ -17,6 +17,7 @@ import { BagScreen, CheckoutScreen, OrderDetailScreen, OrdersScreen, type RootPa
 import { ProductScreen, ShopList, type RootTabs, type ShopStack } from "./src/screens-shop";
 import { ReturnScreen, SupportListScreen, SupportNewScreen, SupportThreadScreen } from "./src/screens-help";
 import { color } from "./src/theme";
+import { KenteBand } from "./src/ui";
 import { Notifications } from "./src/push";
 
 const Tabs = createBottomTabNavigator<RootTabs>();
@@ -79,7 +80,7 @@ function TabsNav() {
   const { t } = usePrefs();
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
-    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
+    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />

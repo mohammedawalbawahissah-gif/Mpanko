@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, idempotencyKey } from "./api";
 import { AddressForm } from "./address";
-import { Alert, Field, Loading, StatusPill, statusLabel, useAsync } from "./components";
+import { Alert, ContactUs, Field, Loading, StatusPill, statusLabel, useAsync } from "./components";
 import { useAuth, useCart, useCurrency } from "./context";
 import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
@@ -478,6 +478,7 @@ export function FindOrderPage() {
     <div className="wrap page narrow">
       <h1>{t("guest.find")}</h1>
       <FindOrder />
+      <ContactUs />
     </div>
   );
 }

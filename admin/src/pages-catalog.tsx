@@ -1,6 +1,22 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ApiError, type Page } from "./api";
 import { Alert, CountryMultiSelect, CountrySelect, Field, Loading, Pill, errText, useAsync, when } from "./ui";
+
+export const MAX_PHOTOS = 10;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/** Which of the chosen files can be added to a product that already has `have` photos, and what to tell staff about the rest. */
+export function checkPhotos(have: number, files: { name: string; size: number; type: string }[]): { ok: number[]; problems: string[] } {
+  const ok: number[] = [];
+  const problems: string[] = [];
+  files.forEach((f, i) => {
+    if (!f.type.startsWith("image/")) problems.push(`${f.name} is not an image.`);
+    else if (f.size > MAX_PHOTO_BYTES) problems.push(`${f.name} is over 5 MB.`);
+    else if (have + ok.length >= MAX_PHOTOS) problems.push(`${f.name} was left out: a product can have at most ${MAX_PHOTOS} photos.`);
+    else ok.push(i);
+  });
+  return { ok, problems };
+}
 
 interface Variant { id: number; sku: string; name: string; price: string; price_override?: string | null; attributes?: Record<string, string>; is_active?: boolean; quantity: number | null; in_stock: boolean }
 interface Photo { id: number; image: string; alt_text: string; position: number }
@@ -27,9 +43,10 @@ interface Category { id: number; name: string; parent?: number | null }
 export function Products() {
   const products = useAsync(() => api<Page<Product>>("/products/?ordering=-created_at&page_size=100"), []);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const [notice, setNotice] = useState("");
 
   if (editing) {
-    return <ProductForm product={editing === "new" ? null : editing} onDone={() => { setEditing(null); products.reload(); }} />;
+    return <ProductForm key={editing === "new" ? "new" : editing.slug} product={editing === "new" ? null : editing} notice={notice} onDone={() => { setEditing(null); setNotice(""); products.reload(); }} onCreated={(p, note) => { setNotice(note); setEditing(p); products.reload(); }} />;
   }
   return (
     <>
@@ -61,7 +78,7 @@ export function Products() {
   );
 }
 
-function ProductForm({ product, onDone }: { product: Product | null; onDone: () => void }) {
+function ProductForm({ product, onDone, onCreated, notice }: { product: Product | null; onDone: () => void; onCreated?: (p: Product, note: string) => void; notice?: string }) {
   const cats = useAsync(() => api<Page<Category> | Category[]>("/categories/"), []);
   const money = useAsync(() => api<{ currencies: string[]; names: Record<string, string> }>("/currency/rates/"), []);
   const types = useAsync(() => api<Page<{ id: number; name: string }> | { id: number; name: string }[]>("/product-types/"), []);
@@ -80,6 +97,16 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [photoNote, setPhotoNote] = useState("");
+  const previews = useMemo(() => newPhotos.map((file) => URL.createObjectURL(file)), [newPhotos]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+  const choosePhotos = (list: FileList | null) => {
+    const files = Array.from(list ?? []);
+    const { ok, problems } = checkPhotos(newPhotos.length, files);
+    setNewPhotos((cur) => [...cur, ...ok.map((i) => files[i])]);
+    setPhotoNote(problems.join(" "));
+  };
   const set = (k: Exclude<keyof typeof f, "restricted">, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
 
   const submit = async (e: FormEvent) => {
@@ -98,7 +125,24 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
     if (!product) body.variants = [{ sku, name: variantName }];
     try {
       if (product) await api(`/products/${product.slug}/`, { method: "PATCH", body });
-      else await api("/products/", { method: "POST", body });
+      else {
+        const created = await api<Product>("/products/", { method: "POST", body });
+        const failed: string[] = [];
+        for (const file of newPhotos) {
+          const form = new FormData();
+          form.append("image", file);
+          form.append("alt_text", f.name);
+          try {
+            await api(`/products/${created.slug}/images/`, { method: "POST", body: form });
+          } catch {
+            failed.push(file.name);
+          }
+        }
+        if (failed.length && onCreated) {
+          onCreated(created, `The product was saved, but these photos did not upload: ${failed.join(", ")}. Add them below.`);
+          return;
+        }
+      }
       onDone();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -112,6 +156,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
   return (
     <>
       <h1>{product ? `Edit ${product.name}` : "Add a product"}</h1>
+      {notice && <Alert kind="info">{notice}</Alert>}
       {msg && <Alert>{msg}</Alert>}
       <form className="form" onSubmit={submit} noValidate>
         <Field id="p-n" label="Name" error={errors.name}><input id="p-n" className="input" value={f.name} onChange={(e) => set("name", e.target.value)} required /></Field>
@@ -172,6 +217,25 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
         <Field id="p-r" label="Can't ship to" error={errors.restricted_countries}>
           <CountryMultiSelect id="p-r" value={f.restricted} onChange={(v) => setF((x) => ({ ...x, restricted: v }))} />
         </Field>
+        {!product && (
+          <fieldset className="card">
+            <legend>Photos</legend>
+            <p className="small muted">The first photo is the main one. JPG or PNG, up to 5 MB each, {MAX_PHOTOS} per product. You can add or change them later.</p>
+            {photoNote && <Alert>{photoNote}</Alert>}
+            <div className="row">
+              {newPhotos.map((file, i) => (
+                <figure key={`${file.name}-${i}`} style={{ margin: 0, width: 140 }}>
+                  <img src={previews[i]} alt="" style={{ width: 140, height: 140, objectFit: "cover", borderRadius: 4, border: "1px solid var(--line)" }} />
+                  <figcaption className="small">
+                    {i === 0 ? "Main photo" : <button type="button" className="link-button" onClick={() => setNewPhotos((c) => [file, ...c.filter((_, j) => j !== i)])}>Make main</button>}
+                    {" · "}<button type="button" className="link-button" onClick={() => setNewPhotos((c) => c.filter((_, j) => j !== i))}>Remove</button>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+            <Field id="np-file" label="Add photos"><input id="np-file" type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { choosePhotos(e.target.files); e.target.value = ""; }} /></Field>
+          </fieldset>
+        )}
         {!product && (
           <div className="row">
             <Field id="v-n" label="First variant name" error={errors.variants}><input id="v-n" className="input" value={variantName} onChange={(e) => setVariantName(e.target.value)} /></Field>
@@ -312,22 +376,32 @@ function PhotosPanel({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false);
   const photos = data?.images ?? [];
 
-  const upload = async (file: File | undefined) => {
-    if (!file) return;
+  const upload = async (list: FileList | null) => {
+    const files = Array.from(list ?? []);
+    if (!files.length) return;
+    const { ok, problems } = checkPhotos(photos.length, files);
+    if (!ok.length) {
+      setMsg({ kind: "error", text: problems.join(" ") });
+      return;
+    }
     setBusy(true);
     setMsg(null);
-    const form = new FormData();
-    form.append("image", file);
-    form.append("alt_text", alt);
+    let added = 0;
     try {
-      await api(`/products/${slug}/images/`, { method: "POST", body: form });
+      for (const i of ok) {
+        const form = new FormData();
+        form.append("image", files[i]);
+        form.append("alt_text", alt);
+        await api(`/products/${slug}/images/`, { method: "POST", body: form });
+        added += 1;
+      }
       setAlt("");
-      setMsg({ kind: "ok", text: "Photo added." });
-      reload();
+      setMsg(problems.length ? { kind: "error", text: `${added} added. ${problems.join(" ")}` } : { kind: "ok", text: added === 1 ? "Photo added." : `${added} photos added.` });
     } catch (e) {
-      setMsg({ kind: "error", text: errText(e) });
+      setMsg({ kind: "error", text: `${added} added, then: ${errText(e)}` });
     } finally {
       setBusy(false);
+      reload();
     }
   };
   const remove = async (id: number) => {
@@ -366,7 +440,7 @@ function PhotosPanel({ slug }: { slug: string }) {
       </div>
       <div className="row">
         <Field id="ph-alt" label="Describe the photo (for screen readers)"><input id="ph-alt" className="input" value={alt} onChange={(e) => setAlt(e.target.value)} /></Field>
-        <Field id="ph-file" label="Add a photo"><input id="ph-file" type="file" accept="image/*" disabled={busy} onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></Field>
+        <Field id="ph-file" label="Add photos"><input id="ph-file" type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} /></Field>
       </div>
     </section>
   );

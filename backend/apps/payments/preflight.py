@@ -170,6 +170,8 @@ def check_payments(offline):
                       "" if settings.WHATSAPP_SUPPORT_NUMBER else "The Chat on WhatsApp button stays hidden.", "Set WHATSAPP_SUPPORT_NUMBER, digits only with country code."))
     out.append(Result("Launch", "Support phone number is set", PASS if settings.SUPPORT_PHONE_NUMBER else WARN,
                       settings.SUPPORT_PHONE_NUMBER or "The Call us link stays hidden.", "Set SUPPORT_PHONE_NUMBER with the country code, for example +233240000000."))
+    out.append(Result("Launch", "Support email address is set", PASS if settings.SUPPORT_EMAIL_ADDRESS else WARN,
+                      settings.SUPPORT_EMAIL_ADDRESS or "The Email us link stays hidden.", "Set SUPPORT_EMAIL_ADDRESS, for example help@yourdomain.com."))
     from .providers import chargeable_currencies
 
     try:

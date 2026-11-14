@@ -71,24 +71,30 @@ export function usePullRefresh(reload: () => void) {
   return { control };
 }
 
-/** "Call us" (opens the phone's dialler) and "Chat on WhatsApp". Each shows only once the shop has set its number; while developing, a placeholder number stands in for the call button. */
-export function WhatsAppButton() {
+/** "Email us", "Call us" and "Chat on WhatsApp". Each opens the right app and shows once the shop has set its details; while developing, placeholders stand in so the layout can be checked. (Keeps its old name because every screen already uses it.) */
+export function WhatsAppButton({ onDark }: { onDark?: boolean } = {}) {
+  const kind = onDark ? "light" : "quiet";
   const { t } = usePrefs();
   const [number, setNumber] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   useEffect(() => {
-    api<{ whatsapp_number?: string; support_phone?: string }>("/config/")
+    api<{ whatsapp_number?: string; support_phone?: string; support_email?: string }>("/config/")
       .then((c) => {
         setNumber((c.whatsapp_number ?? "").replace(/\D/g, ""));
         setPhone((c.support_phone ?? "").trim());
+        setEmail((c.support_email ?? "").trim());
       })
       .catch(() => undefined);
   }, []);
+  const mail = email || (__DEV__ ? "help@mpanko.example" : "");
   const dial = phone || (__DEV__ ? "+233 00 000 0000" : "");
+  const wa = number || (__DEV__ ? "233000000000" : "");
   return (
     <>
-      {!!dial && <Button title={`${t("footer.call")}: ${dial}`} kind="quiet" onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
-      {!!number && <Button title={t("footer.whatsapp")} kind="quiet" onPress={() => Linking.openURL(`https://wa.me/${number}`)} />}
+      {!!mail && <Button title={`${t("footer.email")}: ${mail}`} kind={kind} onPress={() => Linking.openURL(`mailto:${mail}`)} />}
+      {!!dial && <Button title={`${t("footer.call")}: ${dial}`} kind={kind} onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
+      {!!wa && <Button title={t("footer.whatsapp")} kind={kind} onPress={() => Linking.openURL(`https://wa.me/${wa}`)} />}
     </>
   );
 }
@@ -142,7 +148,7 @@ export function Select({ label, value, options, onChange, error, placeholder }: 
   );
 }
 
-export function Button({ title, onPress, disabled, kind = "primary", label }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger"; label?: string }) {
+export function Button({ title, onPress, disabled, kind = "primary", label }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger" | "gold" | "light"; label?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -150,9 +156,9 @@ export function Button({ title, onPress, disabled, kind = "primary", label }: { 
       accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [s.btn, kind === "quiet" && s.btnQuiet, kind === "danger" && s.btnDanger, disabled && { opacity: 0.45 }, pressed && { opacity: 0.8 }]}
+      style={({ pressed }) => [s.btn, kind === "quiet" && s.btnQuiet, kind === "danger" && s.btnDanger, kind === "gold" && { backgroundColor: color.gold }, kind === "light" && { backgroundColor: "#fff" }, disabled && { opacity: 0.45 }, pressed && { opacity: 0.8 }]}
     >
-      <Text style={[s.btnText, kind === "quiet" && { color: color.teal }]}>{title}</Text>
+      <Text style={[s.btnText, (kind === "quiet" || kind === "gold" || kind === "light") && { color: color.ink }]}>{title}</Text>
     </Pressable>
   );
 }
@@ -239,23 +245,36 @@ export function Busy({ what }: { what?: string }) {
   );
 }
 
-export function Art({ seed, height = 120 }: { seed: string; height?: number }) {
+export function Art({ seed, height = 120, width }: { seed: string; height?: number; width?: number }) {
   const c = stripes(seed);
   return (
-    <View style={{ height, flexDirection: "row" }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View style={{ height, width, flexDirection: "row" }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {c.map((col, i) => <View key={i} style={{ flex: i % 3 === 0 ? 2 : 1, backgroundColor: col }} />)}
     </View>
   );
 }
 
+/** A thin woven band in kente colours, the shop's signature. Decorative only. */
+export function KenteBand({ height = 5 }: { height?: number }) {
+  const parts = [color.ink, color.gold, color.teal, color.bad, color.teal, color.gold];
+  const widths = [26, 8, 26, 6, 26, 8];
+  const cells: ReactNode[] = [];
+  for (let i = 0; i < 24; i++) cells.push(<View key={i} style={{ width: widths[i % 6], height, backgroundColor: parts[i % 6] }} />);
+  return (
+    <View style={{ flexDirection: "row", height, overflow: "hidden", backgroundColor: color.ink }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {cells}
+    </View>
+  );
+}
+
 /** A product photo, saved on the phone after the first load; the striped pattern shows when there is none or it fails. */
-export function Photo({ photo, seed, name, height = 120 }: { photo: ProductPhoto | null; seed: string; name: string; height?: number }) {
+export function Photo({ photo, seed, name, height = 120, width }: { photo: ProductPhoto | null; seed: string; name: string; height?: number; width?: number }) {
   const [failed, setFailed] = useState(false);
-  if (!photo || failed) return <Art seed={seed} height={height} />;
+  if (!photo || failed) return <Art seed={seed} height={height} width={width} />;
   return (
     <Image
       source={{ uri: photo.image }}
-      style={{ height, width: "100%", backgroundColor: color.cotton }}
+      style={{ height, width: width ?? "100%", backgroundColor: color.cotton }}
       contentFit="cover"
       cachePolicy="disk"
       transition={150}
@@ -306,18 +325,18 @@ export const s = StyleSheet.create({
   h1: { fontSize: 26, fontWeight: "800", color: color.ink, marginBottom: 12 },
   h2: { fontSize: 18, fontWeight: "700", color: color.ink, marginTop: 20, marginBottom: 8 },
   muted: { color: color.muted },
-  btn: { backgroundColor: color.teal, borderRadius: 4, paddingVertical: 13, paddingHorizontal: 16, alignItems: "center", minHeight: 48, justifyContent: "center" },
-  btnQuiet: { backgroundColor: "transparent", borderWidth: 1, borderColor: color.line },
+  btn: { backgroundColor: color.ink, borderRadius: 999, paddingVertical: 13, paddingHorizontal: 16, alignItems: "center", minHeight: 48, justifyContent: "center" },
+  btnQuiet: { backgroundColor: "transparent", borderWidth: 2, borderColor: color.ink },
   btnDanger: { backgroundColor: color.bad },
   btnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   label: { fontWeight: "600", color: color.ink, marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: "#9AA0BA", borderRadius: 4, backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: color.ink, minHeight: 46 },
+  input: { borderWidth: 1, borderColor: "#9AA0BA", borderRadius: 10, backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: color.ink, minHeight: 46 },
   fieldError: { color: color.bad, marginTop: 4, fontSize: 13 },
-  notice: { backgroundColor: "#fff", borderLeftWidth: 4, padding: 12, marginBottom: 12, borderRadius: 4 },
-  card: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderRadius: 4, marginBottom: 12, overflow: "hidden" },
+  notice: { backgroundColor: "#fff", borderLeftWidth: 4, padding: 12, marginBottom: 12, borderRadius: 10 },
+  card: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderRadius: 14, marginBottom: 12, overflow: "hidden" },
   cardPad: { padding: 12 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
   pill: { alignSelf: "flex-start", backgroundColor: "#E3F1EF", color: color.ink, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
-  choice: { backgroundColor: "#fff", borderWidth: 2, borderColor: color.line, borderRadius: 4, padding: 12, marginBottom: 8 },
-  choiceOn: { borderColor: color.teal },
+  choice: { backgroundColor: "#fff", borderWidth: 2, borderColor: color.line, borderRadius: 12, padding: 12, marginBottom: 8 },
+  choiceOn: { borderColor: color.ink },
 });

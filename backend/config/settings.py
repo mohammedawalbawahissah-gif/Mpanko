@@ -229,6 +229,7 @@ LAUNCH_COUNTRIES = [c.upper() for c in env_list("LAUNCH_COUNTRIES", "")]
 WHATSAPP_SUPPORT_NUMBER = "".join(ch for ch in os.environ.get("WHATSAPP_SUPPORT_NUMBER", "") if ch.isdigit())
 # Phone number customers can call for support, with the country code, e.g. +233 24 000 0000. Blank = no Call us link.
 # Only a leading + and digits are kept, so the link always dials cleanly.
+SUPPORT_EMAIL_ADDRESS = os.environ.get("SUPPORT_EMAIL_ADDRESS", "").strip()
 _phone = os.environ.get("SUPPORT_PHONE_NUMBER", "").strip()
 SUPPORT_PHONE_NUMBER = ("+" if _phone.startswith("+") else "") + "".join(ch for ch in _phone if ch.isdigit())
 SHIPPING_FLAT_RATE = os.environ.get("SHIPPING_FLAT_RATE", "15.00")  # in BASE_CURRENCY (OD-09)

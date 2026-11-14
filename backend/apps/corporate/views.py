@@ -38,6 +38,8 @@ class SiteView(APIView):
             "profile": SiteProfileSerializer(SiteProfile.get()).data,
             "businesses": PublicBusinessSerializer(_published(), many=True, context={"request": request}).data,
             "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
+            "support_phone": settings.SUPPORT_PHONE_NUMBER,
+            "support_email": settings.SUPPORT_EMAIL_ADDRESS,
         })
 
 

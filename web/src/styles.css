@@ -317,3 +317,5 @@ p { margin: 0 0 1em; max-width: 66ch; }
 
 .nowrap { white-space: nowrap; }
 .site-footer .muted { color: #9fbab5; }
+.call-us { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin: 1.25rem 0; padding: 0.8rem 1rem; background: var(--white); border: 1px solid var(--line); border-left: 5px solid var(--gold); border-radius: var(--radius); max-width: none; }
+.call-us-label { font-weight: 600; }

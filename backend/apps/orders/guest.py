@@ -158,6 +158,7 @@ class PublicConfigView(APIView):
             "guest_checkout": settings.GUEST_CHECKOUT_ENABLED,
             "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
             "support_phone": settings.SUPPORT_PHONE_NUMBER,
+            "support_email": settings.SUPPORT_EMAIL_ADDRESS,
             "launch_countries": settings.LAUNCH_COUNTRIES,
         })
 

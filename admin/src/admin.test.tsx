@@ -5,6 +5,7 @@ import { daysLeft } from "./pages-finance";
 import { asPercent, fromPercent } from "./pages-tax";
 import { Alert, Field, Pill, label, when } from "./ui";
 import { BackupCodes } from "./login";
+import { checkPhotos } from "./pages-catalog";
 
 describe("percentages in the tax screens", () => {
   it("shows a share as a percentage", () => {
@@ -74,5 +75,22 @@ describe("backup codes", () => {
     expect(html).toContain("jkmn-pqrs");
     expect(html).toContain("We cannot show them again");
     expect(html).toContain("Download as a file");
+  });
+});
+
+describe("product photo checks", () => {
+  const img = (name: string, size = 1000, type = "image/jpeg") => ({ name, size, type });
+  it("accepts ordinary photos", () => {
+    expect(checkPhotos(0, [img("a.jpg"), img("b.png", 2000, "image/png")])).toEqual({ ok: [0, 1], problems: [] });
+  });
+  it("turns away non-images and files over 5 MB", () => {
+    const r = checkPhotos(0, [img("doc.pdf", 10, "application/pdf"), img("huge.jpg", 6 * 1024 * 1024), img("ok.jpg")]);
+    expect(r.ok).toEqual([2]);
+    expect(r.problems).toHaveLength(2);
+  });
+  it("stops at ten photos in total", () => {
+    const r = checkPhotos(9, [img("a.jpg"), img("b.jpg")]);
+    expect(r.ok).toEqual([0]);
+    expect(r.problems[0]).toContain("at most 10");
   });
 });
