@@ -11,10 +11,11 @@ class Category(models.Model):
     slug = models.SlugField(max_length=140, unique=True, blank=True)
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
     is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0, help_text="Lower numbers come first. Categories with the same number are sorted by name.")
 
     class Meta:
         verbose_name_plural = "categories"
-        ordering = ["name"]
+        ordering = ["sort_order", "name"]
 
     def save(self, *args, **kwargs):
         if not self.slug:

@@ -16,14 +16,19 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
   const { t, money, currency } = usePrefs();
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<number | null>(null);
+  const [cat, setCat] = useState<string | null>(null); // a category address (slug), which the shop API filters on
   // Search as you type: wait for a short pause so each keystroke is not a request.
   useEffect(() => {
     const id = setTimeout(() => setQuery(q.trim()), 350);
     return () => clearTimeout(id);
   }, [q]);
   const cats = useCachedAsync("categories", () => api<Page<Category> | Category[]>("/categories/"), []);
-  const list: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
+  const all: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
+  const byOrder = (a: Category, b: Category) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name);
+  const tops = all.filter((c) => !c.parent).sort(byOrder);
+  const chosen = all.find((c) => c.slug === cat);
+  const topOfChosen = chosen ? (chosen.parent ? all.find((c) => c.id === chosen.parent) : chosen) : undefined;
+  const subs = topOfChosen ? all.filter((c) => c.parent === topOfChosen.id).sort(byOrder) : [];
   const products = useCachedAsync(
     `products?cat=${cat ?? ""}&q=${query}`,
     () => api<Page<Product>>(`/products/?ordering=-created_at${cat ? `&category=${cat}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
@@ -53,13 +58,23 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         </Text>
       )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
-        {[{ id: null as number | null, name: t("m.all") }, ...list].map((c) => (
-          <Pressable key={String(c.id)} onPress={() => setCat(c.id)} accessibilityRole="button" accessibilityState={{ selected: cat === c.id }}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.id ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
-            <Text style={{ color: cat === c.id ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
+        {[{ id: 0, slug: null as string | null, name: t("m.all") }, ...tops].map((c) => (
+          <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: topOfChosen ? topOfChosen.slug === c.slug : c.slug === null }}
+            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
+            <Text style={{ color: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
           </Pressable>
         ))}
       </ScrollView>
+      {subs.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
+          {[{ id: -1, slug: topOfChosen!.slug, name: t("m.all") }, ...subs].map((c) => (
+            <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: cat === c.slug }}
+              style={{ paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.slug ? color.ink : "#fff", borderWidth: 1, borderColor: color.line }}>
+              <Text style={{ color: cat === c.slug ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
       {(products.savedAt || cats.savedAt) && !products.error ? <View style={{ paddingHorizontal: 12 }}><Notice kind="info">{t("offline.saved")}</Notice></View> : null}
       {products.loading && <Busy />}
       {products.error ? <View style={s.pad}><Notice>{products.error}</Notice><Button title={t("m.tryAgain")} onPress={products.reload} /></View> : null}

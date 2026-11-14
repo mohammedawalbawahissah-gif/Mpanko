@@ -7,6 +7,8 @@ const password = "E2e-pass-12345";
 test("a new shopper browses, registers, pays and sees the order", async ({ page }) => {
   await page.goto("/shop");
   await expect(page.getByRole("heading", { name: /shop/i }).first()).toBeVisible();
+  // The shop now has many products, so a shopper finds this one by searching, which also covers search-as-you-type.
+  await page.getByRole("searchbox", { name: /search products/i }).fill("kente");
   await page.getByRole("link", { name: /kente scarf/i }).first().click();
   await expect(page).toHaveURL(/\/shop\/kente-scarf/);
   await expect(page).toHaveTitle(/Kente/i);

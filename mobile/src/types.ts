@@ -4,7 +4,7 @@ export interface Product {
   id: number; name: string; slug: string; description: string; category: number | null; category_name: string | null;
   origin_country: string; maker: string; base_price: string; currency: string; variants: Variant[]; images?: ProductPhoto[];
 }
-export interface Category { id: number; name: string; slug: string }
+export interface Category { id: number; name: string; slug: string; parent?: number | null; sort_order?: number }
 export interface User {
   id: number; email: string; full_name: string; role: string; email_verified: boolean; phone?: string; phone_verified?: boolean;
   notify_order_emails?: boolean; notify_sms?: boolean; notify_whatsapp?: boolean; notify_push?: boolean; marketing_opt_in?: boolean; preferred_currency?: string;

@@ -3,31 +3,29 @@ import { useT } from "./i18n";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, type Page } from "./api";
-import { Alert, Loading, pattern, ProductArt, ProductTile, useAsync } from "./components";
+import { departmentOf, departments } from "./categories";
+import { Alert, AskBanner, Loading, pattern, ProductArt, ProductTile, useAsync } from "./components";
 import { useAuth, useCart, useCurrency, type CartLine } from "./context";
 import { useGuestCheckoutEnabled } from "./guest-config";
 import type { Category, Product, Variant } from "./types";
 
 /* ------------------------------------------------------------------- home */
 
-const STRIP_WEIGHTS = [2, 1.2, 1.6, 1, 1.4, 1.1];
-
-function Loom({ categories }: { categories: Category[] }) {
-  const strips = categories.length ? categories : [{ id: 0, name: "Shop everything", slug: "" }];
+function CategoryCards({ categories }: { categories: Category[] }) {
+  const tree = departments(categories).slice(0, 6);
   return (
-    <nav className="loom" aria-label="Shop by category">
-      {strips.slice(0, 6).map((c, i) => (
-        <Link
-          key={c.id}
-          to={c.slug ? `/shop?category=${c.slug}` : "/shop"}
-          className="strip"
-          style={{ ["--w" as string]: STRIP_WEIGHTS[i % STRIP_WEIGHTS.length], ["--i" as string]: i }}
-        >
-          <div className="pattern" style={pattern(c.slug || "all")} aria-hidden="true" />
-          <span className="label">{c.name}</span>
-        </Link>
-      ))}
-    </nav>
+    <div className="hero-side">
+      <nav className="cat-cards" aria-label="Shop by category">
+        {tree.map(({ category }) => (
+          <Link key={category.id} to={`/shop?category=${category.slug}`} className="cat-card">
+            <span className="swatch-wrap" aria-hidden="true"><span className="swatch" style={{ ...pattern(category.slug), display: "block", height: "100%" }} /></span>
+            <span className="cat-name">{category.name}</span>
+          </Link>
+        ))}
+        <Link to="/shop" className="cat-card all">Browse all products</Link>
+      </nav>
+      <div className="hero-cloth" aria-hidden="true"><span>Made by African makers</span></div>
+    </div>
   );
 }
 
@@ -37,17 +35,21 @@ export function Home() {
   const products = useAsync(() => api<Page<Product>>("/products/?ordering=-created_at"), []);
   return (
     <>
-      <div className="wrap">
-        <section className="hero" aria-labelledby="hero-title">
-          <div className="hero-copy">
-            <h1 id="hero-title">Rooted in Africa. Made for the World.</h1>
-            <p>Hand-woven textiles, shea, baskets and fashion from African makers, delivered to your door with tracking.</p>
-            <div className="hero-actions">
-              <Link to="/shop" className="btn">{t("home.shopCollection")}</Link>
+      <div className="hero-band">
+        <div className="wrap">
+          <section className="hero" aria-labelledby="hero-title">
+            <div className="hero-copy">
+              <h1 id="hero-title">Rooted in Africa. Made for the World.</h1>
+              <p>Hand-woven textiles, shea, baskets and fashion from African makers, delivered to your door with tracking.</p>
+              <div className="hero-actions">
+                <Link to="/shop" className="btn">{t("home.shopCollection")}</Link>
+              </div>
             </div>
-          </div>
-          <Loom categories={cats.data ?? []} />
-        </section>
+            <CategoryCards categories={cats.data ?? []} />
+          </section>
+        </div>
+      </div>
+      <div className="wrap">
 
         <section className="facts" aria-label="How Mpanko works">
           <div>
@@ -64,15 +66,35 @@ export function Home() {
           </div>
         </section>
 
+        <section className="depts" aria-labelledby="dept-title">
+          <div className="section-head">
+            <h2 id="dept-title">{t("home.departments")}</h2>
+          </div>
+          <ul className="dept-grid">
+            {departments(cats.data).map(({ category, children }) => (
+              <li key={category.id}>
+                <Link to={`/shop?category=${category.slug}`} className="dept">
+                  <span className="dept-swatch" style={pattern(category.slug)} aria-hidden="true" />
+                  <span className="dept-name">{category.name}</span>
+                  <span className="dept-count">{t("home.deptCount", { n: children.length })}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section className="page" style={{ paddingTop: 0 }} aria-labelledby="new-title">
           <div className="section-head">
             <h2 id="new-title">New from our makers</h2>
-            <Link to="/shop">See all products</Link>
+            <Link to="/shop" className="btn quiet sm">See all products</Link>
           </div>
           {products.loading && <Loading what="Loading products" />}
           {products.error && <Alert>{products.error}</Alert>}
           {products.data && products.data.results.length === 0 && <p className="muted">New products are on their way. Check back soon.</p>}
-          <div className="grid">{products.data?.results.slice(0, 8).map((p) => <ProductTile key={p.id} product={p} />)}</div>
+          <div className="grid">
+            {products.data?.results.slice(0, 12).map((p) => <ProductTile key={p.id} product={p} />)}
+            {products.data && products.data.results.length > 0 && <AskBanner />}
+          </div>
         </section>
       </div>
     </>
@@ -90,7 +112,7 @@ const SORTS = [
 
 export function Shop() {
   const { t } = useT();
-  useSeo("Shop African-made products", "Textiles, beauty, home and fashion made by African makers, shipped worldwide with tracking.");
+  useSeo("Shop African-made products", "Food, fashion, art, furniture, electronics, books and more from African makers and sellers, shipped worldwide with tracking.");
   const [params, setParams] = useSearchParams();
   const category = params.get("category") ?? "";
   const search = params.get("q") ?? "";
@@ -142,8 +164,15 @@ export function Shop() {
     setParams(next);
   };
 
+  const tree = departments(cats.data);
+  const dept = category ? departmentOf(cats.data, category) : undefined;
+  const selected = category ? cats.data?.find((c) => c.slug === category) : undefined;
+
   return (
     <div className="wrap page">
+      {dept && selected && selected.slug !== dept.category.slug && (
+        <p className="small crumbs"><button className="link-button" onClick={() => update("category", dept.category.slug)}>{dept.category.name}</button><span className="muted"> / {selected.name}</span></p>
+      )}
       <h1>{category ? cats.data?.find((c) => c.slug === category)?.name ?? "Shop" : "All products"}</h1>
       <div className="shop-layout">
         <aside className="filters" aria-label="Filters">
@@ -160,17 +189,32 @@ export function Shop() {
               <button className="btn quiet" type="submit">{t("shop.searchButton")}</button>
             </div>
           </form>
-          <div>
+          <nav aria-label="Categories">
             <h3>Categories</h3>
-            <div className="chip-list">
-              <button className="chip" aria-pressed={!category} onClick={() => update("category", "")}>All</button>
-              {cats.data?.map((c) => (
-                <button key={c.id} className="chip" aria-pressed={category === c.slug} onClick={() => update("category", c.slug)}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
+            <ul className="cat-tree">
+              <li><button className="chip" aria-pressed={!category} onClick={() => update("category", "")}>All</button></li>
+              {tree.map(({ category: top, children }) => {
+                const open = dept?.category.id === top.id;
+                return (
+                  <li key={top.id} className={open ? "open" : undefined}>
+                    <button className="chip" aria-pressed={category === top.slug} aria-expanded={children.length ? open : undefined} onClick={() => update("category", top.slug)}>
+                      {top.name}
+                    </button>
+                    {open && children.length > 0 && (
+                      <ul className="cat-sub">
+                        <li><button className="chip sub" aria-pressed={category === top.slug} onClick={() => update("category", top.slug)}>{t("shop.allIn", { name: top.name })}</button></li>
+                        {children.map((c) => (
+                          <li key={c.id}>
+                            <button className="chip sub" aria-pressed={category === c.slug} onClick={() => update("category", c.slug)}>{c.name}</button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
           <div>
             <label htmlFor="sort"><h3>Sort by</h3></label>
             <select id="sort" className="select" style={{ width: "100%" }} value={ordering} onChange={(e) => update("sort", e.target.value)}>
@@ -190,7 +234,10 @@ export function Shop() {
               <button className="btn quiet" onClick={() => setParams({})}>Clear filters</button>
             </div>
           )}
-          <div className="grid">{items.map((p) => <ProductTile key={p.id} product={p} />)}</div>
+          <div className="grid">
+            {items.map((p) => <ProductTile key={p.id} product={p} />)}
+            {!loading && !error && items.length > 0 && items.length >= count && <AskBanner />}
+          </div>
           {loading && <Loading what="Loading products" />}
           {!loading && items.length < count && (
             <p style={{ marginTop: "2rem" }}>

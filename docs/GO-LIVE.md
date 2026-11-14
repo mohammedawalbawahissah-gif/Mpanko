@@ -54,6 +54,10 @@ Shipping labels are saved in the same bucket under `labels/`. They are only serv
 4. Go live: Paystack needs your business verified (Ghana: registration documents and settlement account). Swap to `sk_live_...` and set the webhook again under live mode.
 5. Charging currencies: Paystack accounts support GHS by default; USD, NGN, ZAR and KES need to be enabled on the account. Shoppers can *view* any currency, but are charged in one you have enabled.
 
+## 5a. Shop categories
+
+Once, after the first deploy, run `python manage.py seed_categories` on the `api` service. It creates the starting departments (Food, Beverages, Fashion, Textiles, Art, Furniture, Electronics, Cars and more) with their sub-categories. It is safe to run again: it only adds what is missing and never changes or removes anything staff have edited. Staff then rename, hide, reorder (the Sort order field) or add categories in the admin.
+
 ## 5b. Chargebacks (card disputes)
 
 Paystack sends `charge.dispute.create`, `charge.dispute.remind` and `charge.dispute.resolve` to the same webhook as payments, so no extra URL is needed. Each one creates or updates a case under **Chargebacks** in the admin (finance, store admin, super admin) and emails the staff addresses. A dispute that is lost, or accepted, reverses the payment and the order becomes **Refunded**. Upload your evidence in the Paystack dashboard before the deadline shown on the case, then tick **Evidence sent** in the admin. Confirm the field names against a sandbox dispute before going live.

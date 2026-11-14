@@ -10,7 +10,19 @@ interface Product {
   length_mm?: number; width_mm?: number; height_mm?: number; is_dangerous_goods?: boolean; dg_class?: string; un_number?: string; hs_code?: string;
   restricted_countries: string[]; variants: Variant[]; images?: Photo[]; product_type?: number | null; made_to_order?: boolean; lead_time_days?: number | null;
 }
-interface Category { id: number; name: string }
+/** "Food" then "Food › Spices and Seasonings": departments first, each followed by its sub-categories. */
+function categoryChoices(all: Category[]): { id: number; label: string }[] {
+  const tops = all.filter((c) => !c.parent);
+  const out: { id: number; label: string }[] = [];
+  for (const t of tops) {
+    out.push({ id: t.id, label: t.name });
+    for (const c of all.filter((x) => x.parent === t.id)) out.push({ id: c.id, label: `${t.name} \u203a ${c.name}` });
+  }
+  const seen = new Set(out.map((o) => o.id));
+  return [...out, ...all.filter((c) => !seen.has(c.id)).map((c) => ({ id: c.id, label: c.name }))];
+}
+
+interface Category { id: number; name: string; parent?: number | null }
 
 export function Products() {
   const products = useAsync(() => api<Page<Product>>("/products/?ordering=-created_at&page_size=100"), []);
@@ -107,7 +119,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
         <Field id="p-c" label="Category" error={errors.category}>
           <select id="p-c" className="select" value={f.category} onChange={(e) => set("category", e.target.value)}>
             <option value="">None</option>
-            {catList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categoryChoices(catList).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </Field>
         <Field id="p-m" label="Maker" error={errors.maker}><input id="p-m" className="input" value={f.maker} onChange={(e) => set("maker", e.target.value)} /></Field>

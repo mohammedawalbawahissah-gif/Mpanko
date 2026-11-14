@@ -38,6 +38,8 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  parent: number | null;
+  sort_order?: number;
 }
 
 export interface User {

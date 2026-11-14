@@ -21,10 +21,22 @@ from .serializers import (
 
 
 class ProductFilter(filters.FilterSet):
-    category = filters.CharFilter(field_name="category__slug")
+    category = filters.CharFilter(method="filter_category")
     min_price = filters.NumberFilter(field_name="base_price", lookup_expr="gte")
     max_price = filters.NumberFilter(field_name="base_price", lookup_expr="lte")
     origin = filters.CharFilter(field_name="origin_country", lookup_expr="iexact")
+
+    def filter_category(self, queryset, name, value):
+        """A department includes everything in its sub-categories, however deep."""
+        slugs = {value}
+        frontier = {value}
+        for _ in range(4):
+            kids = set(Category.objects.filter(parent__slug__in=frontier).values_list("slug", flat=True)) - slugs
+            if not kids:
+                break
+            slugs |= kids
+            frontier = kids
+        return queryset.filter(category__slug__in=slugs)
 
     class Meta:
         model = Product

@@ -135,3 +135,36 @@ def test_seed_demo_is_repeatable(db):
     assert first >= 4
     call_command("seed_demo", stdout=StringIO())
     assert Product.objects.count() == first
+
+
+# --- the shop's starting categories ---------------------------------------------------------------
+
+def test_starting_categories_are_a_two_level_tree_with_unique_addresses(db):
+    from django.utils.text import slugify
+
+    from apps.catalog.management.commands.seed_categories import create_taxonomy
+    from apps.catalog.taxonomy import TAXONOMY
+
+    names = [n for dept, kids in TAXONOMY for n in [dept, *kids]]
+    assert len(names) == len(set(names)), "category names must be unique across the whole tree"
+    assert len({slugify(n) for n in names}) == len(names)
+    assert len(TAXONOMY) >= 15 and all(len(kids) >= 3 for _, kids in TAXONOMY)
+    first = create_taxonomy()
+    assert first == len(names)
+    assert create_taxonomy() == 0, "running it again adds nothing"
+    assert Category.objects.filter(parent=None).count() == len(TAXONOMY)
+
+
+def test_choosing_a_department_also_lists_products_in_its_sub_categories(db, client):
+    from apps.catalog.management.commands.seed_categories import create_taxonomy
+    from apps.catalog.models import Product, ProductStatus
+
+    create_taxonomy()
+    sub = Category.objects.get(name="Women's Fashion")
+    Product.objects.create(name="Test dress", category=sub, base_price="10.00", currency="USD", status=ProductStatus.PUBLISHED)
+    in_department = client.get("/api/v1/products/?category=fashion").json()
+    in_sub = client.get("/api/v1/products/?category=womens-fashion").json()
+    elsewhere = client.get("/api/v1/products/?category=food").json()
+    assert [p["name"] for p in in_department["results"]] == ["Test dress"]
+    assert [p["name"] for p in in_sub["results"]] == ["Test dress"]
+    assert elsewhere["results"] == []

@@ -15,8 +15,14 @@ const TURQ = "#12b5ae";
 const COTTON = "#f1f8f7";
 const DEEP = "#0b6a61";
 
+const GOLD = "#e9a820";
+const HIBISCUS = "#c2183a";
+
 const PALETTES: [string, string, string][] = [
   [TEAL, COTTON, TURQ],
+  [INK, GOLD, COTTON],
+  [DEEP, INK, GOLD],
+  [INK, HIBISCUS, GOLD],
   [INK, TURQ, COTTON],
   [DEEP, INK, TURQ],
   [COTTON, TEAL, INK],
@@ -229,10 +235,33 @@ export function ProductTile({ product }: { product: Product }) {
         {!inStock && <span className="badge-out">{t("common.soldOut")}</span>}
         {inStock && onBackorder && <span className="badge-out">{t("common.backorder")}</span>}
       </div>
-      <span className="name">{product.name}</span>
-      {product.maker && <span className="maker">{product.maker}</span>}
-      <span className="price">{money(product.base_price, product.currency)}</span>
+      <span className="tile-body">
+        <span className="name">{product.name}</span>
+        {product.maker && <span className="maker">{product.maker}</span>}
+        <span className="price">{money(product.base_price, product.currency)}</span>
+        {product.category_name && <span className="cat">{product.category_name}</span>}
+      </span>
     </Link>
+  );
+}
+
+/** A woven band at the end of a product list: a way forward when nothing in the list is quite right. */
+export function AskBanner() {
+  const { t } = useT();
+  const whatsapp = (useShopConfig()?.whatsapp_number ?? "").replace(/\D/g, "");
+  return (
+    <aside className="ask-banner">
+      <div className="ask-art" style={pattern("ask-us")} aria-hidden="true" />
+      <div className="ask-copy">
+        <h3>{t("shop.askTitle")}</h3>
+        <p>{t("shop.askBody")}</p>
+      </div>
+      {whatsapp ? (
+        <a className="btn" href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">{t("shop.askButton")}</a>
+      ) : (
+        <Link to="/support/new" className="btn">{t("shop.askButton")}</Link>
+      )}
+    </aside>
   );
 }
 
