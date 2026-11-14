@@ -52,9 +52,10 @@ export function Orders() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const { data, error, loading } = useAsync(
-    () => api<Page<OrderRow>>(`/orders/?ordering=-created_at${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
-    [status, query]
+    () => api<Page<OrderRow>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
+    [status, query, sort]
   );
   return (
     <>
@@ -65,6 +66,15 @@ export function Orders() {
           <select id="f-s" className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All</option>
             {["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((s) => <option key={s} value={s}>{label(s)}</option>)}
+          </select>
+        </Field>
+        <Field id="f-o" label="Sort by">
+          <select id="f-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="-created_at">Newest first</option>
+            <option value="created_at">Oldest first</option>
+            <option value="-grand_total">Total: high to low</option>
+            <option value="grand_total">Total: low to high</option>
+            <option value="status">Status</option>
           </select>
         </Field>
         <button className="btn quiet">Search</button>

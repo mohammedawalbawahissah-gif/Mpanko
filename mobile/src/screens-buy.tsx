@@ -11,7 +11,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -313,9 +313,21 @@ export function OrdersScreen() {
   const { user, guestEnabled } = useAuth();
   const { t } = usePrefs();
   const nav = useNavigation<Nav>();
-  const { data, error, loading, reload } = useAsync(() => (user ? api<Page<OrderSummary>>("/orders/") : Promise.resolve(null)), [user?.id]);
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [sort, setSort] = useState("-created_at");
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(q.trim()), 300);
+    return () => clearTimeout(id);
+  }, [q]);
+  const { data, error, loading, reload } = useAsync(
+    () => (user ? api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`) : Promise.resolve(null)),
+    [user?.id, sort, status, search]
+  );
   useFocusEffect(useCallback(() => { if (user) reload(); }, [user, reload]));
   const pull = usePullRefresh(reload);
+  const filtering = !!(search || status);
   if (!user) {
     return (
       <View style={[s.screen, s.pad]}>
@@ -326,18 +338,33 @@ export function OrdersScreen() {
     );
   }
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={pull.control}>
+    <FormScreen refreshControl={pull.control}>
       <Text accessibilityRole="header" style={s.h1}>{t("orders.title")}</Text>
+      {(!!data?.results.length || filtering) && (
+        <>
+          <Input label={t("orders.search")} value={q} onChangeText={setQ} autoCapitalize="characters" autoCorrect={false} returnKeyType="search" />
+          <Select label={t("orders.status")} value={status} onChange={setStatus}
+            options={[{ value: "", label: t("orders.allStatuses") }, ...["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((v) => ({ value: v, label: statusText(t, v) }))]} />
+          <Select label={t("orders.sort")} value={sort} onChange={setSort}
+            options={[
+              { value: "-created_at", label: t("orders.sortNewest") },
+              { value: "created_at", label: t("orders.sortOldest") },
+              { value: "-grand_total", label: t("orders.sortHigh") },
+              { value: "grand_total", label: t("orders.sortLow") },
+              { value: "status", label: t("orders.sortStatus") },
+            ]} />
+        </>
+      )}
       {loading && !data && <Busy />}
       {!!error && <ErrorRetry message={error} onRetry={reload} />}
-      {data?.results.length === 0 && <Text style={s.muted}>{t("orders.none")}</Text>}
+      {data?.results.length === 0 && <Text style={s.muted}>{filtering ? t("orders.noMatch") : t("orders.none")}</Text>}
       {data?.results.map((o) => (
         <Pressable key={o.number} style={[s.card, s.cardPad]} accessibilityRole="button" onPress={() => nav.navigate("OrderDetail", { number: o.number })}>
           <View style={s.row}><Text style={{ fontWeight: "700", color: color.ink }}>{o.number}</Text><Pill value={o.status} /></View>
           <Text style={s.muted}>{new Date(o.created_at).toLocaleDateString()} · {t(o.item_count === 1 ? "m.itemOne" : "m.itemMany", { n: o.item_count })} · {o.currency} {o.grand_total}</Text>
         </Pressable>
       ))}
-    </ScrollView>
+    </FormScreen>
   );
 }
 

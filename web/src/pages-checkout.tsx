@@ -446,14 +446,47 @@ export function CheckoutComplete() {
 export function Orders() {
   const { t } = useT();
   const { currency, exact } = useCurrency();
-  const { data, error, loading } = useAsync(() => api<Page<OrderSummary>>("/orders/"), []);
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [sort, setSort] = useState("-created_at");
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(q.trim()), 300);
+    return () => clearTimeout(id);
+  }, [q]);
+  const { data, error, loading } = useAsync(
+    () => api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`),
+    [sort, status, search]
+  );
+  const filtering = !!(search || status);
   void currency;
   return (
     <div className="wrap page">
       <h1>{t("orders.title")}</h1>
+      {(data?.results.length || filtering) ? (
+        <form className="order-tools" role="search" onSubmit={(e) => e.preventDefault()}>
+          <Field id="o-q" label={t("orders.search")}><input id="o-q" className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
+          <Field id="o-s" label={t("orders.status")}>
+            <select id="o-s" className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">{t("orders.allStatuses")}</option>
+              {["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((v) => <option key={v} value={v}>{statusLabel(v)}</option>)}
+            </select>
+          </Field>
+          <Field id="o-o" label={t("orders.sort")}>
+            <select id="o-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="-created_at">{t("orders.sortNewest")}</option>
+              <option value="created_at">{t("orders.sortOldest")}</option>
+              <option value="-grand_total">{t("orders.sortHigh")}</option>
+              <option value="grand_total">{t("orders.sortLow")}</option>
+              <option value="status">{t("orders.sortStatus")}</option>
+            </select>
+          </Field>
+        </form>
+      ) : null}
       {loading && <Loading what="Loading orders" />}
       {error && <Alert>{error}</Alert>}
-      {data && data.results.length === 0 && (
+      {data && data.results.length === 0 && filtering && <p className="muted">{t("orders.noMatch")}</p>}
+      {data && data.results.length === 0 && !filtering && (
         <div className="empty">
           <p className="muted">{t("orders.none")}</p>
           <Link className="btn" to="/shop">{t("orders.start")}</Link>

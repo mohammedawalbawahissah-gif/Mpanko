@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type RefreshControlProps, type TextInputProps } from "react-native";
 import { api } from "./api";
 import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
@@ -168,11 +168,12 @@ export function Button({ title, onPress, disabled, kind = "primary", label }: { 
  * field being typed in; on Android the system already resizes the window. Dragging closes the keyboard,
  * and a button tapped while the keyboard is open works on the first tap.
  */
-export function FormScreen({ children }: { children: ReactNode }) {
+export function FormScreen({ children, refreshControl }: { children: ReactNode; refreshControl?: ReactElement<RefreshControlProps> }) {
   return (
     <ScrollView
       style={s.screen}
       contentContainerStyle={[s.pad, { paddingBottom: 40 }]}
+      refreshControl={refreshControl}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       automaticallyAdjustKeyboardInsets

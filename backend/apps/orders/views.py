@@ -98,7 +98,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
     lookup_field = "number"
     filterset_fields = ["status", "currency"]
     search_fields = ["number", "contact_email"]
-    ordering_fields = ["created_at", "grand_total"]
+    ordering_fields = ["created_at", "grand_total", "status"]
 
     def get_serializer_class(self):
         return OrderListSerializer if self.action == "list" else OrderSerializer

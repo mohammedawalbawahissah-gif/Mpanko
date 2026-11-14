@@ -90,3 +90,23 @@ def test_address_rules_offer_region_lists(api):
     assert "Texas" in us and "District of Columbia" in us
     assert "Northern Ireland" in api.get("/api/v1/auth/address-rules/?country=GB").data["regions"]
     assert api.get("/api/v1/auth/address-rules/?country=FJ").data["regions"] == []  # no clean list: shopper types it
+
+
+@pytest.mark.django_db
+def test_my_orders_can_be_searched_filtered_and_sorted(customer, other_customer):
+    from apps.orders.models import Order
+    from tests.conftest import client_for
+
+    def make(user, total, status="paid"):
+        return Order.objects.create(user=user, status=status, currency="USD", subtotal=total, grand_total=total, shipping_address={}, contact_email=user.email)
+
+    cheap, dear = make(customer, "10.00"), make(customer, "90.00", "delivered")
+    make(other_customer, "50.00")
+    c = client_for(customer)
+    numbers = lambda qs: [o["number"] for o in c.get(f"/api/v1/orders/{qs}").data["results"]]
+    assert set(numbers("")) == {cheap.number, dear.number}  # never someone else's order
+    assert numbers("?ordering=-grand_total") == [dear.number, cheap.number]
+    assert numbers("?ordering=grand_total") == [cheap.number, dear.number]
+    assert numbers(f"?search={cheap.number[-4:]}") == [cheap.number]
+    assert numbers("?status=delivered") == [dear.number]
+    assert numbers("?ordering=status")[0] == dear.number  # "delivered" sorts before "paid"
