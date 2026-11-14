@@ -6,7 +6,7 @@ import type { RootParams } from "./screens-buy";
 import { useAuth } from "./auth";
 import { color } from "./theme";
 import { usePrefs } from "./prefs";
-import { FormScreen, Button, Input, Notice, WhatsAppButton, s } from "./ui";
+import { FormScreen, Button, Input, Notice, ContactButtons, s } from "./ui";
 
 const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? BASE.replace(/\/api\/v1\/?$/, "").replace(":8000", ":5173");
 
@@ -67,7 +67,7 @@ export function AccountScreen() {
         <View style={{ height: 8 }} />
         <Button title={t("m.helpSupport")} kind="quiet" onPress={() => nav.navigate("SupportList")} />
         <View style={{ height: 8 }} />
-        <WhatsAppButton />
+        <ContactButtons />
         <View style={{ height: 8 }} />
         <Button title={t("nav.signOut")} kind="quiet" onPress={logout} />
 

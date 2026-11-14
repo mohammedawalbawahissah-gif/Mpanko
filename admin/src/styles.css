@@ -129,7 +129,3 @@ code.secret { background: #E3F1EF; padding: 0.15rem 0.4rem; border-radius: 3px; 
 .pre { white-space: pre-wrap; max-width: 60ch; }
 .pill.s-handled { background: #D6EFE5; color: #075A40; }
 .pill.s-new { background: #FBEFC4; color: #6A4C00; }
-.support-contacts { margin-bottom: 0.4rem; }
-.call-support { display: block; margin-bottom: 0.4rem; padding: 0.5rem 0.7rem; border: 1px solid rgba(255,255,255,0.25); border-left: 4px solid var(--gold, #e9a820); border-radius: 10px; color: #fff; text-decoration: none; font-weight: 600; }
-.call-support:hover, .call-support:focus-visible { background: rgba(255,255,255,0.1); }
-.nowrap { white-space: nowrap; }

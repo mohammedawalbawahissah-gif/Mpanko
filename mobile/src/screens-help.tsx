@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, WhatsAppButton, Select, s, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, ContactButtons, Select, s, useAsync, usePullRefresh } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -129,7 +129,7 @@ export function SupportListScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={pull.control}>
       <Button title={t("m.askUs")} onPress={() => nav.navigate("SupportNew", {})} />
       <View style={{ height: 8 }} />
-      <WhatsAppButton />
+      <ContactButtons />
       <View style={{ height: 12 }} />
       {loading && !data && <Busy />}
       {!!error && <ErrorRetry message={error} onRetry={reload} />}
@@ -169,7 +169,7 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
     <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("m.askUs")}</Text>
       <Text style={s.muted}>{t("callus.prefer")}</Text>
-      <WhatsAppButton />
+      <ContactButtons />
       <View style={{ height: 12 }} />
       {!!problem && <Notice>{problem}</Notice>}
       <Text style={s.label}>{t("m.whatAbout")}</Text>

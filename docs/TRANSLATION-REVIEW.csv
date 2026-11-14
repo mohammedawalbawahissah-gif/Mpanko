@@ -366,3 +366,6 @@
 "orders.sortStatus","Status","Statut","Estado","Matsayi",""
 "orders.allStatuses","All statuses","Tous les statuts","Todos los estados","Duk matsayi",""
 "orders.noMatch","No orders match.","Aucune commande ne correspond.","Ningún pedido coincide.","Babu oda da ya dace.",""
+"contact.email","Email","E-mail","Correo","Imel",""
+"contact.call","Call","Appeler","Llamar","Kira",""
+"contact.whatsapp","WhatsApp","WhatsApp","WhatsApp","WhatsApp",""

@@ -11,7 +11,7 @@ import { checkoutItems, isEmail, loadGuestOrder, saveGuestOrder } from "./core/g
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from "./types";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, WhatsAppButton, methodLabel, s, statusText } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, ContactButtons, methodLabel, s, statusText } from "./ui";
 import type { RootParams } from "./screens-buy";
 
 type Nav = NavigationProp<RootParams>;
@@ -408,7 +408,7 @@ export function FindOrderScreen() {
       )}
       <View style={{ height: 16 }} />
       <Text style={s.muted}>{t("callus.prefer")}</Text>
-      <WhatsAppButton />
+      <ContactButtons />
     </FormScreen>
   );
 }

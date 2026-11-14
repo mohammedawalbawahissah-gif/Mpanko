@@ -321,3 +321,9 @@ p { margin: 0 0 1em; max-width: 66ch; }
 .call-us-label { font-weight: 600; }
 .order-tools { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-end; margin: 0.5rem 0 1.25rem; }
 .order-tools .field { margin: 0; }
+.contact-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.contact-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.7rem; min-height: 32px; border: 1.5px solid currentColor; border-radius: 999px; font-size: 0.85rem; font-weight: 600; line-height: 1; text-decoration: none; color: var(--ink); background: transparent; }
+.contact-chip:hover { background: var(--ink); color: #fff; }
+.site-footer .contact-chip, .site-footer li a.contact-chip { color: #fff; border-color: rgba(255, 255, 255, 0.45); min-height: 32px; text-decoration: none; }
+.site-footer .contact-chip:hover { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.contact-icon { flex: none; }

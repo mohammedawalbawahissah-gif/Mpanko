@@ -3,7 +3,8 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react
 import { useAuth, useCart, useCurrency } from "./context";
 import { useShopConfig } from "./guest-config";
 import { LanguageSelect, useT } from "./i18n";
-import { callLink, emailLink, whatsappLink } from "./phone";
+import { whatsappLink } from "./phone";
+import { ContactButtons } from "./contact";
 import { reportError } from "./report";
 import type { MessageKey } from "./locales";
 import type { Product } from "./types";
@@ -97,10 +98,6 @@ export function Layout() {
   const { count } = useCart();
   const { currency, currencies, names, setCurrency } = useCurrency();
   const { t } = useT();
-  const config = useShopConfig();
-  const whatsapp = whatsappLink(config?.whatsapp_number, import.meta.env.DEV);
-  const call = callLink(config?.support_phone, import.meta.env.DEV);
-  const mail = emailLink(config?.support_email, import.meta.env.DEV);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -185,9 +182,7 @@ export function Layout() {
             <ul>
               <li><Link to="/account">{t("footer.profile")}</Link></li>
               <li><Link to="/orders">{t("footer.track")}</Link></li>
-              {mail && <li><a href={mail.href} className="mail-link">{t("footer.email")}: <span className="nowrap">{mail.label}</span></a>{mail.placeholder && <span className="small muted"> (placeholder)</span>}</li>}
-              {call && <li><a href={call.href} className="call-link">{t("footer.call")}: <span className="nowrap">{call.label}</span></a>{call.placeholder && <span className="small muted"> (placeholder)</span>}</li>}
-              {whatsapp && <li><a href={whatsapp.href} target="_blank" rel="noopener noreferrer">{t("footer.whatsapp")}</a>{whatsapp.placeholder && <span className="small muted"> (placeholder)</span>}</li>}
+              <li><ContactButtons /></li>
             </ul>
           </div>
           <div>
@@ -251,22 +246,13 @@ export function ProductTile({ product }: { product: Product }) {
   );
 }
 
-/** "Prefer to talk?": email, call and WhatsApp links for help and contact pages. Hidden when no number is set (a placeholder shows while developing). */
+/** "Prefer to talk?" with the Email, Call and WhatsApp buttons, for help pages. */
 export function ContactUs() {
   const { t } = useT();
-  const config = useShopConfig();
-  const mail = emailLink(config?.support_email, import.meta.env.DEV);
-  const call = callLink(config?.support_phone, import.meta.env.DEV);
-  const whatsapp = whatsappLink(config?.whatsapp_number, import.meta.env.DEV);
-  if (!mail && !call && !whatsapp) return null;
-  const hint = (mail?.placeholder || call?.placeholder || whatsapp?.placeholder) && <span className="small muted"> (placeholders)</span>;
   return (
     <div className="call-us">
       <span className="call-us-label">{t("callus.prefer")}</span>
-      {mail && <a className="btn quiet sm" href={mail.href}>{t("footer.email")}: <span className="nowrap">{mail.label}</span></a>}
-      {call && <a className="btn quiet sm" href={call.href}>{t("footer.call")}: <span className="nowrap">{call.label}</span></a>}
-      {whatsapp && <a className="btn quiet sm" href={whatsapp.href} target="_blank" rel="noopener noreferrer">{t("footer.whatsapp")}</a>}
-      {hint}
+      <ContactButtons />
     </div>
   );
 }

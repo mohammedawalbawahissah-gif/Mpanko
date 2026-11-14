@@ -71,9 +71,42 @@ export function usePullRefresh(reload: () => void) {
   return { control };
 }
 
-/** "Email us", "Call us" and "Chat on WhatsApp". Each opens the right app and shows once the shop has set its details; while developing, placeholders stand in so the layout can be checked. (Keeps its old name because every screen already uses it.) */
-export function WhatsAppButton({ onDark }: { onDark?: boolean } = {}) {
-  const kind = onDark ? "light" : "quiet";
+/** Small icons drawn from plain Views (the app has no icon font). Decorative: the button's label is what is read aloud. */
+function ContactIcon({ name }: { name: "mail" | "call" | "whatsapp" }) {
+  const c = color.ink;
+  if (name === "mail") {
+    return (
+      <View style={{ width: 18, height: 13, borderWidth: 1.8, borderColor: c, borderRadius: 3, overflow: "hidden" }}>
+        <View style={{ position: "absolute", top: -6, left: 3.2, width: 9, height: 9, borderRightWidth: 1.8, borderBottomWidth: 1.8, borderColor: c, transform: [{ rotate: "45deg" }] }} />
+      </View>
+    );
+  }
+  if (name === "call") {
+    return (
+      <View style={{ width: 11, height: 18, borderWidth: 1.8, borderColor: c, borderRadius: 3, alignItems: "center", justifyContent: "flex-end" }}>
+        <View style={{ width: 4, height: 1.8, backgroundColor: c, marginBottom: 1.5 }} />
+      </View>
+    );
+  }
+  return (
+    <View style={{ width: 18, height: 18, borderWidth: 1.8, borderColor: c, borderRadius: 9, borderBottomLeftRadius: 1, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: c }} />
+    </View>
+  );
+}
+
+function ContactChip({ icon, label, name, onPress }: { icon: "mail" | "call" | "whatsapp"; label: string; name: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={name} hitSlop={6} onPress={onPress}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: color.ink, opacity: pressed ? 0.7 : 1 })}>
+      <ContactIcon name={icon} />
+      <Text style={{ color: color.ink, fontWeight: "700", fontSize: 14 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** Compact Email, Call and WhatsApp buttons with icons. They never show the address or number; each opens the right app. They show once the shop has set its details; while developing, placeholders stand in so the layout can be checked. */
+export function ContactButtons() {
   const { t } = usePrefs();
   const [number, setNumber] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,12 +123,13 @@ export function WhatsAppButton({ onDark }: { onDark?: boolean } = {}) {
   const mail = email || (__DEV__ ? "help@mpanko.example" : "");
   const dial = phone || (__DEV__ ? "+233 00 000 0000" : "");
   const wa = number || (__DEV__ ? "233000000000" : "");
+  if (!mail && !dial && !wa) return null;
   return (
-    <>
-      {!!mail && <Button title={`${t("footer.email")}: ${mail}`} kind={kind} onPress={() => Linking.openURL(`mailto:${mail}`)} />}
-      {!!dial && <Button title={`${t("footer.call")}: ${dial}`} kind={kind} onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
-      {!!wa && <Button title={t("footer.whatsapp")} kind={kind} onPress={() => Linking.openURL(`https://wa.me/${wa}`)} />}
-    </>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
+      {!!mail && <ContactChip icon="mail" label={t("contact.email")} name={t("footer.email")} onPress={() => Linking.openURL(`mailto:${mail}`)} />}
+      {!!dial && <ContactChip icon="call" label={t("contact.call")} name={t("footer.call")} onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
+      {!!wa && <ContactChip icon="whatsapp" label={t("contact.whatsapp")} name={t("footer.whatsapp")} onPress={() => Linking.openURL(`https://wa.me/${wa}`)} />}
+    </View>
   );
 }
 

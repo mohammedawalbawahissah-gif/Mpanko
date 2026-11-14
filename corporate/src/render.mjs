@@ -71,12 +71,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
   const policy = site.shopUrl
     ? [["Terms of sale", "/terms"], ["Privacy", "/privacy"], ["Returns", "/returns-policy"]].map(([l, p]) => `<li><a href="${esc(site.shopUrl + p)}">${l}</a></li>`).join("")
     : "";
-  const contactBits = [
-    profile.contact_email ? `<a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a>` : "",
-    profile.phone ? `<a class="call-link" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">Call us: <span class="nowrap">${esc(profile.phone)}</span></a>` : "",
-    profile.whatsapp_number ? `<a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a>` : "",
-    profile.address ? esc(profile.address) : "",
-  ].filter(Boolean);
+  const contactBits = [contactButtons(profile), profile.address ? `<p>${esc(profile.address)}</p>` : ""].filter(Boolean);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -112,7 +107,7 @@ ${body}
   <div class="foot-inner">
     <div>
       <p class="foot-name">&copy; ${new Date().getUTCFullYear()} ${esc(name)}</p>
-      ${contactBits.length ? `<p>${contactBits.join(" &middot; ")}</p>` : ""}
+      ${contactBits.join("")}
     </div>
     ${social || policy ? `<nav aria-label="More">
       <ul>${social}${policy}</ul>
@@ -227,6 +222,22 @@ export function businessPage(ctx, b) {
   return layout({ ...ctx, title: b.name, path: `/businesses/${b.slug}`, description: b.summary || b.tagline, body });
 }
 
+/** Compact Email, Call and WhatsApp buttons with icons. They never show the address or number; each opens the right app. */
+const CONTACT_ICONS = {
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  call: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  whatsapp: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9 9.5c.3 2 2.5 4.2 4.5 4.5l1.3-1.3-2-1-.8.8c-.8-.4-1.5-1.1-1.9-1.9l.8-.8-1-2z"/>',
+};
+const contactIcon = (k) => `<svg class="contact-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${CONTACT_ICONS[k]}</svg>`;
+export function contactButtons(profile) {
+  const chips = [
+    profile.contact_email ? `<a class="contact-chip" href="mailto:${esc(profile.contact_email)}" aria-label="Email us">${contactIcon("mail")}Email</a>` : "",
+    profile.phone ? `<a class="contact-chip" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}" aria-label="Call us">${contactIcon("call")}Call</a>` : "",
+    profile.whatsapp_number ? `<a class="contact-chip" href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener" aria-label="Chat with us on WhatsApp">${contactIcon("whatsapp")}WhatsApp</a>` : "",
+  ].join("");
+  return chips ? `<div class="contact-row">${chips}</div>` : "";
+}
+
 /** `form` is { values, errors, state: "idle"|"sent"|"error", notice } */
 export function contactPage(ctx, form = {}) {
   const { profile, businesses } = ctx;
@@ -234,12 +245,7 @@ export function contactPage(ctx, form = {}) {
   const errors = form.errors || {};
   const err = (f) => (errors[f] ? `<p class="field-error" id="${f}-err">${esc(errors[f])}</p>` : "");
   const attrs = (f) => (errors[f] ? ` aria-invalid="true" aria-describedby="${f}-err"` : "");
-  const direct = [
-    profile.contact_email ? `<dt>Email</dt><dd><a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a></dd>` : "",
-    profile.phone ? `<dt>Call us</dt><dd><a class="call-link" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a></dd>` : "",
-    profile.whatsapp_number ? `<dt>WhatsApp</dt><dd><a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a></dd>` : "",
-    profile.address ? `<dt>Address</dt><dd>${esc(profile.address)}</dd>` : "",
-  ].join("");
+  const direct = contactButtons(profile) + (profile.address ? `<dl class="direct"><dt>Address</dt><dd>${esc(profile.address)}</dd></dl>` : "");
   const sent = form.state === "sent";
   const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">Contact us</h1></div></section>
   <section aria-labelledby="msg-h">
@@ -247,7 +253,7 @@ export function contactPage(ctx, form = {}) {
       <div>
         <h2 id="msg-h">Send a message</h2>
         <p class="lede">We reply within two working days.</p>
-        ${direct ? `<dl class="direct">${direct}</dl>` : ""}
+        ${direct}
       </div>
       <div>
         ${sent ? `<div class="notice ok" role="status"><h3>Message sent</h3><p>Thank you. We will reply by email within two working days.</p><p><a class="textlink" href="/">Back to the home page</a></p></div>` : `
