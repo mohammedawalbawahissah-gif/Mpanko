@@ -47,7 +47,7 @@ function Shell() {
   return (
     <div className="shell">
       <nav className="side" aria-label="Main">
-        <div className="brand">Mpanko</div>
+        <div className="brand"><img src="/logo-light.svg" alt="Mpanko" height={56} /></div>
         {items.map((n) => <NavLink key={n.to} to={n.to} end={n.to === "/"}>{n.name}</NavLink>)}
         <div className="who">
           {user.full_name || user.email}<br />{ROLE_LABEL[user.role] ?? user.role}

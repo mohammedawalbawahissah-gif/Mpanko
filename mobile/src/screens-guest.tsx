@@ -64,7 +64,7 @@ export function GuestBag() {
               <Text accessibilityLabel={t("m.quantity", { n: l.quantity })} style={{ fontWeight: "700", fontSize: 16 }}>{l.quantity}</Text>
               <Button title="+" kind="quiet" onPress={() => setGuestQuantity(l.variantId, l.quantity + 1)} />
             </View>
-            <Pressable accessibilityRole="button" onPress={() => removeGuestLine(l.variantId)}><Text style={{ color: color.indigo, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => removeGuestLine(l.variantId)}><Text style={{ color: color.teal, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
           </View>
         </View>
       ))}
@@ -202,7 +202,7 @@ export function GuestCheckoutScreen() {
           <Text style={{ fontWeight: "700", color: color.ink }}>{address.recipient_name}</Text>
           <Text style={{ color: color.ink }}>{address.line1}{address.line2 ? `, ${address.line2}` : ""}, {address.city} {address.postal_code}, {address.country}</Text>
           <Text style={s.muted}>{address.phone}</Text>
-          <Pressable accessibilityRole="button" onPress={() => setAddress(null)}><Text style={{ color: color.indigo, textDecorationLine: "underline", marginTop: 6 }}>{t("guest.changeAddress")}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => setAddress(null)}><Text style={{ color: color.teal, textDecorationLine: "underline", marginTop: 6 }}>{t("guest.changeAddress")}</Text></Pressable>
         </View>
       ) : <AddressForm local onSaved={setAddress} />}
 

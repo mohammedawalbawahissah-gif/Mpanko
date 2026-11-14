@@ -7,18 +7,18 @@ import type { Product } from "./types";
 
 /* ---------------------------------------------------------------- weave patterns */
 
-const INK = "#141b3c";
-const INDIGO = "#2a3fa0";
-const GOLD = "#f2b705";
-const COTTON = "#f5f6f8";
-const MALACHITE = "#0e7c5a";
+const INK = "#0a2b29";
+const TEAL = "#0e7f74";
+const TURQ = "#12b5ae";
+const COTTON = "#f1f8f7";
+const DEEP = "#0b6a61";
 
 const PALETTES: [string, string, string][] = [
-  [INDIGO, COTTON, GOLD],
-  [INK, GOLD, COTTON],
-  [MALACHITE, INK, GOLD],
-  [COTTON, INDIGO, INK],
-  [INK, INDIGO, GOLD],
+  [TEAL, COTTON, TURQ],
+  [INK, TURQ, COTTON],
+  [DEEP, INK, TURQ],
+  [COTTON, TEAL, INK],
+  [INK, TEAL, TURQ],
 ];
 
 function hash(seed: string): number {
@@ -61,16 +61,6 @@ export function ProductArt({ product }: { product: Pick<Product, "name" | "slug"
 
 /* ---------------------------------------------------------------------- layout */
 
-function Mark() {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="1" y="2" width="8" height="28" fill={INDIGO} />
-      <rect x="12" y="2" width="8" height="28" fill={GOLD} />
-      <rect x="23" y="2" width="8" height="28" fill={INK} />
-    </svg>
-  );
-}
-
 export function Layout() {
   const { user, logout } = useAuth();
   const { count } = useCart();
@@ -89,8 +79,7 @@ export function Layout() {
       <header className="site-header">
         <div className="wrap">
           <Link to="/" className="logo" aria-label="Mpanko home">
-            <Mark />
-            Mpanko
+            <img src="/logo.svg" alt="" width={59} height={56} />
           </Link>
           <nav className="nav" aria-label="Main">
             <NavLink to="/shop">{t("nav.shop")}</NavLink>

@@ -31,7 +31,7 @@ export function Login() {
 
   return (
     <main className="login">
-      <div className="brand">Mpanko admin</div>
+      <div className="brand"><img src="/logo.svg" alt="Mpanko" height={72} /><p className="muted small">Admin</p></div>
       {error && <Alert>{error}</Alert>}
       {!step && (
         <form className="form" onSubmit={submit} noValidate>

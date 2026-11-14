@@ -58,7 +58,7 @@ export function BagScreen() {
               <Text accessibilityLabel={t("m.quantity", { n: i.quantity })} style={{ fontWeight: "700", fontSize: 16 }}>{i.quantity}</Text>
               <Button title="+" kind="quiet" onPress={() => guard(() => setQuantity(i.id, i.quantity + 1))} />
             </View>
-            <Pressable accessibilityRole="button" onPress={() => guard(() => removeItem(i.id))}><Text style={{ color: color.indigo, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => guard(() => removeItem(i.id))}><Text style={{ color: color.teal, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
           </View>
         </View>
       ))}

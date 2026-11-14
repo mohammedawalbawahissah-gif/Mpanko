@@ -73,7 +73,7 @@ test("logos have alt text, and a business without one shows its initial", () => 
   assert.match(withLogo, /<img[^>]+alt="Foods logo"/);
   assert.match(businessesPage(ctx([biz({ logo: "https://cdn.example/x.png" })])), /alt="Wolbi Foods logo"/);
   const plain = businessesPage(ctx());
-  assert.equal(/<img/.test(plain), false);
+  assert.equal(/<img class="logo/.test(plain), false);
   assert.match(plain, /class="logo md mono" aria-hidden="true">W</);
   assert.equal(monogram("  élan"), "É");
 });

@@ -96,7 +96,7 @@ export function ProfileScreen() {
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         {matches.map((c) => (
           <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: currency === c }} onPress={() => setCurrency(c)}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: currency === c ? color.indigo : "#fff", borderWidth: 1, borderColor: color.line }}>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: currency === c ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
             <Text style={{ color: currency === c ? "#fff" : color.ink, fontWeight: "600" }}>{c}</Text>
           </Pressable>
         ))}

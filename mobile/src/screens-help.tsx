@@ -98,9 +98,9 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
         return (
           <View key={i.order_item} style={[s.card, s.cardPad, s.row]}>
             <Text style={{ flex: 1 }}>{i.product_name}{i.variant_name ? ` (${i.variant_name})` : ""}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("m.fewer", { name: i.product_name })} onPress={() => setQty({ ...qty, [i.order_item]: Math.max(0, n - 1) })} style={{ padding: 12 }}><Text style={{ fontSize: 22, color: color.indigo }}>−</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("m.fewer", { name: i.product_name })} onPress={() => setQty({ ...qty, [i.order_item]: Math.max(0, n - 1) })} style={{ padding: 12 }}><Text style={{ fontSize: 22, color: color.teal }}>−</Text></Pressable>
             <Text accessibilityLabel={t("m.nToReturn", { n })} style={{ minWidth: 24, textAlign: "center", fontWeight: "700" }}>{n}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("m.more", { name: i.product_name })} onPress={() => setQty({ ...qty, [i.order_item]: Math.min(i.max, n + 1) })} style={{ padding: 12 }}><Text style={{ fontSize: 22, color: color.indigo }}>+</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("m.more", { name: i.product_name })} onPress={() => setQty({ ...qty, [i.order_item]: Math.min(i.max, n + 1) })} style={{ padding: 12 }}><Text style={{ fontSize: 22, color: color.teal }}>+</Text></Pressable>
           </View>
         );
       })}

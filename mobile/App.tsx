@@ -35,7 +35,7 @@ function ShopNav() {
 }
 
 function TabLabel({ text, focused }: { text: string; focused: boolean }) {
-  return <Text style={{ fontSize: 12, fontWeight: focused ? "800" : "500", color: focused ? color.indigo : color.muted, marginBottom: 6 }}>{text}</Text>;
+  return <Text style={{ fontSize: 12, fontWeight: focused ? "800" : "500", color: focused ? color.teal : color.muted, marginBottom: 6 }}>{text}</Text>;
 }
 
 function TabsNav() {
@@ -43,7 +43,7 @@ function TabsNav() {
   const { t } = usePrefs();
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
-    <Tabs.Navigator screenOptions={{ ...header, tabBarIcon: () => null, tabBarActiveTintColor: color.indigo }}>
+    <Tabs.Navigator screenOptions={{ ...header, tabBarIcon: () => null, tabBarActiveTintColor: color.teal }}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />

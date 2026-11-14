@@ -83,7 +83,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(fullTitle)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="theme-color" content="#1b2455">
+<meta name="theme-color" content="#0e7f74">
 ${noindex ? '<meta name="robots" content="noindex">' : ""}
 ${canonical}
 ${og}
@@ -96,7 +96,7 @@ ${og}
 <a class="skip" href="#main">Skip to the content</a>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="/">${esc(name)}</a>
+    <a class="brand" href="/"><img src="/logo-light.svg" alt="${esc(name)}" width="92" height="68"></a>
     <nav aria-label="Main">
       <ul>
 ${NAV.map((n) => `        <li><a href="${n.href}"${path === n.href || (n.href !== "/" && path.startsWith(n.href + "/")) ? ' aria-current="page"' : ""}>${n.label}</a></li>`).join("\n")}

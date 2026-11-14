@@ -39,14 +39,14 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         />
       </View>
       {!!currency && (
-        <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.indigo, fontWeight: "600", paddingHorizontal: 14, paddingBottom: 2 }}>
+        <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.teal, fontWeight: "600", paddingHorizontal: 14, paddingBottom: 2 }}>
           {t("shop.pricesIn", { currency })}
         </Text>
       )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
         {[{ id: null as number | null, name: t("m.all") }, ...list].map((c) => (
           <Pressable key={String(c.id)} onPress={() => setCat(c.id)} accessibilityRole="button" accessibilityState={{ selected: cat === c.id }}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: cat === c.id ? color.indigo : "#fff", borderWidth: 1, borderColor: color.line }}>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: cat === c.id ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
             <Text style={{ color: cat === c.id ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
           </Pressable>
         ))}

@@ -130,7 +130,7 @@ export function AccountScreen() {
             <Text style={{ flex: 1 }} onPress={() => setAgree(!agree)}>{t("register.agree")} {t("register.terms")} {t("register.and")} {t("register.privacy")}</Text>
             <Switch accessibilityLabel={t("m.acceptTermsPrivacy")} value={agree} onValueChange={setAgree} />
           </View>
-          <Text style={{ color: color.indigo, marginBottom: 10 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
+          <Text style={{ color: color.teal, marginBottom: 10 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
           {!!errors.accept_terms && <Text style={s.fieldError}>{errors.accept_terms}</Text>}
           <View style={[s.row, { marginBottom: 14 }]}>
             <Text style={{ flex: 1 }} onPress={() => setMarketing(!marketing)}>{t("register.marketing")}</Text>

@@ -59,7 +59,7 @@ export function Button({ title, onPress, disabled, kind = "primary" }: { title: 
       disabled={disabled}
       style={({ pressed }) => [s.btn, kind === "quiet" && s.btnQuiet, kind === "danger" && s.btnDanger, disabled && { opacity: 0.45 }, pressed && { opacity: 0.8 }]}
     >
-      <Text style={[s.btnText, kind === "quiet" && { color: color.indigo }]}>{title}</Text>
+      <Text style={[s.btnText, kind === "quiet" && { color: color.teal }]}>{title}</Text>
     </Pressable>
   );
 }
@@ -87,7 +87,7 @@ export function Input({ label, error, secureTextEntry, ...props }: TextInputProp
             hitSlop={8}
             style={{ position: "absolute", right: 0, top: 0, bottom: 0, paddingHorizontal: 14, justifyContent: "center" }}
           >
-            <Text style={{ color: color.indigo, fontWeight: "700" }}>{hidden ? t("m.show") : t("m.hide")}</Text>
+            <Text style={{ color: color.teal, fontWeight: "700" }}>{hidden ? t("m.show") : t("m.hide")}</Text>
           </Pressable>
         )}
       </View>
@@ -97,7 +97,7 @@ export function Input({ label, error, secureTextEntry, ...props }: TextInputProp
 }
 
 export function Notice({ kind = "error", children }: { kind?: "error" | "ok" | "info"; children: ReactNode }) {
-  const c = kind === "error" ? color.bad : kind === "ok" ? color.ok : color.indigo;
+  const c = kind === "error" ? color.bad : kind === "ok" ? color.ok : color.teal;
   return (
     <View accessibilityRole="alert" style={[s.notice, { borderLeftColor: c }]}>
       <Text style={{ color: color.ink }}>{children}</Text>
@@ -109,7 +109,7 @@ export function Busy({ what }: { what?: string }) {
   const { t } = usePrefs();
   return (
     <View style={{ padding: 24, alignItems: "center" }}>
-      <ActivityIndicator color={color.indigo} />
+      <ActivityIndicator color={color.teal} />
       <Text style={{ color: color.muted, marginTop: 8 }}>{what ?? t("m.loading")}…</Text>
     </View>
   );
@@ -181,7 +181,7 @@ export const s = StyleSheet.create({
   h1: { fontSize: 26, fontWeight: "800", color: color.ink, marginBottom: 12 },
   h2: { fontSize: 18, fontWeight: "700", color: color.ink, marginTop: 20, marginBottom: 8 },
   muted: { color: color.muted },
-  btn: { backgroundColor: color.indigo, borderRadius: 4, paddingVertical: 13, paddingHorizontal: 16, alignItems: "center", minHeight: 48, justifyContent: "center" },
+  btn: { backgroundColor: color.teal, borderRadius: 4, paddingVertical: 13, paddingHorizontal: 16, alignItems: "center", minHeight: 48, justifyContent: "center" },
   btnQuiet: { backgroundColor: "transparent", borderWidth: 1, borderColor: color.line },
   btnDanger: { backgroundColor: color.bad },
   btnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
@@ -192,7 +192,7 @@ export const s = StyleSheet.create({
   card: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderRadius: 4, marginBottom: 12, overflow: "hidden" },
   cardPad: { padding: 12 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  pill: { alignSelf: "flex-start", backgroundColor: "#E7E9F3", color: color.ink, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
+  pill: { alignSelf: "flex-start", backgroundColor: "#E3F1EF", color: color.ink, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
   choice: { backgroundColor: "#fff", borderWidth: 2, borderColor: color.line, borderRadius: 4, padding: 12, marginBottom: 8 },
-  choiceOn: { borderColor: color.indigo },
+  choiceOn: { borderColor: color.teal },
 });
