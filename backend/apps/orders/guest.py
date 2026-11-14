@@ -157,6 +157,7 @@ class PublicConfigView(APIView):
         return Response({
             "guest_checkout": settings.GUEST_CHECKOUT_ENABLED,
             "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
+            "support_phone": settings.SUPPORT_PHONE_NUMBER,
             "launch_countries": settings.LAUNCH_COUNTRIES,
         })
 

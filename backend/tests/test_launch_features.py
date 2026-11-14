@@ -69,6 +69,13 @@ def test_config_exposes_whatsapp_and_launch_countries(api, settings):
     assert d["whatsapp_number"] == "233241234567" and d["launch_countries"] == ["US"]
 
 
+def test_config_exposes_a_dialable_support_phone(api, settings):
+    settings.SUPPORT_PHONE_NUMBER = "+233240000000"
+    assert api.get("/api/v1/config/").data["support_phone"] == "+233240000000"
+    settings.SUPPORT_PHONE_NUMBER = ""
+    assert api.get("/api/v1/config/").data["support_phone"] == ""
+
+
 def test_address_rules_offer_region_lists(api):
     gh = api.get("/api/v1/auth/address-rules/?country=GH").data
     assert "Northern" in gh["regions"] and len(gh["regions"]) == 16

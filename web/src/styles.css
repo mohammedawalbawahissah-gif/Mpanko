@@ -314,3 +314,6 @@ p { margin: 0 0 1em; max-width: 66ch; }
   .dept-swatch { width: 36px; height: 36px; }
   .dept-name { font-size: 0.92rem; }
 }
+
+.nowrap { white-space: nowrap; }
+.site-footer .muted { color: #9fbab5; }

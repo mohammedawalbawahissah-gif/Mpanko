@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react
 import { useAuth, useCart, useCurrency } from "./context";
 import { useShopConfig } from "./guest-config";
 import { LanguageSelect, useT } from "./i18n";
+import { callLink } from "./phone";
 import { reportError } from "./report";
 import type { MessageKey } from "./locales";
 import type { Product } from "./types";
@@ -96,7 +97,9 @@ export function Layout() {
   const { count } = useCart();
   const { currency, currencies, names, setCurrency } = useCurrency();
   const { t } = useT();
-  const whatsapp = (useShopConfig()?.whatsapp_number ?? "").replace(/\D/g, "");
+  const config = useShopConfig();
+  const whatsapp = (config?.whatsapp_number ?? "").replace(/\D/g, "");
+  const call = callLink(config?.support_phone, import.meta.env.DEV);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -181,6 +184,7 @@ export function Layout() {
             <ul>
               <li><Link to="/account">{t("footer.profile")}</Link></li>
               <li><Link to="/orders">{t("footer.track")}</Link></li>
+              {call && <li><a href={call.href} className="call-link">{t("footer.call")}: <span className="nowrap">{call.label}</span></a>{call.placeholder && <span className="small muted"> (placeholder)</span>}</li>}
               {whatsapp && <li><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">{t("footer.whatsapp")}</a></li>}
             </ul>
           </div>

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 
-export interface ShopConfig { guest_checkout: boolean; whatsapp_number: string; launch_countries: string[] }
-const EMPTY: ShopConfig = { guest_checkout: false, whatsapp_number: "", launch_countries: [] };
+export interface ShopConfig { guest_checkout: boolean; whatsapp_number: string; support_phone: string; launch_countries: string[] }
+const EMPTY: ShopConfig = { guest_checkout: false, whatsapp_number: "", support_phone: "", launch_countries: [] };
 
 let configPromise: Promise<ShopConfig> | null = null;
 
 function loadConfig(): Promise<ShopConfig> {
   configPromise ??= api<Partial<ShopConfig>>("/config/")
-    .then((c) => ({ guest_checkout: !!c.guest_checkout, whatsapp_number: c.whatsapp_number ?? "", launch_countries: c.launch_countries ?? [] }))
+    .then((c) => ({ guest_checkout: !!c.guest_checkout, whatsapp_number: c.whatsapp_number ?? "", support_phone: c.support_phone ?? "", launch_countries: c.launch_countries ?? [] }))
     .catch(() => EMPTY);
   return configPromise;
 }

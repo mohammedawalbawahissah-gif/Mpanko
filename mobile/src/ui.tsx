@@ -71,15 +71,26 @@ export function usePullRefresh(reload: () => void) {
   return { control };
 }
 
-/** "Chat on WhatsApp". Shown only once the shop has set its WhatsApp number. */
+/** "Call us" (opens the phone's dialler) and "Chat on WhatsApp". Each shows only once the shop has set its number; while developing, a placeholder number stands in for the call button. */
 export function WhatsAppButton() {
   const { t } = usePrefs();
   const [number, setNumber] = useState("");
+  const [phone, setPhone] = useState("");
   useEffect(() => {
-    api<{ whatsapp_number?: string }>("/config/").then((c) => setNumber((c.whatsapp_number ?? "").replace(/\D/g, ""))).catch(() => undefined);
+    api<{ whatsapp_number?: string; support_phone?: string }>("/config/")
+      .then((c) => {
+        setNumber((c.whatsapp_number ?? "").replace(/\D/g, ""));
+        setPhone((c.support_phone ?? "").trim());
+      })
+      .catch(() => undefined);
   }, []);
-  if (!number) return null;
-  return <Button title={t("footer.whatsapp")} kind="quiet" onPress={() => Linking.openURL(`https://wa.me/${number}`)} />;
+  const dial = phone || (__DEV__ ? "+233 00 000 0000" : "");
+  return (
+    <>
+      {!!dial && <Button title={`${t("footer.call")}: ${dial}`} kind="quiet" onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
+      {!!number && <Button title={t("footer.whatsapp")} kind="quiet" onPress={() => Linking.openURL(`https://wa.me/${number}`)} />}
+    </>
+  );
 }
 
 /** Countries to offer: the shop's launch countries when it has set them, otherwise every country. */

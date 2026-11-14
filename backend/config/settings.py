@@ -227,6 +227,10 @@ STORE_COUNTRY = os.environ.get("STORE_COUNTRY", "GH")  # shipments to other coun
 LAUNCH_COUNTRIES = [c.upper() for c in env_list("LAUNCH_COUNTRIES", "")]
 # WhatsApp number customers can message for support, digits only with the country code, e.g. 233240000000. Blank = no button.
 WHATSAPP_SUPPORT_NUMBER = "".join(ch for ch in os.environ.get("WHATSAPP_SUPPORT_NUMBER", "") if ch.isdigit())
+# Phone number customers can call for support, with the country code, e.g. +233 24 000 0000. Blank = no Call us link.
+# Only a leading + and digits are kept, so the link always dials cleanly.
+_phone = os.environ.get("SUPPORT_PHONE_NUMBER", "").strip()
+SUPPORT_PHONE_NUMBER = ("+" if _phone.startswith("+") else "") + "".join(ch for ch in _phone if ch.isdigit())
 SHIPPING_FLAT_RATE = os.environ.get("SHIPPING_FLAT_RATE", "15.00")  # in BASE_CURRENCY (OD-09)
 STOCK_RESERVATION_MINUTES = int(os.environ.get("STOCK_RESERVATION_MINUTES", "30"))
 
