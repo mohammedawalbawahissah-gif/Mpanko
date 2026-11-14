@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { Busy, Button, Notice, Pill, s, useAsync } from "./ui";
+import { Busy, Button, ErrorRetry, Notice, Pill, s, useAsync } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -30,11 +30,12 @@ const fail = (e: unknown, fallback: string) => (e instanceof ApiError || e insta
 export function OrderReturns({ orderNumber, status }: { orderNumber: string; status: string }) {
   const nav = useNavigation<Nav>();
   const { t } = usePrefs();
-  const { data, reload } = useAsync(() => api<Page<ReturnRow>>(`/returns/?search=${orderNumber}`), [orderNumber]);
+  const { data, error: loadError, reload } = useAsync(() => api<Page<ReturnRow>>(`/returns/?search=${orderNumber}`), [orderNumber]);
   const [error, setError] = useState("");
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
   const list = data?.results ?? [];
   if (list.length === 0 && status !== "delivered") return null;
+  if (loadError && !data) return <ErrorRetry message={loadError} onRetry={reload} />;
   const cancel = async (n: string) => {
     setError("");
     try {
@@ -46,7 +47,7 @@ export function OrderReturns({ orderNumber, status }: { orderNumber: string; sta
   };
   return (
     <View>
-      <Text style={s.h2}>{t("m.returns")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.returns")}</Text>
       {!!error && <Notice>{error}</Notice>}
       {list.map((r) => (
         <View key={r.number} style={[s.card, s.cardPad]}>
@@ -66,14 +67,14 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
   const { number } = route.params;
   const nav = useNavigation<Nav>();
   const { t } = usePrefs();
-  const { data: e, error, loading } = useAsync(() => api<Eligibility>(`/returns/eligibility/?order=${number}`), [number]);
+  const { data: e, error, loading, reload: reloadElig } = useAsync(() => api<Eligibility>(`/returns/eligibility/?order=${number}`), [number]);
   const [qty, setQty] = useState<Record<number, number>>({});
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   if (loading) return <Busy />;
-  if (error || !e) return <View style={s.pad}><Notice>{error || t("m.cantLoadOrder")}</Notice></View>;
+  if (error || !e) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={reloadElig} /> : <Notice>{t("m.cantLoadOrder")}</Notice>}</View>;
   if (!e.eligible) return <View style={s.pad}><Notice kind="info">{e.message}</Notice></View>;
   const chosen = Object.entries(qty).filter(([, n]) => n > 0).map(([id, n]) => ({ order_item: Number(id), quantity: n }));
   const submit = async () => {
@@ -89,10 +90,10 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
   };
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{t("m.returnItems")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("m.returnItems")}</Text>
       <Text style={s.muted}>{t("m.returnIntro", { days: e.window_days })}</Text>
       {!!problem && <View style={{ marginTop: 12 }}><Notice>{problem}</Notice></View>}
-      <Text style={s.h2}>{t("m.howMany")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.howMany")}</Text>
       {e.items.filter((i) => i.max > 0).map((i) => {
         const n = qty[i.order_item] ?? 0;
         return (
@@ -104,7 +105,7 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
           </View>
         );
       })}
-      <Text style={s.h2}>{t("m.whyReturn")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.whyReturn")}</Text>
       {e.reasons.map((r) => (
         <Pressable key={r.value} accessibilityRole="radio" accessibilityState={{ selected: reason === r.value }} onPress={() => setReason(r.value)} style={[s.choice, reason === r.value && s.choiceOn]}>
           <Text>{r.label}</Text>
@@ -128,7 +129,7 @@ export function SupportListScreen() {
       <Button title={t("m.askUs")} onPress={() => nav.navigate("SupportNew", {})} />
       <View style={{ height: 12 }} />
       {loading && !data && <Busy />}
-      {!!error && <Notice>{error}</Notice>}
+      {!!error && <ErrorRetry message={error} onRetry={reload} />}
       {data && data.results.length === 0 && <Text style={s.muted}>{t("m.noContact")}</Text>}
       {data?.results.map((c) => (
         <Pressable key={c.number} accessibilityRole="button" style={[s.card, s.cardPad]} onPress={() => nav.navigate("SupportThread", { number: c.number })}>
@@ -163,7 +164,7 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
   };
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{t("m.askUs")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("m.askUs")}</Text>
       {!!problem && <Notice>{problem}</Notice>}
       <Text style={s.label}>{t("m.whatAbout")}</Text>
       <TextInput accessibilityLabel={t("m.subject")} style={s.input} maxLength={150} value={subject} onChangeText={setSubject} />
@@ -188,7 +189,7 @@ export function SupportThreadScreen({ route }: { route: { params: { number: stri
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   if (loading && !c) return <Busy />;
-  if (error || !c) return <View style={s.pad}><Notice>{error || t("m.requestNotFound")}</Notice></View>;
+  if (error || !c) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={reload} /> : <Notice>{t("m.requestNotFound")}</Notice>}</View>;
   const send = async () => {
     setBusy(true);
     setProblem("");
@@ -204,7 +205,7 @@ export function SupportThreadScreen({ route }: { route: { params: { number: stri
   };
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{c.subject}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{c.subject}</Text>
       <Pill value={c.status} />
       {c.messages.map((m) => (
         <View key={m.id} style={[s.card, s.cardPad, { marginTop: 12, marginLeft: m.from_staff ? 16 : 0 }]}>

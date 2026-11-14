@@ -180,3 +180,12 @@ Run `python manage.py preflight` after setting these. It warns about anything mi
 - Product types: shipping rules by kind of product (Admin > Product types).
 - Pickup locations: where couriers collect from; choose one when creating a label.
 - Product form: "Made to order" and days to make.
+
+## Logs, monitoring and security checks
+
+- Set `SENTRY_DSN` on the api service so crashes reach you. Errors carry the request ID.
+- Every API response has an `X-Request-ID` header, and every log line has the same ID. When a customer reports a problem, ask for the time, find the request in the Railway logs (search `request_id`), and follow it through.
+- Logs are JSON in production. Set `LOG_FORMAT=text` only while debugging.
+- `/health/` says the API is running and shows which version is live (Railway sets `RAILWAY_GIT_COMMIT_SHA`). `/ready/` checks the database and Redis. Point Railway's health check at `/ready/`.
+- Requests slower than one second are logged as warnings with "(slow)".
+- Each push runs a dependency audit. See `docs/SECURITY-AUDIT.md`.

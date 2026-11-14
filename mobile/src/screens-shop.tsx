@@ -7,7 +7,7 @@ import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { Busy, Button, Notice, Photo, s, useCachedAsync } from "./ui";
+import { Busy, Button, ErrorRetry, Notice, Photo, s, useCachedAsync } from "./ui";
 
 export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
@@ -39,14 +39,14 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         />
       </View>
       {!!currency && (
-        <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.teal, fontWeight: "600", paddingHorizontal: 14, paddingBottom: 2 }}>
+        <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.teal, fontWeight: "600", paddingHorizontal: 14, paddingVertical: 12 }}>
           {t("shop.pricesIn", { currency })}
         </Text>
       )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
         {[{ id: null as number | null, name: t("m.all") }, ...list].map((c) => (
           <Pressable key={String(c.id)} onPress={() => setCat(c.id)} accessibilityRole="button" accessibilityState={{ selected: cat === c.id }}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: cat === c.id ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.id ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
             <Text style={{ color: cat === c.id ? "#fff" : color.ink, fontWeight: "600" }}>{c.name}</Text>
           </Pressable>
         ))}
@@ -79,7 +79,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
 export function ProductScreen({ route, navigation }: NativeStackScreenProps<ShopStack, "Product">) {
   const { user, addToCart, guestEnabled, addGuestLine } = useAuth();
   const { money, t } = usePrefs();
-  const { data: p, error, loading, savedAt } = useCachedAsync(`product:${route.params.slug}`, () => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
+  const { data: p, error, loading, savedAt, reload } = useCachedAsync(`product:${route.params.slug}`, () => api<Product>(`/products/${route.params.slug}/`), [route.params.slug]);
   const [variantId, setVariantId] = useState<number | null>(null);
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -87,7 +87,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
   const { width } = useWindowDimensions();
 
   if (loading) return <Busy />;
-  if (error || !p) return <View style={s.pad}><Notice>{error || t("m.productNotFound")}</Notice></View>;
+  if (error || !p) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={reload} /> : <Notice>{t("m.productNotFound")}</Notice>}</View>;
   const photos = photoList(p.images);
   const variants = p.variants.filter((v) => v.is_active);
   const chosen = variants.find((v) => v.id === (variantId ?? variants[0]?.id));
@@ -124,13 +124,13 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
       ) : <Photo photo={photos[0] ?? null} seed={p.slug} name={p.name} height={260} />}
       <View style={s.pad}>
         {savedAt ? <Notice kind="info">{t("offline.saved")}</Notice> : null}
-        <Text style={s.h1}>{p.name}</Text>
+        <Text accessibilityRole="header" style={s.h1}>{p.name}</Text>
         <Text style={s.muted}>{p.maker ? t("m.madeBy", { maker: p.maker }) : ""}{p.maker && p.origin_country ? " · " : ""}{p.origin_country}</Text>
         <Text style={{ fontSize: 22, fontWeight: "800", color: color.ink, marginVertical: 12 }}>{money(chosen?.price ?? p.base_price, p.currency)}</Text>
         <Text style={{ color: color.ink, lineHeight: 22 }}>{p.description}</Text>
         {variants.length > 1 && (
           <>
-            <Text style={s.h2}>{t("m.chooseOne")}</Text>
+            <Text accessibilityRole="header" style={s.h2}>{t("m.chooseOne")}</Text>
             {variants.map((v) => (
               <Pressable key={v.id} onPress={() => setVariantId(v.id)} accessibilityRole="radio" accessibilityState={{ selected: chosen?.id === v.id }}
                 style={[s.choice, chosen?.id === v.id && s.choiceOn]}>
@@ -140,9 +140,9 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
           </>
         )}
         <View style={[s.row, { marginVertical: 16, justifyContent: "flex-start" }]}>
-          <Button title="−" kind="quiet" onPress={() => setQty((n) => Math.max(1, n - 1))} />
+          <Button title="−" label={t("m.fewer", { name: p.name })} kind="quiet" onPress={() => setQty((n) => Math.max(1, n - 1))} />
           <Text accessibilityLabel={t("m.quantity", { n: qty })} style={{ fontSize: 18, fontWeight: "700", minWidth: 28, textAlign: "center" }}>{qty}</Text>
-          <Button title="+" kind="quiet" onPress={() => setQty((n) => Math.min(20, n + 1))} />
+          <Button title="+" label={t("m.more", { name: p.name })} kind="quiet" onPress={() => setQty((n) => Math.min(20, n + 1))} />
         </View>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <Button title={!user && !guestEnabled ? t("m.signInToAdd") : busy ? t("m.adding") : t("m.addToBag")} disabled={busy || !chosen || !chosen.in_stock} onPress={add} />

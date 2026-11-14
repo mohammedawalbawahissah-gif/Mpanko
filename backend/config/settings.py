@@ -63,6 +63,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "config.request_log.RequestLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "config.security_headers.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -366,10 +367,17 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
+# JSON lines in production (searchable by request_id on Railway); plain text while developing. Set LOG_FORMAT=json or text to force one.
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "text" if DEBUG else "json")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "filters": {"request_id": {"()": "config.request_log.RequestIDFilter"}},
+    "formatters": {
+        "json": {"()": "config.request_log.JsonFormatter"},
+        "text": {"format": "%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s"},
+    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "filters": ["request_id"], "formatter": LOG_FORMAT if LOG_FORMAT in ("json", "text") else "json"}},
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
 }
 

@@ -11,7 +11,7 @@ import { checkoutItems, isEmail, loadGuestOrder, saveGuestOrder } from "./core/g
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from "./types";
-import { Busy, Button, Input, Notice, Pill, methodLabel, s, statusText } from "./ui";
+import { Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText } from "./ui";
 import type { RootParams } from "./screens-buy";
 
 type Nav = NavigationProp<RootParams>;
@@ -44,7 +44,7 @@ export function GuestBag() {
   if (guestLines.length === 0) {
     return (
       <View style={[s.screen, s.pad]}>
-        <Text style={s.h1}>{t("bag.empty")}</Text>
+        <Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text>
         <Text style={s.muted}>{t("m.bagEmptyGuest")}</Text>
         <View style={{ height: 16 }} />
         <Button title={t("guest.find")} kind="quiet" onPress={() => nav.navigate("FindOrder")} />
@@ -53,16 +53,16 @@ export function GuestBag() {
   }
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-      <Text style={s.h1}>{t("bag.title")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("bag.title")}</Text>
       {guestLines.map((l) => (
         <View key={l.variantId} style={[s.card, s.cardPad]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{l.name}{l.variantName && l.variantName !== "Default" ? ` (${l.variantName})` : ""}</Text>
           <Text style={s.muted}>{t("bag.each", { price: money(l.unitPrice, l.currency) })}</Text>
           <View style={[s.row, { marginTop: 8 }]}>
             <View style={[s.row, { gap: 8 }]}>
-              <Button title="−" kind="quiet" onPress={() => setGuestQuantity(l.variantId, l.quantity - 1)} />
+              <Button title="−" label={t("m.fewer", { name: l.name })} kind="quiet" onPress={() => setGuestQuantity(l.variantId, l.quantity - 1)} />
               <Text accessibilityLabel={t("m.quantity", { n: l.quantity })} style={{ fontWeight: "700", fontSize: 16 }}>{l.quantity}</Text>
-              <Button title="+" kind="quiet" onPress={() => setGuestQuantity(l.variantId, l.quantity + 1)} />
+              <Button title="+" label={t("m.more", { name: l.name })} kind="quiet" onPress={() => setGuestQuantity(l.variantId, l.quantity + 1)} />
             </View>
             <Pressable accessibilityRole="button" onPress={() => removeGuestLine(l.variantId)}><Text style={{ color: color.teal, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
           </View>
@@ -98,6 +98,10 @@ export function GuestCheckoutScreen() {
   const [duties, setDuties] = useState(false);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [quoteTry, setQuoteTry] = useState(0);
+  const [quoteError, setQuoteError] = useState("");
+  const [methodsTry, setMethodsTry] = useState(0);
+  const [methodsError, setMethodsError] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
   const placed = useRef<PlacedGuest | null>(null);
@@ -110,18 +114,20 @@ export function GuestCheckoutScreen() {
     if (!address) return;
     let cancelled = false;
     setQuote(null);
+    setQuoteError("");
     setService("");
     api<Quote>(`/shipping/quote/?country=${address.country}&city=${encodeURIComponent(address.city)}&postal_code=${encodeURIComponent(address.postal_code)}&products=${encodeURIComponent(slugs)}`)
       .then((r) => { if (!cancelled) { setQuote(r); if (r.services.length) setService(r.services[0].service_code); } })
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : t("m.loadDeliveryFail")));
+      .catch((e: unknown) => !cancelled && setQuoteError(e instanceof Error ? e.message : t("m.loadDeliveryFail")));
     return () => { cancelled = true; };
-  }, [address, slugs]);
+  }, [address, slugs, quoteTry]);
 
   useEffect(() => {
+    setMethodsError(false);
     api<PaymentMethod[]>(`/payments/methods/?currency=${currency}`)
       .then((m) => { setMethods(m); setProvider((p) => (m.some((x) => x.provider === p) ? p : m[0]?.provider ?? "")); })
-      .catch(() => setMethods([]));
-  }, [currency]);
+      .catch(() => { setMethods([]); setMethodsError(true); });
+  }, [currency, methodsTry]);
 
   // A changed choice is a different order, so it gets a fresh idempotency key.
   useEffect(() => { key.current = idempotencyKey(); placed.current = null; }, [email, address, service, currency]);
@@ -189,14 +195,14 @@ export function GuestCheckoutScreen() {
     }
   };
 
-  if (guestLines.length === 0 && !placed.current) return <View style={[s.screen, s.pad]}><Text style={s.h1}>{t("bag.empty")}</Text></View>;
+  if (guestLines.length === 0 && !placed.current) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text></View>;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{t("guest.title")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("guest.title")}</Text>
       {!!error && <Notice>{error}</Notice>}
       <Input label={t("guest.email")} value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
-      <Text style={s.h2}>{t("m.sendTo")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.sendTo")}</Text>
       {address ? (
         <View style={[s.choice, s.choiceOn]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{address.recipient_name}</Text>
@@ -208,8 +214,9 @@ export function GuestCheckoutScreen() {
 
       {address && (
         <>
-          <Text style={s.h2}>{t("checkout.delivery")}</Text>
-          {!quote && <Busy what={t("m.findingDelivery")} />}
+          <Text accessibilityRole="header" style={s.h2}>{t("checkout.delivery")}</Text>
+          {!quote && !quoteError && <Busy what={t("m.findingDelivery")} />}
+          {!!quoteError && <ErrorRetry message={quoteError} onRetry={() => setQuoteTry((n) => n + 1)} />}
           {restricted.length > 0 && <Notice>{t("m.cantShip", { items: restricted.join(", "), country: address.country })}</Notice>}
           {quote?.services.map((x) => (
             <Pressable key={x.service_code} onPress={() => setService(x.service_code)} accessibilityRole="radio" accessibilityState={{ selected: x.service_code === service }} style={[s.choice, x.service_code === service && s.choiceOn]}>
@@ -221,12 +228,13 @@ export function GuestCheckoutScreen() {
         </>
       )}
 
-      <Text style={s.h2}>{t("m.payIn")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.payIn")}</Text>
       <View style={[s.row, { justifyContent: "flex-start" }]}>
         {(rates?.chargeable?.length ? rates.chargeable : ["USD", "GHS"]).map((c) => <Button key={c} title={c} kind={currency === c ? "primary" : "quiet"} onPress={() => setCurrency(c)} />)}
       </View>
-      <Text style={s.h2}>{t("m.paymentMethod")}</Text>
-      {methods.length === 0 && <Notice kind="info">{t("checkout.noMethod", { currency })}</Notice>}
+      <Text accessibilityRole="header" style={s.h2}>{t("m.paymentMethod")}</Text>
+      {methodsError && <ErrorRetry message={t("m.loadMethodsFail")} onRetry={() => setMethodsTry((n) => n + 1)} />}
+      {!methodsError && methods.length === 0 && <Notice kind="info">{t("checkout.noMethod", { currency })}</Notice>}
       {methods.map((m) => (
         <Pressable key={m.provider} onPress={() => setProvider(m.provider)} accessibilityRole="radio" accessibilityState={{ selected: m.provider === provider }} style={[s.choice, m.provider === provider && s.choiceOn]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{methodLabel(t, m.provider, currency)}</Text>
@@ -308,7 +316,7 @@ export function GuestOrderScreen({ route }: { route: { params: { number: string;
   }, [order?.status, order?.currency, load]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !order) return <Busy />;
-  if (!order) return <View style={s.pad}><Notice>{error || t("m.guestOrderInvalid")}</Notice></View>;
+  if (!order) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={() => load()} /> : <Notice>{t("m.guestOrderInvalid")}</Notice>}</View>;
 
   const payNow = async (provider: string) => {
     setBusy(true);
@@ -327,7 +335,7 @@ export function GuestOrderScreen({ route }: { route: { params: { number: string;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-      <Text style={s.h1}>{t("orders.orderN", { number: order.number })}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("orders.orderN", { number: order.number })}</Text>
       <Pill value={order.status} />
       {!!msg && <View style={{ marginTop: 12 }}><Notice>{msg}</Notice></View>}
       {order.status === "pending_payment" && (
@@ -336,13 +344,13 @@ export function GuestOrderScreen({ route }: { route: { params: { number: string;
           {methods.map((m) => <View key={m.provider} style={{ marginBottom: 8 }}><Button title={busy ? t("m.opening") : t("orders.payWith", { method: methodLabel(t, m.provider, order.currency) })} disabled={busy} onPress={() => payNow(m.provider)} /></View>)}
         </View>
       )}
-      <Text style={s.h2}>{t("orders.whatOrdered")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("orders.whatOrdered")}</Text>
       {order.items.map((i) => (
         <View key={i.sku} style={[s.row, { marginBottom: 6 }]}><Text style={{ flex: 1 }}>{i.quantity} × {i.product_name}{i.variant_name ? ` (${i.variant_name})` : ""}</Text><Text>{order.currency} {i.line_total}</Text></View>
       ))}
       <View style={s.row}><Text style={s.muted}>{t("checkout.delivery")}</Text><Text>{order.currency} {order.shipping_total}</Text></View>
       <View style={s.row}><Text style={{ fontWeight: "800" }}>{t("checkout.total")}</Text><Text style={{ fontWeight: "800" }}>{order.currency} {order.grand_total}</Text></View>
-      <Text style={s.h2}>{t("orders.whereIs")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("orders.whereIs")}</Text>
       {order.shipments.length === 0 && <Text style={s.muted}>{t("m.noTrackingEmail")}</Text>}
       {order.shipments.map((sh) => (
         <View key={sh.id} style={{ marginBottom: 12 }}>
@@ -387,7 +395,7 @@ export function FindOrderScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{t("guest.find")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("guest.find")}</Text>
       {saved && <View style={{ marginBottom: 16 }}><Button title={t("m.openLast", { number: saved.number })} onPress={() => nav.navigate("GuestOrder", { number: saved.number, token: saved.token })} /></View>}
       {done ? <Notice kind="info">{t("guest.findSent")}</Notice> : (
         <>

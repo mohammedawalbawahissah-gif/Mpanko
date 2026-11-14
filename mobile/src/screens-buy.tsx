@@ -11,7 +11,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { Busy, Button, Input, Notice, Pill, methodLabel, s, statusText, useAsync } from "./ui";
+import { Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -30,8 +30,8 @@ export function BagScreen() {
   useFocusEffect(useCallback(() => { if (user) refreshCart(); }, [user, refreshCart]));
 
   if (!user && guestEnabled) return <GuestBag />;
-  if (!user) return <View style={[s.screen, s.pad]}><Text style={s.h1}>{t("bag.title")}</Text><Text style={s.muted}>{t("m.bagSignIn")}</Text></View>;
-  if (cart.length === 0) return <View style={[s.screen, s.pad]}><Text style={s.h1}>{t("bag.empty")}</Text><Text style={s.muted}>{t("m.bagEmptyLine")}</Text></View>;
+  if (!user) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.title")}</Text><Text style={s.muted}>{t("m.bagSignIn")}</Text></View>;
+  if (cart.length === 0) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text><Text style={s.muted}>{t("m.bagEmptyLine")}</Text></View>;
 
   const guard = async (fn: () => Promise<void>) => {
     setErr("");
@@ -46,7 +46,7 @@ export function BagScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-      <Text style={s.h1}>{t("bag.title")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("bag.title")}</Text>
       {!!err && <Notice>{err}</Notice>}
       {cart.map((i) => (
         <View key={i.id} style={[s.card, s.cardPad]}>
@@ -54,9 +54,9 @@ export function BagScreen() {
           <Text style={s.muted}>{t("bag.each", { price: money(i.unit_price, i.currency) })}</Text>
           <View style={[s.row, { marginTop: 8 }]}>
             <View style={[s.row, { gap: 8 }]}>
-              <Button title="−" kind="quiet" onPress={() => guard(() => (i.quantity > 1 ? setQuantity(i.id, i.quantity - 1) : removeItem(i.id)))} />
+              <Button title="−" label={t("m.fewer", { name: i.product_name })} kind="quiet" onPress={() => guard(() => (i.quantity > 1 ? setQuantity(i.id, i.quantity - 1) : removeItem(i.id)))} />
               <Text accessibilityLabel={t("m.quantity", { n: i.quantity })} style={{ fontWeight: "700", fontSize: 16 }}>{i.quantity}</Text>
-              <Button title="+" kind="quiet" onPress={() => guard(() => setQuantity(i.id, i.quantity + 1))} />
+              <Button title="+" label={t("m.more", { name: i.product_name })} kind="quiet" onPress={() => guard(() => setQuantity(i.id, i.quantity + 1))} />
             </View>
             <Pressable accessibilityRole="button" onPress={() => guard(() => removeItem(i.id))}><Text style={{ color: color.teal, textDecorationLine: "underline" }}>{t("common.remove")}</Text></Pressable>
           </View>
@@ -97,6 +97,10 @@ export function CheckoutScreen() {
   const [codeInput, setCodeInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount: string; free_shipping: boolean } | null>(null);
   const [codeError, setCodeError] = useState("");
+  const [quoteTry, setQuoteTry] = useState(0);
+  const [quoteError, setQuoteError] = useState("");
+  const [methodsError, setMethodsError] = useState(false);
+  const [methodsTry, setMethodsTry] = useState(0);
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
   const orderRef = useRef<Order | null>(null);
   const keyRef = useRef(idempotencyKey());
@@ -115,6 +119,7 @@ export function CheckoutScreen() {
     if (!address) return;
     let cancelled = false;
     setQuote(null);
+    setQuoteError("");
     setService("");
     api<{ services: ShippingService[]; restricted_products: string[] }>(`/shipping/quote/?country=${address.country}&city=${encodeURIComponent(address.city)}&postal_code=${encodeURIComponent(address.postal_code)}&products=${encodeURIComponent(slugs)}`)
       .then((r) => {
@@ -122,15 +127,16 @@ export function CheckoutScreen() {
         setQuote(r);
         if (r.services.length) setService(r.services[0].service_code);
       })
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : t("m.loadDeliveryFail")));
+      .catch((e: unknown) => !cancelled && setQuoteError(e instanceof Error ? e.message : t("m.loadDeliveryFail")));
     return () => { cancelled = true; };
-  }, [address, slugs]);
+  }, [address, slugs, quoteTry]);
 
   useEffect(() => {
+    setMethodsError(false);
     api<PaymentMethod[]>(`/payments/methods/?currency=${currency}`)
       .then((m) => { setMethods(m); setProvider((p) => (m.some((x) => x.provider === p) ? p : m[0]?.provider ?? "")); })
-      .catch(() => setMethods([]));
-  }, [currency]);
+      .catch(() => { setMethods([]); setMethodsError(true); });
+  }, [currency, methodsTry]);
 
   useEffect(() => { keyRef.current = idempotencyKey(); orderRef.current = null; }, [addressId, service, currency]);
 
@@ -211,13 +217,14 @@ export function CheckoutScreen() {
     }
   };
 
-  if (cart.length === 0 && !orderRef.current) return <View style={[s.screen, s.pad]}><Text style={s.h1}>{t("bag.empty")}</Text></View>;
+  if (cart.length === 0 && !orderRef.current) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text></View>;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
       {!!error && <Notice>{error}</Notice>}
-      <Text style={s.h2}>{t("m.sendTo")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.sendTo")}</Text>
       {addrs.loading && <Busy />}
+      {!!addrs.error && <ErrorRetry message={addrs.error} onRetry={addrs.reload} />}
       {!adding && list.map((a) => (
         <Pressable key={a.id} onPress={() => setAddressId(a.id)} accessibilityRole="radio" accessibilityState={{ selected: a.id === addressId }} style={[s.choice, a.id === addressId && s.choiceOn]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{a.recipient_name}</Text>
@@ -231,8 +238,9 @@ export function CheckoutScreen() {
 
       {address && (
         <>
-          <Text style={s.h2}>{t("checkout.delivery")}</Text>
-          {!quote && <Busy what={t("m.findingDelivery")} />}
+          <Text accessibilityRole="header" style={s.h2}>{t("checkout.delivery")}</Text>
+          {!quote && !quoteError && <Busy what={t("m.findingDelivery")} />}
+          {!!quoteError && <ErrorRetry message={quoteError} onRetry={() => setQuoteTry((n) => n + 1)} />}
           {restricted.length > 0 && <Notice>{t("m.cantShip", { items: restricted.join(", "), country: address.country })}</Notice>}
           {quote?.services.map((x) => (
             <Pressable key={x.service_code} onPress={() => setService(x.service_code)} accessibilityRole="radio" accessibilityState={{ selected: x.service_code === service }} style={[s.choice, x.service_code === service && s.choiceOn]}>
@@ -244,12 +252,13 @@ export function CheckoutScreen() {
         </>
       )}
 
-      <Text style={s.h2}>{t("m.payIn")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("m.payIn")}</Text>
       <View style={[s.row, { justifyContent: "flex-start" }]}>
         {(rates?.chargeable?.length ? rates.chargeable : ["USD", "GHS"]).map((c) => <Button key={c} title={c} kind={currency === c ? "primary" : "quiet"} onPress={() => setCurrency(c)} />)}
       </View>
-      <Text style={s.h2}>{t("m.paymentMethod")}</Text>
-      {methods.length === 0 && <Notice kind="info">{t("checkout.noMethod", { currency })}</Notice>}
+      <Text accessibilityRole="header" style={s.h2}>{t("m.paymentMethod")}</Text>
+      {methodsError && <ErrorRetry message={t("m.loadMethodsFail")} onRetry={() => setMethodsTry((n) => n + 1)} />}
+      {!methodsError && methods.length === 0 && <Notice kind="info">{t("checkout.noMethod", { currency })}</Notice>}
       {methods.map((m) => (
         <Pressable key={m.provider} onPress={() => setProvider(m.provider)} accessibilityRole="radio" accessibilityState={{ selected: m.provider === provider }} style={[s.choice, m.provider === provider && s.choiceOn]}>
           <Text style={{ fontWeight: "700", color: color.ink }}>{methodLabel(t, m.provider, currency)}</Text>
@@ -309,7 +318,7 @@ export function OrdersScreen() {
   if (!user) {
     return (
       <View style={[s.screen, s.pad]}>
-        <Text style={s.h1}>{t("orders.title")}</Text>
+        <Text accessibilityRole="header" style={s.h1}>{t("orders.title")}</Text>
         <Text style={s.muted}>{t("m.signInOrders")}</Text>
         {guestEnabled && <View style={{ marginTop: 16 }}><Button title={t("guest.find")} kind="quiet" onPress={() => nav.navigate("FindOrder")} /></View>}
       </View>
@@ -317,9 +326,9 @@ export function OrdersScreen() {
   }
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-      <Text style={s.h1}>{t("orders.title")}</Text>
-      {loading && <Busy />}
-      {!!error && <Notice>{error}</Notice>}
+      <Text accessibilityRole="header" style={s.h1}>{t("orders.title")}</Text>
+      {loading && !data && <Busy />}
+      {!!error && <ErrorRetry message={error} onRetry={reload} />}
       {data?.results.length === 0 && <Text style={s.muted}>{t("orders.none")}</Text>}
       {data?.results.map((o) => (
         <Pressable key={o.number} style={[s.card, s.cardPad]} accessibilityRole="button" onPress={() => nav.navigate("OrderDetail", { number: o.number })}>
@@ -349,7 +358,7 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
   }, [o?.status, o?.currency, reload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !o) return <Busy />;
-  if (error || !o) return <View style={s.pad}><Notice>{error || t("m.orderNotFound")}</Notice></View>;
+  if (error || !o) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={reload} /> : <Notice>{t("m.orderNotFound")}</Notice>}</View>;
 
   const payNow = async (provider: string) => {
     setBusy(true);
@@ -375,7 +384,7 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-      <Text style={s.h1}>{t("orders.orderN", { number: o.number })}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("orders.orderN", { number: o.number })}</Text>
       <Pill value={o.status} />
       {!!msg && <View style={{ marginTop: 12 }}><Notice>{msg}</Notice></View>}
       {o.status === "pending_payment" && (
@@ -385,14 +394,14 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
           <Button title={t("orders.cancel")} kind="quiet" onPress={cancel} />
         </View>
       )}
-      <Text style={s.h2}>{t("orders.whatOrdered")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("orders.whatOrdered")}</Text>
       {o.items.map((i) => (
         <View key={i.sku} style={[s.row, { marginBottom: 6 }]}><Text style={{ flex: 1 }}>{i.quantity} × {i.product_name}{i.variant_name ? ` (${i.variant_name})` : ""}</Text><Text>{o.currency} {i.line_total}</Text></View>
       ))}
       <View style={s.row}><Text style={s.muted}>{t("checkout.delivery")}</Text><Text>{o.currency} {o.shipping_total}</Text></View>
       <View style={s.row}><Text style={{ fontWeight: "800" }}>{t("checkout.total")}</Text><Text style={{ fontWeight: "800" }}>{o.currency} {o.grand_total}</Text></View>
 
-      <Text style={s.h2}>{t("orders.whereIs")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("orders.whereIs")}</Text>
       {o.shipments.length === 0 && <Text style={s.muted}>{t("orders.noTracking")}</Text>}
       {o.shipments.map((sh) => (
         <View key={sh.id} style={{ marginBottom: 12 }}>

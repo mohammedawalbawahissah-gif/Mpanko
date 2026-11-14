@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -8,7 +10,9 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 def health(_request):
-    return JsonResponse({"status": "ok", "service": "mpanko-api"})
+    # RAILWAY_GIT_COMMIT_SHA is set by Railway on every deploy, so "which version is live?" is one request away.
+    release = (os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("RELEASE") or "")[:12]
+    return JsonResponse({"status": "ok", "service": "mpanko-api", **({"release": release} if release else {})})
 
 
 def ready(_request):

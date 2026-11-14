@@ -23,6 +23,22 @@ jobs:
       - run: python -m pytest -p no:warnings -q tests
         env: { DEBUG: "true" }
 
+  # Fails the build on a known HIGH or CRITICAL vulnerability in what we ship. Moderate ones are reviewed by hand: see docs/SECURITY-AUDIT.md.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install pip-audit && pip-audit -r backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: |
+          for app in web admin mobile corporate; do
+            echo "== $app"
+            (cd $app && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high)
+          done
+
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }

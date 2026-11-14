@@ -9,7 +9,7 @@ import { usePrefs } from "./prefs";
 import { disablePush, enablePush } from "./push";
 import { color } from "./theme";
 import type { Address, User } from "./types";
-import { Busy, Button, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
+import { Busy, Button, ErrorRetry, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
 import type { MessageKey } from "./core/i18n";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
@@ -80,23 +80,23 @@ export function ProfileScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{t("prefs.title")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{t("prefs.title")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
 
-      <Text style={s.h2}>{t("prefs.details")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("prefs.details")}</Text>
       <Text style={s.muted}>{user.email}</Text>
       <View style={{ height: 8 }} />
       <Input label={t("prefs.name")} value={name} onChangeText={setName} error={errors.full_name} autoComplete="name" />
       <PhoneVerify />
 
-      <Text style={s.h2}>{t("prefs.display")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("prefs.display")}</Text>
       <Text style={s.label}>{t("prefs.currency")}</Text>
       <Text style={{ color: color.ink, marginBottom: 6 }}>{currency ? `${currency}${rates?.names?.[currency] ? ` · ${rates.names[currency]}` : ""}` : t("prefs.currencyStore")}</Text>
       <Input label={t("prefs.currencySearch")} value={search} onChangeText={setSearch} autoCapitalize="none" />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         {matches.map((c) => (
           <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: currency === c }} onPress={() => setCurrency(c)}
-            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: currency === c ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: currency === c ? color.teal : "#fff", borderWidth: 1, borderColor: color.line }}>
             <Text style={{ color: currency === c ? "#fff" : color.ink, fontWeight: "600" }}>{c}</Text>
           </Pressable>
         ))}
@@ -107,7 +107,7 @@ export function ProfileScreen() {
         {LANGUAGES.map((l) => <Button key={l.code} title={l.label} kind={lang === l.code ? "primary" : "quiet"} onPress={() => setLang(l.code)} />)}
       </View>
 
-      <Text style={s.h2}>{t("prefs.notifications")}</Text>
+      <Text accessibilityRole="header" style={s.h2}>{t("prefs.notifications")}</Text>
       <Toggle label={t("prefs.orderEmails")} value={orderEmails} onChange={setOrderEmails} />
       <Toggle label={t("prefs.sms")} value={verified && sms} onChange={setSms} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
       <Toggle label={t("prefs.whatsapp")} value={verified && whatsapp} onChange={setWhatsapp} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
@@ -126,7 +126,7 @@ function Toggle({ label, value, onChange, disabled, hint }: { label: string; val
   return (
     <View style={{ marginBottom: 10 }}>
       <View style={s.row}>
-        <Text style={{ flex: 1, color: color.ink }} onPress={() => !disabled && onChange(!value)}>{label}</Text>
+        <Text style={{ flex: 1, color: color.ink }} importantForAccessibility="no" accessibilityElementsHidden onPress={() => !disabled && onChange(!value)}>{label}</Text>
         <Switch accessibilityLabel={label} value={value} disabled={disabled} onValueChange={onChange} />
       </View>
       {!!hint && <Text style={[s.muted, { fontSize: 13 }]}>{hint}</Text>}
@@ -222,8 +222,9 @@ function Addresses() {
   };
   return (
     <View>
-      <Text style={s.h2}>{t("prefs.addresses")}</Text>
-      {list.loading && <Busy />}
+      <Text accessibilityRole="header" style={s.h2}>{t("prefs.addresses")}</Text>
+      {list.loading && !list.data && <Busy />}
+      {!!list.error && <ErrorRetry message={list.error} onRetry={list.reload} />}
       {list.data?.results.length === 0 && !adding && <Text style={s.muted}>{t("prefs.noAddresses")}</Text>}
       {list.data?.results.map((a) => (
         <View key={a.id} style={[s.card, s.cardPad]}>

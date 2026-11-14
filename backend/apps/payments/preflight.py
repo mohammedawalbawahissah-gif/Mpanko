@@ -45,6 +45,9 @@ def check_core(offline):
     cors_local = [o for o in settings.CORS_ALLOWED_ORIGINS if "localhost" in o or o.startswith("http://")]
     out.append(Result(g, "CORS lists only your sites", WARN if cors_local else PASS, ", ".join(cors_local), "Set CORS_ALLOWED_ORIGINS to your shop and admin https addresses only."))
     out.append(Result(g, "Staff two-step key is set", PASS if settings.MFA_ENCRYPTION_KEY else WARN, "" if settings.MFA_ENCRYPTION_KEY else "Derived from SECRET_KEY.", "Set MFA_ENCRYPTION_KEY to a long random value."))
+    out.append(Result(g, "HTTPS redirect is on", PASS if (settings.DEBUG or getattr(settings, "SECURE_SSL_REDIRECT", False)) else FAIL, "" if (settings.DEBUG or getattr(settings, "SECURE_SSL_REDIRECT", False)) else "SECURE_SSL_REDIRECT is off.", "Remove SECURE_SSL_REDIRECT=false from the api service."))
+    json_logs = settings.LOGGING["handlers"]["console"]["formatter"] == "json"
+    out.append(Result(g, "Logs carry request IDs in JSON", PASS if json_logs else WARN, "" if json_logs else "Plain-text logs are easier to read but harder to search.", "Remove LOG_FORMAT=text from the api service so logs are searchable by request ID."))
     out.append(Result(g, "Error reporting (Sentry)", PASS if settings.SENTRY_DSN else WARN, "" if settings.SENTRY_DSN else "Not configured.", "Set SENTRY_DSN so you hear about crashes."))
     try:
         connection.ensure_connection()

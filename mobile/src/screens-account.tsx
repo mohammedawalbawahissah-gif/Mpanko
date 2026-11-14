@@ -49,7 +49,7 @@ export function AccountScreen() {
   if (user) {
     return (
       <ScrollView style={s.screen} contentContainerStyle={s.pad}>
-        <Text style={s.h1}>{t("account.profile")}</Text>
+        <Text accessibilityRole="header" style={s.h1}>{t("account.profile")}</Text>
         <Text style={{ fontWeight: "700" }}>{user.full_name}</Text>
         <Text style={s.muted}>{user.email}</Text>
         {!user.email_verified && (
@@ -71,7 +71,7 @@ export function AccountScreen() {
         <View style={{ height: 8 }} />
         <Button title={t("nav.signOut")} kind="quiet" onPress={logout} />
 
-        <Text style={s.h2}>{t("m.yourData")}</Text>
+        <Text accessibilityRole="header" style={s.h2}>{t("m.yourData")}</Text>
         <Text style={s.muted}>{t("m.dataIntro")}</Text>
         <View style={{ height: 8 }} />
         <Button title={t("m.shareData")} kind="quiet" onPress={() => run(async () => {
@@ -102,7 +102,7 @@ export function AccountScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{mode === "in" ? t("login.title") : mode === "phone" ? t("m.signInCodeTitle") : mode === "up" ? t("register.title") : t("m.resetTitle")}</Text>
+      <Text accessibilityRole="header" style={s.h1}>{mode === "in" ? t("login.title") : mode === "phone" ? t("m.signInCodeTitle") : mode === "up" ? t("register.title") : t("m.resetTitle")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
       {mode === "phone" && (
         <View>
@@ -129,13 +129,13 @@ export function AccountScreen() {
       {mode === "up" && (
         <View>
           <View style={[s.row, { marginBottom: 6 }]}>
-            <Text style={{ flex: 1 }} onPress={() => setAgree(!agree)}>{t("register.agree")} {t("register.terms")} {t("register.and")} {t("register.privacy")}</Text>
+            <Text style={{ flex: 1 }} importantForAccessibility="no" accessibilityElementsHidden onPress={() => setAgree(!agree)}>{t("register.agree")} {t("register.terms")} {t("register.and")} {t("register.privacy")}</Text>
             <Switch accessibilityLabel={t("m.acceptTermsPrivacy")} value={agree} onValueChange={setAgree} />
           </View>
-          <Text style={{ color: color.teal, marginBottom: 10 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
+          <Text accessibilityRole="link" style={{ color: color.teal, paddingVertical: 12 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
           {!!errors.accept_terms && <Text style={s.fieldError}>{errors.accept_terms}</Text>}
           <View style={[s.row, { marginBottom: 14 }]}>
-            <Text style={{ flex: 1 }} onPress={() => setMarketing(!marketing)}>{t("register.marketing")}</Text>
+            <Text style={{ flex: 1 }} importantForAccessibility="no" accessibilityElementsHidden onPress={() => setMarketing(!marketing)}>{t("register.marketing")}</Text>
             <Switch accessibilityLabel={t("register.marketing")} value={marketing} onValueChange={setMarketing} />
           </View>
           <Button title={busy ? t("register.creating") : t("register.create")} disabled={busy || !agree} onPress={() => run(() => register(email, password, name, marketing))} />

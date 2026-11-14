@@ -93,7 +93,7 @@ export function Select({ label, value, options, onChange, error, placeholder }: 
       {!!error && <Text style={{ color: color.bad, marginTop: 4 }}>{error}</Text>}
       <Modal visible={open} animationType="slide" onRequestClose={close}>
         <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, paddingTop: 48 }}>
-          <Text style={s.h2}>{label}</Text>
+          <Text accessibilityRole="header" style={s.h2}>{label}</Text>
           {options.length > 12 && <TextInput accessibilityLabel={t("m.searchList")} placeholder={t("m.searchList")} placeholderTextColor={color.muted} style={s.input} value={q} onChangeText={setQ} autoCapitalize="none" />}
           <FlatList
             data={list}
@@ -113,10 +113,12 @@ export function Select({ label, value, options, onChange, error, placeholder }: 
   );
 }
 
-export function Button({ title, onPress, disabled, kind = "primary" }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger" }) {
+export function Button({ title, onPress, disabled, kind = "primary", label }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger"; label?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [s.btn, kind === "quiet" && s.btnQuiet, kind === "danger" && s.btnDanger, disabled && { opacity: 0.45 }, pressed && { opacity: 0.8 }]}
@@ -167,10 +169,22 @@ export function Notice({ kind = "error", children }: { kind?: "error" | "ok" | "
   );
 }
 
+/** An error with a "Try again" button, so a dropped connection is never a dead end. */
+export function ErrorRetry({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = usePrefs();
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Notice>{message}</Notice>
+      <View style={{ height: 8 }} />
+      <Button title={t("m.tryAgain")} kind="quiet" onPress={onRetry} />
+    </View>
+  );
+}
+
 export function Busy({ what }: { what?: string }) {
   const { t } = usePrefs();
   return (
-    <View style={{ padding: 24, alignItems: "center" }}>
+    <View style={{ padding: 24, alignItems: "center" }} accessible accessibilityRole="progressbar" accessibilityLabel={what ?? t("m.loading")} accessibilityLiveRegion="polite">
       <ActivityIndicator color={color.teal} />
       <Text style={{ color: color.muted, marginTop: 8 }}>{what ?? t("m.loading")}…</Text>
     </View>
