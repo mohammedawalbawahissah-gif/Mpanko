@@ -15,6 +15,8 @@ import { installGlobalErrorReporting, setCurrentScreen } from "./src/report";
 import { FindOrderScreen, GuestCheckoutScreen, GuestOrderScreen } from "./src/screens-guest";
 import { BagScreen, CheckoutScreen, OrderDetailScreen, OrdersScreen, type RootParams } from "./src/screens-buy";
 import { ProductScreen, ShopList, type RootTabs, type ShopStack } from "./src/screens-shop";
+import { NotificationBell, NotificationsScreen } from "./src/screens-notifications";
+import { refreshUnread } from "./src/inbox";
 import { ReturnScreen, SupportListScreen, SupportNewScreen, SupportThreadScreen } from "./src/screens-help";
 import { color } from "./src/theme";
 import { KenteBand } from "./src/ui";
@@ -28,7 +30,7 @@ const header = { headerStyle: { backgroundColor: color.ink }, headerTintColor: "
 
 function ShopNav() {
   return (
-    <Shop.Navigator screenOptions={header}>
+    <Shop.Navigator screenOptions={{ ...header, headerRight: () => <NotificationBell /> }}>
       <Shop.Screen name="List" component={ShopList} options={{ title: "Mpanko" }} />
       <Shop.Screen name="Product" component={ProductScreen} options={{ title: "Mpanko" }} />
     </Shop.Navigator>
@@ -80,7 +82,7 @@ function TabsNav() {
   const { t } = usePrefs();
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
-    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
+    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerRight: () => <NotificationBell />, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />
@@ -96,6 +98,7 @@ const linking: LinkingOptions<RootParams> = {
   config: {
     screens: {
       Profile: "profile",
+      Notifications: "notifications",
       Tabs: { screens: { Orders: "orders", Bag: "bag", Account: "account", Shop: { screens: { Product: "shop/:slug", List: "shop" } } } },
       GuestOrder: "orders/guest/:number",
       FindOrder: "orders/find",
@@ -115,7 +118,11 @@ function useOpenFromNotification() {
       const url = (r.notification.request.content.data as { url?: string } | undefined)?.url;
       if (url) Linking.openURL(url);
     });
-    return () => sub.remove();
+    const received = Notifications.addNotificationReceivedListener(() => void refreshUnread());
+    return () => {
+      sub.remove();
+      received.remove();
+    };
   }, []);
 }
 
@@ -132,6 +139,7 @@ function RootNav() {
       <Root.Screen name="FindOrder" component={FindOrderScreen} options={{ title: t("guest.find") }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: t("orders.order") }} />
       <Root.Screen name="Return" component={ReturnScreen} options={{ title: t("m.returnItems") }} />
+      <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: t("notifications.title") }} />
       <Root.Screen name="Profile" component={ProfileScreen} options={{ title: t("prefs.title") }} />
       <Root.Screen name="SupportList" component={SupportListScreen} options={{ title: t("m.helpSupport") }} />
       <Root.Screen name="SupportNew" component={SupportNewScreen} options={{ title: t("m.askUs") }} />

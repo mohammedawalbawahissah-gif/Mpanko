@@ -1,6 +1,7 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework import serializers
+from rest_framework import mixins, serializers, viewsets
+from rest_framework.decorators import action
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
@@ -9,7 +10,9 @@ from apps.accounts.models import AuditLog
 from apps.accounts.permissions import CatalogManager, OrderStaff
 
 from . import services
-from .models import EmailTemplate, NotificationLog
+from django.utils import timezone
+
+from .models import EmailTemplate, InboxMessage, NotificationLog, WebPushSubscription
 
 
 class TemplateWrite(serializers.Serializer):
@@ -108,3 +111,90 @@ def device(request):
         return Response({"registered": False})
     DeviceToken.objects.update_or_create(token=token, defaults={"user": request.user, "platform": s.validated_data["platform"]})
     return Response({"registered": True})
+
+
+# ---- the customer's notification list ------------------------------------------------------------------------
+
+
+class InboxSerializer(serializers.ModelSerializer):
+    is_read = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InboxMessage
+        fields = ("id", "key", "title", "body", "path", "is_read", "created_at")
+
+    def get_is_read(self, obj):
+        return obj.read_at is not None
+
+
+class InboxViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    """A customer's own notifications, newest first. ?unread=1 shows only the unread ones."""
+
+    serializer_class = InboxSerializer
+    filterset_fields: list = []
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return InboxMessage.objects.none()
+        qs = InboxMessage.objects.filter(user=self.request.user)
+        if self.request.query_params.get("unread") in ("1", "true"):
+            qs = qs.filter(read_at__isnull=True)
+        return qs
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @action(detail=False, methods=["get"], url_path="unread-count", pagination_class=None)
+    def unread_count(self, request):
+        return Response({"count": InboxMessage.objects.filter(user=request.user, read_at__isnull=True).count()})
+
+    @extend_schema(request=None, responses=InboxSerializer)
+    @action(detail=True, methods=["post"])
+    def read(self, request, pk=None):
+        msg = self.get_object()
+        if msg.read_at is None:
+            msg.read_at = timezone.now()
+            msg.save(update_fields=["read_at"])
+        return Response(InboxSerializer(msg).data)
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    @action(detail=False, methods=["post"], url_path="read-all")
+    def read_all(self, request):
+        n = InboxMessage.objects.filter(user=request.user, read_at__isnull=True).update(read_at=timezone.now())
+        return Response({"marked": n})
+
+
+# ---- browser push --------------------------------------------------------------------------------------------
+
+
+class WebPushSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=500)
+    p256dh = serializers.CharField(max_length=200, required=False)
+    auth = serializers.CharField(max_length=100, required=False)
+
+
+@extend_schema(responses=OpenApiTypes.OBJECT)
+@api_view(["GET"])
+@permission_classes([])
+def web_push_key(request):
+    """The public key a browser needs to subscribe. Empty while browser push isn't set up."""
+    from django.conf import settings
+
+    return Response({"public_key": settings.VAPID_PUBLIC_KEY if settings.VAPID_PRIVATE_KEY else ""})
+
+
+@extend_schema(request=WebPushSerializer, responses=OpenApiTypes.OBJECT)
+@api_view(["POST", "DELETE"])
+def web_push(request):
+    """The shop in a browser subscribes (POST) or unsubscribes (DELETE) that browser."""
+    s = WebPushSerializer(data=request.data)
+    s.is_valid(raise_exception=True)
+    d = s.validated_data
+    if request.method == "DELETE":
+        WebPushSubscription.objects.filter(user=request.user, endpoint=d["endpoint"]).delete()
+        return Response({"subscribed": False})
+    if not d.get("p256dh") or not d.get("auth"):
+        raise ValidationError({"detail": "The browser's keys are missing."})
+    WebPushSubscription.objects.update_or_create(endpoint=d["endpoint"], defaults={"user": request.user, "p256dh": d["p256dh"], "auth": d["auth"]})
+    if not request.user.notify_push:  # allowing notifications in a browser is asking for push
+        request.user.notify_push = True
+        request.user.save(update_fields=["notify_push"])
+    return Response({"subscribed": True})

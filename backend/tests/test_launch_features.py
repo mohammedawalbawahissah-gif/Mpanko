@@ -110,3 +110,25 @@ def test_my_orders_can_be_searched_filtered_and_sorted(customer, other_customer)
     assert numbers(f"?search={cheap.number[-4:]}") == [cheap.number]
     assert numbers("?status=delivered") == [dear.number]
     assert numbers("?ordering=status")[0] == dear.number  # "delivered" sorts before "paid"
+
+
+@pytest.mark.django_db
+def test_orders_can_be_limited_to_a_date_range(customer):
+    from datetime import datetime, timezone
+
+    from apps.orders.models import Order
+    from tests.conftest import client_for
+
+    def placed(day):
+        o = Order.objects.create(user=customer, status="paid", currency="USD", subtotal="5", grand_total="5", shipping_address={}, contact_email=customer.email)
+        Order.objects.filter(pk=o.pk).update(created_at=datetime(2026, 11, day, 12, 0, tzinfo=timezone.utc))
+        return o.number
+
+    early, mid, late = placed(2), placed(10), placed(20)
+    c = client_for(customer)
+    numbers = lambda qs: [o["number"] for o in c.get(f"/api/v1/orders/{qs}").data["results"]]
+    assert numbers("?placed_from=2026-11-10") == [late, mid]
+    assert numbers("?placed_to=2026-11-10") == [mid, early]
+    assert numbers("?placed_from=2026-11-10&placed_to=2026-11-10") == [mid]
+    assert numbers("?placed_from=2026-11-03&placed_to=2026-11-19&ordering=created_at") == [mid]
+    assert numbers("?placed_from=2026-12-01") == []

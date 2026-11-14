@@ -27,9 +27,9 @@ export function ContactButtons() {
   if (!mail && !call && !whatsapp) return null;
   return (
     <div className="contact-row">
-      {mail && <a className="contact-chip" href={mail.href} aria-label={t("footer.email")}><ContactIcon name="mail" />{t("contact.email")}</a>}
-      {call && <a className="contact-chip" href={call.href} aria-label={t("footer.call")}><ContactIcon name="call" />{t("contact.call")}</a>}
-      {whatsapp && <a className="contact-chip" href={whatsapp.href} target="_blank" rel="noopener noreferrer" aria-label={t("footer.whatsapp")}><ContactIcon name="whatsapp" />{t("contact.whatsapp")}</a>}
+      {mail && <a className="contact-chip" href={mail.href}><ContactIcon name="mail" />{t("contact.email")}</a>}
+      {call && <a className="contact-chip" href={call.href}><ContactIcon name="call" />{t("contact.call")}</a>}
+      {whatsapp && <a className="contact-chip" href={whatsapp.href} target="_blank" rel="noopener noreferrer"><ContactIcon name="whatsapp" />{t("contact.whatsapp")}</a>}
     </div>
   );
 }

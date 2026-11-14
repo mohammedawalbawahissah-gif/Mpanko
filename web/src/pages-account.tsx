@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { BrowserPushToggle } from "./pages-notifications";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError, downloadFile, type Page } from "./api";
 import { AddressForm } from "./address";
@@ -408,6 +409,7 @@ export function Account() {
           <h2 id="me">Details</h2>
           <p>{user.email}</p>
           <ProfileForm key={`${user.id}-${user.phone}`} onSaved={async () => { await reload(); setNote("Details saved."); }} />
+          <BrowserPushToggle />
           <div id="mobile"><PhonePanel key={`p-${user.phone}-${user.phone_verified}`} onVerified={reload} /></div>
           <p><Link to="/orders">Your orders</Link></p>
           <button className="btn quiet" onClick={async () => { await logout(); navigate("/"); }}>Sign out</button>

@@ -231,9 +231,9 @@ const CONTACT_ICONS = {
 const contactIcon = (k) => `<svg class="contact-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${CONTACT_ICONS[k]}</svg>`;
 export function contactButtons(profile) {
   const chips = [
-    profile.contact_email ? `<a class="contact-chip" href="mailto:${esc(profile.contact_email)}" aria-label="Email us">${contactIcon("mail")}Email</a>` : "",
-    profile.phone ? `<a class="contact-chip" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}" aria-label="Call us">${contactIcon("call")}Call</a>` : "",
-    profile.whatsapp_number ? `<a class="contact-chip" href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener" aria-label="Chat with us on WhatsApp">${contactIcon("whatsapp")}WhatsApp</a>` : "",
+    profile.contact_email ? `<a class="contact-chip" href="mailto:${esc(profile.contact_email)}">${contactIcon("mail")}Email</a>` : "",
+    profile.phone ? `<a class="contact-chip" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${contactIcon("call")}Call</a>` : "",
+    profile.whatsapp_number ? `<a class="contact-chip" href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">${contactIcon("whatsapp")}WhatsApp</a>` : "",
   ].join("");
   return chips ? `<div class="contact-row">${chips}</div>` : "";
 }

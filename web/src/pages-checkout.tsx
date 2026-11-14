@@ -450,15 +450,17 @@ export function Orders() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("-created_at");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   useEffect(() => {
     const id = setTimeout(() => setSearch(q.trim()), 300);
     return () => clearTimeout(id);
   }, [q]);
   const { data, error, loading } = useAsync(
-    () => api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`),
-    [sort, status, search]
+    () => api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
+    [sort, status, search, from, to]
   );
-  const filtering = !!(search || status);
+  const filtering = !!(search || status || from || to);
   void currency;
   return (
     <div className="wrap page">
@@ -472,6 +474,9 @@ export function Orders() {
               {["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((v) => <option key={v} value={v}>{statusLabel(v)}</option>)}
             </select>
           </Field>
+          <Field id="o-f" label={t("orders.from")}><input id="o-f" className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
+          <Field id="o-t" label={t("orders.to")}><input id="o-t" className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
+          {(from || to) && <button type="button" className="btn quiet sm" onClick={() => { setFrom(""); setTo(""); }}>{t("orders.clearDate")}</button>}
           <Field id="o-o" label={t("orders.sort")}>
             <select id="o-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="-created_at">{t("orders.sortNewest")}</option>

@@ -55,6 +55,7 @@ def export_user_data(user):
         "support_requests": [{"number": c.number, "subject": c.subject, "status": c.status,
                               "messages": [{"from_staff": m.from_staff, "body": m.body, "sent": m.created_at.isoformat()} for m in c.messages.all()]}
                              for c in user.support_cases.prefetch_related("messages")],
+        "notifications": [{"title": m.title, "message": m.body, "sent": m.created_at.isoformat(), "read": m.read_at is not None} for m in user.inbox.all()],
         "consents": [{"kind": c.kind, "granted": c.granted, "version": c.version, "recorded": c.created_at.isoformat()} for c in user.consents.all()],
     }
 
@@ -89,6 +90,9 @@ def delete_account(user):
     from apps.orders.models import Cart
 
     Cart.objects.filter(user=user).delete()
+    user.inbox.all().delete()
+    user.web_push_subscriptions.all().delete()
+    user.device_tokens.all().delete()
     if hasattr(user, "totp_device"):
         user.totp_device.delete()
     from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken

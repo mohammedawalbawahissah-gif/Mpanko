@@ -133,6 +133,70 @@ export function ContactButtons() {
   );
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const isoDay = (y: number, m: number, d: number) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
+
+/** A date field: tap it, pick a day from a month calendar. Value is "YYYY-MM-DD", or "" for no date. */
+export function DateField({ label, value, onChange, min, max }: { label: string; value: string; onChange: (v: string) => void; min?: string; max?: string }) {
+  const { t } = usePrefs();
+  const [open, setOpen] = useState(false);
+  const start = value ? new Date(`${value}T00:00:00`) : new Date();
+  const [view, setView] = useState({ y: start.getFullYear(), m: start.getMonth() });
+  const first = new Date(view.y, view.m, 1).getDay();
+  const days = new Date(view.y, view.m + 1, 0).getDate();
+  const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+  while (cells.length % 7) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
+  const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2023, 0, 1 + i).toLocaleDateString(undefined, { weekday: "narrow" }));
+  const shift = (by: number) => setView((v) => { const d = new Date(v.y, v.m + by, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const shown = value ? new Date(`${value}T00:00:00`).toLocaleDateString() : "";
+  const close = () => setOpen(false);
+  const off = (iso: string) => (!!min && iso < min) || (!!max && iso > max);
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={s.label}>{label}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${shown || t("orders.anyDate")}`} onPress={() => { const d = value ? new Date(`${value}T00:00:00`) : new Date(); setView({ y: d.getFullYear(), m: d.getMonth() }); setOpen(true); }}
+        style={[s.input, { justifyContent: "center" }]}>
+        <Text style={{ color: shown ? color.ink : color.muted }}>{shown || t("orders.anyDate")}</Text>
+      </Pressable>
+      <Modal visible={open} animationType="slide" onRequestClose={close}>
+        <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, paddingTop: 48 }}>
+          <Text accessibilityRole="header" style={s.h2}>{label}</Text>
+          <View style={[s.row, { marginBottom: 8 }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("orders.prevMonth")} hitSlop={10} onPress={() => shift(-1)}><Text style={{ fontSize: 28, color: color.ink, paddingHorizontal: 12 }}>{"\u2039"}</Text></Pressable>
+            <Text style={{ flex: 1, textAlign: "center", fontWeight: "700", color: color.ink, fontSize: 16 }}>{new Date(view.y, view.m, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("orders.nextMonth")} hitSlop={10} onPress={() => shift(1)}><Text style={{ fontSize: 28, color: color.ink, paddingHorizontal: 12 }}>{"\u203A"}</Text></Pressable>
+          </View>
+          <View style={{ flexDirection: "row" }}>
+            {weekdays.map((w, i) => <Text key={i} style={{ flex: 1, textAlign: "center", color: color.muted, fontWeight: "600", paddingVertical: 6 }}>{w}</Text>)}
+          </View>
+          {weeks.map((wk, i) => (
+            <View key={i} style={{ flexDirection: "row" }}>
+              {wk.map((d, j) => {
+                if (!d) return <View key={j} style={{ flex: 1, height: 44 }} />;
+                const iso = isoDay(view.y, view.m, d);
+                const on = iso === value;
+                const blocked = off(iso);
+                return (
+                  <Pressable key={j} accessibilityRole="button" accessibilityState={{ selected: on, disabled: blocked }} disabled={blocked}
+                    onPress={() => { onChange(iso); close(); }}
+                    style={{ flex: 1, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22, backgroundColor: on ? color.ink : "transparent", opacity: blocked ? 0.3 : 1 }}>
+                    <Text style={{ color: on ? "#fff" : color.ink, fontWeight: on ? "700" : "400" }}>{d}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          <View style={{ height: 16 }} />
+          {!!value && <Button title={t("orders.clearDate")} kind="quiet" onPress={() => { onChange(""); close(); }} />}
+          {!!value && <View style={{ height: 8 }} />}
+          <Button title={t("common.cancel")} kind="quiet" onPress={close} />
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
 /** Countries to offer: the shop's launch countries when it has set them, otherwise every country. */
 export function useCountryOptions(current?: string): { value: string; label: string }[] {
   const [launch, setLaunch] = useState<string[]>([]);

@@ -172,6 +172,8 @@ def check_payments(offline):
                       settings.SUPPORT_PHONE_NUMBER or "The Call us link stays hidden.", "Set SUPPORT_PHONE_NUMBER with the country code, for example +233240000000."))
     out.append(Result("Launch", "Support email address is set", PASS if settings.SUPPORT_EMAIL_ADDRESS else WARN,
                       settings.SUPPORT_EMAIL_ADDRESS or "The Email us link stays hidden.", "Set SUPPORT_EMAIL_ADDRESS, for example help@yourdomain.com."))
+    out.append(Result("Launch", "Browser push keys are set", PASS if (settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY) else WARN,
+                      "" if (settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY) else "Browser notifications stay off.", "Run python manage.py generate_vapid_keys and set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY."))
     from .providers import chargeable_currencies
 
     try:

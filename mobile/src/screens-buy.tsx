@@ -11,12 +11,12 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
   OrderDetail: { number: string }; Return: { number: string };
-  Profile: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
+  Profile: undefined; Notifications: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
 };
 type Nav = NavigationProp<RootParams>;
 
@@ -317,17 +317,19 @@ export function OrdersScreen() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("-created_at");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   useEffect(() => {
     const id = setTimeout(() => setSearch(q.trim()), 300);
     return () => clearTimeout(id);
   }, [q]);
   const { data, error, loading, reload } = useAsync(
-    () => (user ? api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`) : Promise.resolve(null)),
-    [user?.id, sort, status, search]
+    () => (user ? api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`) : Promise.resolve(null)),
+    [user?.id, sort, status, search, from, to]
   );
   useFocusEffect(useCallback(() => { if (user) reload(); }, [user, reload]));
   const pull = usePullRefresh(reload);
-  const filtering = !!(search || status);
+  const filtering = !!(search || status || from || to);
   if (!user) {
     return (
       <View style={[s.screen, s.pad]}>
@@ -345,6 +347,8 @@ export function OrdersScreen() {
           <Input label={t("orders.search")} value={q} onChangeText={setQ} autoCapitalize="characters" autoCorrect={false} returnKeyType="search" />
           <Select label={t("orders.status")} value={status} onChange={setStatus}
             options={[{ value: "", label: t("orders.allStatuses") }, ...["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((v) => ({ value: v, label: statusText(t, v) }))]} />
+          <DateField label={t("orders.from")} value={from} onChange={setFrom} max={to || undefined} />
+          <DateField label={t("orders.to")} value={to} onChange={setTo} min={from || undefined} />
           <Select label={t("orders.sort")} value={sort} onChange={setSort}
             options={[
               { value: "-created_at", label: t("orders.sortNewest") },

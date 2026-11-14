@@ -53,9 +53,11 @@ export function Orders() {
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("-created_at");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const { data, error, loading } = useAsync(
-    () => api<Page<OrderRow>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
-    [status, query, sort]
+    () => api<Page<OrderRow>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
+    [status, query, sort, from, to]
   );
   return (
     <>
@@ -68,6 +70,9 @@ export function Orders() {
             {["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((s) => <option key={s} value={s}>{label(s)}</option>)}
           </select>
         </Field>
+        <Field id="f-f" label="Placed from"><input id="f-f" className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
+        <Field id="f-t" label="Placed until"><input id="f-t" className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
+        {(from || to) && <button type="button" className="btn quiet" onClick={() => { setFrom(""); setTo(""); }}>Clear dates</button>}
         <Field id="f-o" label="Sort by">
           <select id="f-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
             <option value="-created_at">Newest first</option>

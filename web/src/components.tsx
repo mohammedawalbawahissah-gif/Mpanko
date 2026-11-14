@@ -5,6 +5,7 @@ import { useShopConfig } from "./guest-config";
 import { LanguageSelect, useT } from "./i18n";
 import { whatsappLink } from "./phone";
 import { ContactButtons } from "./contact";
+import { NotificationBell } from "./notifications";
 import { reportError } from "./report";
 import type { MessageKey } from "./locales";
 import type { Product } from "./types";
@@ -87,6 +88,7 @@ export function routeTitle(pathname: string, t: (key: MessageKey) => string): st
     [/^\/verify-email$/, () => t("register.title")],
     [/^\/support(\/.*)?$/, () => t("nav.help")],
     [/^\/account$/, () => t("prefs.title")],
+    [/^\/notifications$/, () => t("notifications.title")],
   ];
   for (const [re, label] of table) if (re.test(p)) return label();
   if (p === "/" || p.startsWith("/shop") || ["/privacy", "/terms", "/returns-policy", "/cookies"].includes(p)) return undefined;
@@ -140,6 +142,7 @@ export function Layout() {
             <LanguageSelect />
             {user ? (
               <>
+                <NotificationBell />
                 <Link to="/account">{t("nav.account")}</Link>
                 <button
                   className="link-button"

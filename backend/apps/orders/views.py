@@ -2,6 +2,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from django_filters import rest_framework as filters
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -92,11 +93,22 @@ class CheckoutView(APIView):
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
+class OrderFilter(filters.FilterSet):
+    """Status and currency, plus the day an order was placed: placed_from and placed_to are dates (YYYY-MM-DD), both inclusive."""
+
+    placed_from = filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    placed_to = filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = Order
+        fields = ["status", "currency"]
+
+
 class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Customers see only their own orders (FR-CUS-03). Staff see all, within their permissions."""
 
     lookup_field = "number"
-    filterset_fields = ["status", "currency"]
+    filterset_class = OrderFilter
     search_fields = ["number", "contact_email"]
     ordering_fields = ["created_at", "grand_total", "status"]
 

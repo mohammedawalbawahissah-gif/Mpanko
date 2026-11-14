@@ -109,6 +109,7 @@ The adapters follow each carrier's published API but have not been run against r
 Railway-provided domains work for launch. When you buy a domain later: add it in each Railway service > Settings > Domains, add the DNS records Railway shows, then update `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`, `PAYMENT_RETURN_URL`, `VITE_API_URL`, the Paystack webhook URL and the Resend sending domain.
 
 ## 7b. Push notifications and deep links
+Full setup for every notification channel (email, SMS, WhatsApp, phone push, browser push), with a test command for each, is in `docs/NOTIFICATIONS.md`.
 - Push uses Expo. In the mobile project run `eas init` once; it writes the EAS project id into `app.json` (`extra.eas.projectId`). Without it, phones cannot get a push token.
 - iOS push needs an Apple developer account and Android push needs a Firebase (FCM) key, both added through `eas credentials`. Optional: set `EXPO_ACCESS_TOKEN` on the api to raise Expo's limits.
 - Links such as `mpanko://orders/MP-1001` already open the right screen. Links that open the app from the website address (universal links on iOS, app links on Android) need the shop domain and signing details first: add `apple-app-site-association` and `assetlinks.json` to the web `public/` folder once the app has its real bundle signing.
@@ -182,6 +183,7 @@ Set these as variables on Railway (backend service):
 | `WHATSAPP_SUPPORT_NUMBER` | digits only, with country code, for example `233241234567` | Shows "Chat on WhatsApp" in the shop, the app and the corporate site. Hidden while blank. |
 | `SUPPORT_PHONE_NUMBER` | with the country code, for example `+233240000000` | Shows a "Call us" link in the shop footer and a call button in the app. Tapping it starts a phone call. Hidden while blank. |
 | `SUPPORT_EMAIL_ADDRESS` | for example `help@yourdomain.com` | Shows an "Email us" link beside Call and WhatsApp in the shop, the apps and the corporate site. Hidden while blank. |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | from `python manage.py generate_vapid_keys` | Turns on browser notifications in the shop. See `docs/NOTIFICATIONS.md`. |
 | `PAYMENT_PROVIDERS_ENABLED` | add `mtn_momo` | Turns on native MTN Mobile Money for Ghana (GHS). |
 | `MTN_MOMO_API_USER`, `MTN_MOMO_API_KEY`, `MTN_MOMO_SUBSCRIPTION_KEY` | from the MTN MoMo developer portal | Credentials. |
 | `MTN_MOMO_ENVIRONMENT`, `MTN_MOMO_BASE_URL`, `MTN_MOMO_CURRENCY` | `mtnghana`, MTN's live address, `GHS` | Switch from sandbox to live after MTN approves the business. |

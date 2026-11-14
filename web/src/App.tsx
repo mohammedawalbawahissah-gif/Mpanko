@@ -1,4 +1,5 @@
 import { CookieNotice, Legal } from "./pages-legal";
+import { Notifications } from "./pages-notifications";
 import { Route, Routes, Link } from "react-router-dom";
 import { Layout, RequireAuth } from "./components";
 import { Bag, Home, ProductPage, Shop } from "./pages-shop";
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="support" element={<RequireAuth><SupportList /></RequireAuth>} />
         <Route path="support/new" element={<RequireAuth><SupportNew /></RequireAuth>} />
         <Route path="support/:number" element={<RequireAuth><SupportThread /></RequireAuth>} />
+        <Route path="notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
         <Route path="account" element={<RequireAuth><Account /></RequireAuth>} />
         <Route path="privacy" element={<Legal slug="privacy" />} />
         <Route path="terms" element={<Legal slug="terms" />} />

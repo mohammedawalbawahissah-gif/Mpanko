@@ -46,3 +46,29 @@ class DeviceToken(models.Model):
     platform = models.CharField(max_length=10, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_seen = models.DateTimeField(auto_now=True)
+
+
+class InboxMessage(models.Model):
+    """What a customer sees in the app's notification list: one row per event that also emailed or pushed them."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="inbox")
+    key = models.CharField(max_length=60)
+    title = models.CharField(max_length=120)
+    body = models.CharField(max_length=200, blank=True)
+    path = models.CharField(max_length=80, blank=True, help_text="Where tapping it goes, e.g. orders/MP-1234 or support/SUP-1")
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["user", "read_at"])]
+
+
+class WebPushSubscription(models.Model):
+    """A browser that can receive push notifications for a customer."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="web_push_subscriptions")
+    endpoint = models.CharField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)

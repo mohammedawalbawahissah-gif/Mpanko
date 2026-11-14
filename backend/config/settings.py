@@ -288,6 +288,10 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM = os.environ.get("TWILIO_FROM", "")  # a number or an approved alphanumeric sender id
 TWILIO_MESSAGING_SERVICE_SID = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
 # WhatsApp through the same Twilio account (INT-05). "log" writes to the server log; "twilio" sends for real.
+# Browser push (Web Push). Make a key pair with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "").strip() or "mailto:" + (os.environ.get("SUPPORT_EMAIL_ADDRESS", "").strip() or "admin@example.com")
 WHATSAPP_BACKEND = os.environ.get("WHATSAPP_BACKEND", "log")
 TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")  # e.g. whatsapp:+14155238886 (the Twilio sandbox number)
 WHATSAPP_TEMPLATE_SIDS = os.environ.get("WHATSAPP_TEMPLATE_SIDS", "")  # JSON: event key -> approved Twilio template sid
