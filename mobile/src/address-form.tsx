@@ -4,7 +4,7 @@ import { api, ApiError } from "./api";
 import { fieldHints, type AddressRules } from "./core/addressRules";
 import { usePrefs } from "./prefs";
 import type { Address } from "./types";
-import { Button, Input } from "./ui";
+import { Button, Input, Select, useCountryOptions } from "./ui";
 
 export const BLANK = { recipient_name: "", phone: "", country: "GH", line1: "", line2: "", city: "", region: "", postal_code: "" };
 
@@ -23,6 +23,7 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
     return () => { cancelled = true; };
   }, [cc]);
   const hints = fieldHints(rules);
+  const countryOptions = useCountryOptions(f.country);
   const { t } = usePrefs();
   const save = async () => {
     setErrors({});
@@ -49,11 +50,11 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
     <View>
       <Input label={t("m.fullName")} value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
       <Input label={t("m.phoneCourier")} value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
-      <Input label={t("m.countryCode")} value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
+      <Select label={t("m.countryCode")} value={f.country} options={countryOptions} onChange={(v) => { set("country")(v); set("region")(""); }} error={errors.country} />
       <Input label={t("m.street")} value={f.line1} onChangeText={set("line1")} error={errors.line1} />
       <Input label={t("m.line2")} value={f.line2} onChangeText={set("line2")} error={errors.line2} />
       <Input label={t("m.city")} value={f.city} onChangeText={set("city")} error={errors.city} />
-      <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
+      {rules?.regions?.length ? <Select label={hints.regionLabel} value={f.region} options={rules.regions.map((r) => ({ value: r, label: r }))} onChange={set("region")} error={errors.region} /> : <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />}
       {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
       <Button title={busy ? t("m.saving") : t("m.saveAddress")} disabled={busy} onPress={save} />
       {onCancel && <View style={{ height: 8 }} />}

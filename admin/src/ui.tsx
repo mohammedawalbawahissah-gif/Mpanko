@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ALL_COUNTRIES, countryName } from "./countries";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
@@ -71,6 +72,42 @@ export function PasswordInput({ id, value, onChange, autoComplete, required }: {
     <div className="pw-wrap">
       <input id={id} className="input" type={shown ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
       <button type="button" className="pw-toggle" onClick={() => setShown((v) => !v)} aria-pressed={shown} aria-controls={id}>{shown ? "Hide" : "Show"}</button>
+    </div>
+  );
+}
+
+
+/** Pick one country from a list. `allowAll` adds an "Everywhere else" choice, stored as "*". */
+export function CountrySelect({ id, value, onChange, allowAll, required }: { id: string; value: string; onChange: (v: string) => void; allowAll?: boolean; required?: boolean }) {
+  return (
+    <select id={id} className="select" value={value} required={required} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Choose a country</option>
+      {allowAll && <option value="*">Everywhere else</option>}
+      {ALL_COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+    </select>
+  );
+}
+
+/** Build a list of countries by picking them one at a time. The chosen ones show as removable tags. */
+export function CountryMultiSelect({ id, value, onChange, allowAll }: { id: string; value: string[]; onChange: (v: string[]) => void; allowAll?: boolean }) {
+  const label = (c: string) => (c === "*" ? "Everywhere else" : countryName(c));
+  return (
+    <div>
+      {value.length > 0 && (
+        <ul className="chips" aria-label="Chosen countries" style={{ listStyle: "none", padding: 0, margin: "0 0 .5rem", display: "flex", flexWrap: "wrap", gap: ".4rem" }}>
+          {value.map((c) => (
+            <li key={c} className="pill s-info" style={{ display: "inline-flex", alignItems: "center", gap: ".35rem" }}>
+              {label(c)}
+              <button type="button" className="link-button" aria-label={`Remove ${label(c)}`} onClick={() => onChange(value.filter((x) => x !== c))}>×</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <select id={id} className="select" value="" onChange={(e) => e.target.value && onChange([...value, e.target.value])}>
+        <option value="">{value.length ? "Add another country" : "Add a country"}</option>
+        {allowAll && !value.includes("*") && <option value="*">Everywhere else</option>}
+        {ALL_COUNTRIES.filter(([code]) => !value.includes(code)).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+      </select>
     </div>
   );
 }

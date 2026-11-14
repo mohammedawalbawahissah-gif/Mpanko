@@ -18,7 +18,7 @@ test("a visitor checks out as a guest, pays, and finds the order again", async (
   await page.getByLabel("Country", { exact: true }).selectOption("GH");
   await page.getByLabel("Street address").fill("2 Test Road");
   await page.getByLabel("Town or city").fill("Tamale");
-  await page.getByLabel(/^Region/).fill("Northern");
+  await page.getByLabel(/^Region/).selectOption("Northern");
   await page.getByRole("button", { name: "Use this address" }).click();
 
   const delivery = page.getByRole("radiogroup", { name: "Delivery" }).getByRole("radio").first();

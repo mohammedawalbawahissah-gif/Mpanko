@@ -1,19 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "./api";
 import { Alert, Field } from "./components";
+import { ALL_COUNTRIES } from "./countries";
 import { useShopConfig } from "./guest-config";
 import { useT } from "./i18n";
 import type { Address, AddressRules } from "./types";
 
-export const COUNTRIES: [string, string][] = [
-  ["GH", "Ghana"], ["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"], ["NG", "Nigeria"],
-  ["KE", "Kenya"], ["ZA", "South Africa"], ["CI", "Côte d'Ivoire"], ["SN", "Senegal"], ["TG", "Togo"],
-  ["BJ", "Benin"], ["BF", "Burkina Faso"], ["TZ", "Tanzania"], ["UG", "Uganda"], ["RW", "Rwanda"],
-  ["EG", "Egypt"], ["MA", "Morocco"], ["DE", "Germany"], ["FR", "France"], ["NL", "Netherlands"],
-  ["IE", "Ireland"], ["IT", "Italy"], ["ES", "Spain"], ["SE", "Sweden"], ["NO", "Norway"],
-  ["AU", "Australia"], ["NZ", "New Zealand"], ["AE", "United Arab Emirates"], ["JP", "Japan"],
-  ["BR", "Brazil"],
-];
+export const COUNTRIES = ALL_COUNTRIES;
 
 const EMPTY = { label: "", recipient_name: "", phone: "", line1: "", line2: "", city: "", region: "", postal_code: "", country: "GH", is_default: false };
 
@@ -84,7 +77,7 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
         </Field>
       </div>
       <Field id="a-country" label="Country" error={errors.country}>
-        <select id="a-country" className="select" style={{ width: "100%" }} value={form.country} onChange={(e) => set("country", e.target.value)}>
+        <select id="a-country" className="select" style={{ width: "100%" }} value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value, region: "" }))}>
           {COUNTRIES.filter(([code]) => !launch.length || launch.includes(code) || code === form.country).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </select>
       </Field>
@@ -99,7 +92,14 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
           <input id="a-city" className="input" autoComplete="address-level2" value={form.city} onChange={(e) => set("city", e.target.value)} required />
         </Field>
         <Field id="a-region" label={rules?.region_required ? rules.region_label : `${rules?.region_label ?? "Region or state"} (optional)`} error={errors.region}>
-          <input id="a-region" className="input" autoComplete="address-level1" value={form.region} onChange={(e) => set("region", e.target.value)} required={!!rules?.region_required} />
+          {rules?.regions?.length ? (
+            <select id="a-region" className="select" style={{ width: "100%" }} autoComplete="address-level1" value={form.region} onChange={(e) => set("region", e.target.value)} required={!!rules.region_required}>
+              <option value="">{t("address.choose")}</option>
+              {rules.regions.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          ) : (
+            <input id="a-region" className="input" autoComplete="address-level1" value={form.region} onChange={(e) => set("region", e.target.value)} required={!!rules?.region_required} />
+          )}
         </Field>
       </div>
       {rules?.postal_code !== "none" && (

@@ -9,7 +9,7 @@ import { usePrefs } from "./prefs";
 import { disablePush, enablePush } from "./push";
 import { color } from "./theme";
 import type { Address, User } from "./types";
-import { Busy, Button, Input, Notice, s, useAsync } from "./ui";
+import { Busy, Button, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
 import type { MessageKey } from "./core/i18n";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
@@ -204,6 +204,7 @@ function Addresses() {
     return () => { cancelled = true; };
   }, [country]);
   const hints = fieldHints(rules);
+  const countryOptions = useCountryOptions(f.country);
 
   const add = async () => {
     setBusy(true);
@@ -236,11 +237,11 @@ function Addresses() {
         <View>
           <Input label={t("m.fullName")} value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
           <Input label={t("m.phoneCourier")} value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
-          <Input label={t("m.countryCode")} value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
+          <Select label={t("m.countryCode")} value={f.country} options={countryOptions} onChange={(v) => { set("country")(v); set("region")(""); }} error={errors.country} />
           <Input label={t("m.street")} value={f.line1} onChangeText={set("line1")} error={errors.line1} />
           <Input label={t("m.line2")} value={f.line2} onChangeText={set("line2")} error={errors.line2} />
           <Input label={t("m.city")} value={f.city} onChangeText={set("city")} error={errors.city} />
-          <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
+          {rules?.regions?.length ? <Select label={hints.regionLabel} value={f.region} options={rules.regions.map((r) => ({ value: r, label: r }))} onChange={set("region")} error={errors.region} /> : <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />}
           {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
           <Button title={busy ? "…" : t("prefs.save")} disabled={busy} onPress={add} />
           <View style={{ height: 8 }} />

@@ -425,7 +425,12 @@ export function ShipmentDetail() {
           ) : (
             <div className="row">
               <Field id="l-s" label="Carrier service code">
-                <input id="l-s" className="input" placeholder="dhl:P, fedex:INTERNATIONAL_PRIORITY or ups:65" value={labelService} onChange={(e) => setLabelService(e.target.value)} />
+                <select id="l-s" className="select" value={labelService} onChange={(e) => setLabelService(e.target.value)}>
+                  <option value="">The service the customer chose</option>
+                  <optgroup label="DHL Express"><option value="dhl:P">DHL Express Worldwide</option><option value="dhl:D">DHL Express Worldwide (documents)</option></optgroup>
+                  <optgroup label="FedEx"><option value="fedex:INTERNATIONAL_PRIORITY">FedEx International Priority</option><option value="fedex:INTERNATIONAL_ECONOMY">FedEx International Economy</option></optgroup>
+                  <optgroup label="UPS"><option value="ups:07">UPS Worldwide Express</option><option value="ups:08">UPS Worldwide Expedited</option><option value="ups:11">UPS Standard</option><option value="ups:54">UPS Worldwide Express Plus</option><option value="ups:65">UPS Worldwide Saver</option></optgroup>
+                </select>
               </Field>
               {pickupList.length > 0 && (
                 <Field id="l-p" label="Collect from">

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "./api";
 import { useAuth } from "./auth";
-import { Alert, Field, Loading, errText, useAsync } from "./ui";
+import { Alert, CountryMultiSelect, CountrySelect, Field, Loading, errText, useAsync } from "./ui";
 
 interface Rate {
   id: number; zone: number; service_code: string; service_name: string; base_price: string; price_per_kg: string;
@@ -101,14 +101,18 @@ type SetMsg = (m: { kind: "ok" | "error"; text: string } | null) => void;
 
 function ZoneForm({ onSaved, setMsg }: { onSaved: () => void; setMsg: SetMsg }) {
   const [name, setName] = useState("");
-  const [countries, setCountries] = useState("");
+  const [countries, setCountries] = useState<string[]>([]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setMsg(null);
+    if (countries.length === 0) {
+      setMsg({ kind: "error", text: "Choose at least one country for this zone." });
+      return;
+    }
     try {
-      await api("/shipping/zones/", { method: "POST", body: { name, countries: countries.split(/[ ,]+/).filter(Boolean) } });
+      await api("/shipping/zones/", { method: "POST", body: { name, countries } });
       setName("");
-      setCountries("");
+      setCountries([]);
       setMsg({ kind: "ok", text: "Zone added. Now add a service to it." });
       onSaved();
     } catch (x) {
@@ -118,7 +122,7 @@ function ZoneForm({ onSaved, setMsg }: { onSaved: () => void; setMsg: SetMsg }) 
   return (
     <form className="row card" onSubmit={submit} style={{ marginBottom: "1.5rem" }}>
       <Field id="z-n" label="New zone name"><input id="z-n" className="input" value={name} onChange={(e) => setName(e.target.value)} required /></Field>
-      <Field id="z-c" label="Country codes (GH, NG ... or * for everywhere else)"><input id="z-c" className="input" value={countries} onChange={(e) => setCountries(e.target.value)} required /></Field>
+      <Field id="z-c" label="Countries in this zone"><CountryMultiSelect id="z-c" allowAll value={countries} onChange={setCountries} /></Field>
       <button className="btn">Add zone</button>
     </form>
   );
@@ -184,7 +188,7 @@ function BlockForm({ onSaved, setMsg }: { onSaved: () => void; setMsg: SetMsg })
   };
   return (
     <form className="row" onSubmit={submit} style={{ marginTop: "1rem" }}>
-      <Field id="bl-c" label="Country code"><input id="bl-c" className="input" maxLength={2} value={country} onChange={(e) => setCountry(e.target.value)} required /></Field>
+      <Field id="bl-c" label="Country"><CountrySelect id="bl-c" required value={country} onChange={setCountry} /></Field>
       <Field id="bl-r" label="Reason"><input id="bl-r" className="input" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       <button className="btn quiet">Block country</button>
     </form>

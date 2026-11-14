@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "./api";
 import { useAuth } from "./auth";
-import { Alert, Field, Loading, errText, useAsync } from "./ui";
+import { Alert, CountrySelect, Field, Loading, errText, useAsync } from "./ui";
 
 interface TaxRule { id: number; country: string; name: string; rate: string; applies_to_shipping: boolean; is_active: boolean }
 interface DutyRule { id: number; country: string; de_minimis: string; duty_rate: string; import_vat_rate: string; note: string; is_active: boolean }
@@ -132,7 +132,7 @@ function TaxForm({ onSaved, setMsg }: { onSaved: () => void; setMsg: SetMsg }) {
   };
   return (
     <form className="row card" onSubmit={submit}>
-      <Field id="t-c" label="Country code (or * for everywhere else)"><input id="t-c" className="input" maxLength={2} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} required /></Field>
+      <Field id="t-c" label="Country"><CountrySelect id="t-c" allowAll required value={f.country} onChange={(v) => setF({ ...f, country: v })} /></Field>
       <Field id="t-n" label="Name on the invoice"><input id="t-n" className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></Field>
       <Field id="t-r" label="Rate (%)"><input id="t-r" className="input" inputMode="decimal" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} required /></Field>
       <label className="small"><input type="checkbox" checked={f.shipping} onChange={(e) => setF({ ...f, shipping: e.target.checked })} /> Also charge on shipping</label>
@@ -160,7 +160,7 @@ function DutyForm({ onSaved, setMsg }: { onSaved: () => void; setMsg: SetMsg }) 
   };
   return (
     <form className="row card" onSubmit={submit}>
-      <Field id="d-c" label="Country code"><input id="d-c" className="input" maxLength={2} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} required /></Field>
+      <Field id="d-c" label="Country"><CountrySelect id="d-c" required value={f.country} onChange={(v) => setF({ ...f, country: v })} /></Field>
       <Field id="d-m" label="Duty-free up to"><input id="d-m" className="input" inputMode="decimal" value={f.de_minimis} onChange={(e) => setF({ ...f, de_minimis: e.target.value })} /></Field>
       <Field id="d-d" label="Duty (%)"><input id="d-d" className="input" inputMode="decimal" value={f.duty} onChange={(e) => setF({ ...f, duty: e.target.value })} required /></Field>
       <Field id="d-v" label="Import VAT (%)"><input id="d-v" className="input" inputMode="decimal" value={f.vat} onChange={(e) => setF({ ...f, vat: e.target.value })} /></Field>

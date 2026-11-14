@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError, type Page } from "./api";
-import { Alert, Field, Loading, errText, useAsync } from "./ui";
+import { Alert, CountryMultiSelect, CountrySelect, Field, Loading, errText, useAsync } from "./ui";
 
 interface ProductType { id: number; name: string; notes: string; restricted_countries: string[]; restriction_note: string; product_count: number }
 interface Pickup {
@@ -41,15 +41,15 @@ export function ProductTypes() {
 }
 
 function TypeForm({ item, onDone }: { item: ProductType | null; onDone: () => void }) {
-  const [f, setF] = useState({ name: item?.name ?? "", notes: item?.notes ?? "", restricted: (item?.restricted_countries ?? []).join(", "), restriction_note: item?.restriction_note ?? "" });
+  const [f, setF] = useState<{ name: string; notes: string; restricted: string[]; restriction_note: string }>({ name: item?.name ?? "", notes: item?.notes ?? "", restricted: item?.restricted_countries ?? [], restriction_note: item?.restriction_note ?? "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
-  const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+  const set = (k: "name" | "notes" | "restriction_note", v: string) => setF((x) => ({ ...x, [k]: v }));
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors({});
     setMsg("");
-    const body = { name: f.name, notes: f.notes, restriction_note: f.restriction_note, restricted_countries: f.restricted.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean) };
+    const body = { name: f.name, notes: f.notes, restriction_note: f.restriction_note, restricted_countries: f.restricted };
     try {
       if (item) await api(`/product-types/${item.id}/`, { method: "PATCH", body });
       else await api("/product-types/", { method: "POST", body });
@@ -68,7 +68,7 @@ function TypeForm({ item, onDone }: { item: ProductType | null; onDone: () => vo
       {msg && <Alert>{msg}</Alert>}
       <form className="form" onSubmit={submit} noValidate>
         <Field id="pt-n" label="Name" error={errors.name}><input id="pt-n" className="input" value={f.name} onChange={(e) => set("name", e.target.value)} required /></Field>
-        <Field id="pt-c" label="Can't ship to (country codes, comma-separated)" error={errors.restricted_countries}><input id="pt-c" className="input" value={f.restricted} onChange={(e) => set("restricted", e.target.value)} /></Field>
+        <Field id="pt-c" label="Can't ship to" error={errors.restricted_countries}><CountryMultiSelect id="pt-c" value={f.restricted} onChange={(v) => setF((x) => ({ ...x, restricted: v }))} /></Field>
         <Field id="pt-r" label="Message shown to shoppers in those countries" error={errors.restriction_note}><input id="pt-r" className="input" value={f.restriction_note} onChange={(e) => set("restriction_note", e.target.value)} /></Field>
         <Field id="pt-o" label="Internal notes" error={errors.notes}><textarea id="pt-o" rows={3} value={f.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
         <p><button className="btn">Save product type</button> <button type="button" className="btn quiet" onClick={onDone}>Cancel</button>
@@ -149,7 +149,7 @@ function PickupForm({ item, onDone }: { item: Pickup | null; onDone: () => void 
         {text("city", "City", true)}
         {text("region", "Region")}
         {text("postal_code", "Postal code")}
-        <Field id="pk-country" label="Country (2 letters)" error={errors.country}><input id="pk-country" className="input" maxLength={2} value={f.country} onChange={(e) => set("country", e.target.value)} required /></Field>
+        <Field id="pk-country" label="Country" error={errors.country}><CountrySelect id="pk-country" required value={f.country} onChange={(v) => set("country", v)} /></Field>
         <label className="small"><input type="checkbox" checked={f.is_default} onChange={(e) => set("is_default", e.target.checked)} /> Use as the default pickup location</label>
         <label className="small"><input type="checkbox" checked={f.is_active} onChange={(e) => set("is_active", e.target.checked)} /> In use</label>
         <p><button className="btn">Save pickup location</button> <button type="button" className="btn quiet" onClick={onDone}>Cancel</button></p>

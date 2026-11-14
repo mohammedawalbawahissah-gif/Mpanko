@@ -4,6 +4,7 @@ expect; any other country accepts what the customer types, within sane limits. R
 a wrong postal code is the commonest reason an international parcel is delayed.
 """
 import re
+import unicodedata
 
 import pycountry
 
@@ -49,7 +50,47 @@ def is_country(code):
     return bool(code) and len(code) == 2 and pycountry.countries.get(alpha_2=code.upper()) is not None
 
 
+# Countries whose regions are a clean list a shopper can pick from: country -> the pycountry subdivision types to offer.
+_REGION_TYPES = {
+    "GH": {"Region"}, "NG": {"State", "Capital territory"}, "US": {"State", "District"}, "CA": {"Province", "Territory"},
+    "AU": {"State", "Territory"}, "IN": {"State", "Union territory"},
+    "JP": {"Prefecture"}, "ZA": {"Province"}, "KE": {"County"},
+    "BR": {"State", "Federal district"}, "MX": {"State", "Federal entity"}, "AT": {"State"},
+    "IE": {"Province"}, "NZ": {"Region"}, "FR": {"Metropolitan region"},
+}
+# Lists written by hand where the standard data is awkward (odd spellings, missing entries).
+_REGION_LISTS = {
+    "GB": ["England", "Northern Ireland", "Scotland", "Wales"],
+    "DE": ["Baden-Wuerttemberg", "Bavaria", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hesse", "Lower Saxony", "Mecklenburg-Western Pomerania",
+           "North Rhine-Westphalia", "Rhineland-Palatinate", "Saarland", "Saxony", "Saxony-Anhalt", "Schleswig-Holstein", "Thuringia"],
+    "AE": ["Abu Dhabi", "Ajman", "Dubai", "Fujairah", "Ras Al Khaimah", "Sharjah", "Umm Al Quwain"],
+}
+
+
+def regions_for(country):
+    """Names of the regions to offer as a dropdown, or [] when the shopper should type it (no clean list)."""
+    country = (country or "").upper()
+    if country in _REGION_LISTS:
+        return list(_REGION_LISTS[country])
+    wanted = _REGION_TYPES.get(country)
+    if not wanted:
+        return []
+    try:
+        subs = pycountry.subdivisions.get(country_code=country.upper()) or []
+    except (KeyError, LookupError):
+        return []
+    # Plain letters only: carriers and labels do not cope with accents.
+    fold = lambda text: unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return sorted({fold(s.name) for s in subs if s.type in wanted})
+
+
 def describe(country):
+    info = _describe(country)
+    info["regions"] = regions_for(info["country"])
+    return info
+
+
+def _describe(country):
     country = (country or "").upper()
     rule = _RULES.get(country)
     if rule:

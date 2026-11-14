@@ -18,8 +18,8 @@ test("a new shopper browses, registers, pays and sees the order", async ({ page 
   await page.getByLabel(/^Password/).fill(password);
   await page.getByLabel(/I accept the/).check();
   await page.getByRole("button", { name: "Create account" }).click();
-  // Wait for the checkout page itself: the register page's address is /register?next=/checkout, which also contains "/checkout".
-  await expect(page).toHaveURL(/\/checkout$/);
+  // Wait for the checkout page itself. Match the path, not the whole address: the register page is /register?next=/checkout.
+  await page.waitForURL((url) => url.pathname === "/checkout");
   await expect(page.getByRole("heading", { level: 1, name: "Checkout" })).toBeVisible();
   // The address form only appears once the saved addresses have loaded.
   await page.getByLabel("Full name").waitFor();
@@ -29,7 +29,7 @@ test("a new shopper browses, registers, pays and sees the order", async ({ page 
   await page.getByLabel("Country", { exact: true }).selectOption("GH");
   await page.getByLabel("Street address").fill("1 Test Road");
   await page.getByLabel("Town or city").fill("Tamale");
-  await page.getByLabel(/^Region/).fill("Northern");
+  await page.getByLabel(/^Region/).selectOption("Northern");
   await page.getByRole("button", { name: "Save address" }).click();
 
   const delivery = page.getByRole("radiogroup", { name: "Delivery" }).getByRole("radio").first();

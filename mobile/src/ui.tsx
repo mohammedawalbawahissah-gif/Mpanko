@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { api } from "./api";
+import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
 import { photoLabel, type ProductPhoto } from "./core/images";
@@ -61,6 +62,55 @@ export function WhatsAppButton() {
   }, []);
   if (!number) return null;
   return <Button title={t("footer.whatsapp")} kind="quiet" onPress={() => Linking.openURL(`https://wa.me/${number}`)} />;
+}
+
+/** Countries to offer: the shop's launch countries when it has set them, otherwise every country. */
+export function useCountryOptions(current?: string): { value: string; label: string }[] {
+  const [launch, setLaunch] = useState<string[]>([]);
+  useEffect(() => {
+    api<{ launch_countries?: string[] }>("/config/").then((c) => setLaunch(c.launch_countries ?? [])).catch(() => undefined);
+  }, []);
+  return ALL_COUNTRIES.filter(([code]) => !launch.length || launch.includes(code) || code === current).map(([value, label]) => ({ value, label }));
+}
+
+/** A pick-from-a-list field: tap it, search if the list is long, tap an item. Use instead of typing codes or names. */
+export function Select({ label, value, options, onChange, error, placeholder }: {
+  label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void; error?: string; placeholder?: string;
+}) {
+  const { t } = usePrefs();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const shown = options.find((o) => o.value === value)?.label ?? (value || "");
+  const list = q.trim() ? options.filter((o) => o.label.toLowerCase().includes(q.trim().toLowerCase())) : options;
+  const close = () => { setOpen(false); setQ(""); };
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={s.label}>{label}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${shown || placeholder || t("address.choose")}`} onPress={() => setOpen(true)}
+        style={[s.input, { justifyContent: "center" }, error ? { borderColor: color.bad } : null]}>
+        <Text style={{ color: shown ? color.ink : color.muted }}>{shown || placeholder || t("address.choose")}</Text>
+      </Pressable>
+      {!!error && <Text style={{ color: color.bad, marginTop: 4 }}>{error}</Text>}
+      <Modal visible={open} animationType="slide" onRequestClose={close}>
+        <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, paddingTop: 48 }}>
+          <Text style={s.h2}>{label}</Text>
+          {options.length > 12 && <TextInput accessibilityLabel={t("m.searchList")} placeholder={t("m.searchList")} placeholderTextColor={color.muted} style={s.input} value={q} onChangeText={setQ} autoCapitalize="none" />}
+          <FlatList
+            data={list}
+            keyExtractor={(o) => o.value}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: item.value === value }} onPress={() => { onChange(item.value); close(); }}
+                style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: color.line }}>
+                <Text style={{ color: item.value === value ? color.teal : color.ink, fontWeight: item.value === value ? "700" : "400" }}>{item.label}</Text>
+              </Pressable>
+            )}
+          />
+          <Button title={t("common.cancel")} kind="quiet" onPress={close} />
+        </View>
+      </Modal>
+    </View>
+  );
 }
 
 export function Button({ title, onPress, disabled, kind = "primary" }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger" }) {

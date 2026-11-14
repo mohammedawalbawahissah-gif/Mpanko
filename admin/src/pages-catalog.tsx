@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError, type Page } from "./api";
-import { Alert, Field, Loading, Pill, errText, useAsync, when } from "./ui";
+import { Alert, CountryMultiSelect, CountrySelect, Field, Loading, Pill, errText, useAsync, when } from "./ui";
 
 interface Variant { id: number; sku: string; name: string; price: string; price_override?: string | null; attributes?: Record<string, string>; is_active?: boolean; quantity: number | null; in_stock: boolean }
 interface Photo { id: number; image: string; alt_text: string; position: number }
@@ -60,7 +60,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
     origin_country: product?.origin_country ?? "GH", maker: product?.maker ?? "", base_price: product?.base_price ?? "", currency: product?.currency ?? "USD",
     status: product?.status ?? "draft", weight_grams: String(product?.weight_grams ?? 500),
     length_mm: String(product?.length_mm ?? 0), width_mm: String(product?.width_mm ?? 0), height_mm: String(product?.height_mm ?? 0),
-    dangerous: product?.is_dangerous_goods ?? false, dg_class: product?.dg_class ?? "", un_number: product?.un_number ?? "", hs_code: product?.hs_code ?? "", restricted: (product?.restricted_countries ?? []).join(", "),
+    dangerous: product?.is_dangerous_goods ?? false, dg_class: product?.dg_class ?? "", un_number: product?.un_number ?? "", hs_code: product?.hs_code ?? "", restricted: product?.restricted_countries ?? [],
     product_type: product?.product_type ? String(product.product_type) : "", made_to_order: product?.made_to_order ?? false, lead_time_days: product?.lead_time_days ? String(product.lead_time_days) : "",
   });
   const [variantName, setVariantName] = useState("Standard");
@@ -68,7 +68,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof f, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
+  const set = (k: Exclude<keyof typeof f, "restricted">, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -81,7 +81,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
       length_mm: Number(f.length_mm) || 0, width_mm: Number(f.width_mm) || 0, height_mm: Number(f.height_mm) || 0,
       is_dangerous_goods: f.dangerous, dg_class: f.dangerous ? f.dg_class.trim() : "", un_number: f.dangerous ? f.un_number.trim().toUpperCase() : "", hs_code: f.hs_code.trim(),
       product_type: f.product_type ? Number(f.product_type) : null, made_to_order: f.made_to_order, lead_time_days: f.made_to_order && f.lead_time_days ? Number(f.lead_time_days) : null,
-      restricted_countries: f.restricted.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean),
+      restricted_countries: f.restricted,
     };
     if (!product) body.variants = [{ sku, name: variantName }];
     try {
@@ -112,7 +112,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
         </Field>
         <Field id="p-m" label="Maker" error={errors.maker}><input id="p-m" className="input" value={f.maker} onChange={(e) => set("maker", e.target.value)} /></Field>
         <div className="row">
-          <Field id="p-o" label="Country of origin (2 letters)" error={errors.origin_country}><input id="p-o" className="input" maxLength={2} value={f.origin_country} onChange={(e) => set("origin_country", e.target.value)} /></Field>
+          <Field id="p-o" label="Country of origin" error={errors.origin_country}><CountrySelect id="p-o" required value={f.origin_country} onChange={(v) => set("origin_country", v)} /></Field>
           <Field id="p-w" label="Weight in grams" error={errors.weight_grams}><input id="p-w" className="input" inputMode="numeric" value={f.weight_grams} onChange={(e) => set("weight_grams", e.target.value)} /></Field>
         </div>
         <div className="row">
@@ -157,8 +157,8 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
         {f.made_to_order && (
           <Field id="p-lt" label="Days to make before it ships" error={errors.lead_time_days}><input id="p-lt" className="input" inputMode="numeric" value={f.lead_time_days} onChange={(e) => set("lead_time_days", e.target.value)} required /></Field>
         )}
-        <Field id="p-r" label="Can't ship to (country codes, comma-separated)" error={errors.restricted_countries}>
-          <input id="p-r" className="input" value={f.restricted} onChange={(e) => set("restricted", e.target.value)} />
+        <Field id="p-r" label="Can't ship to" error={errors.restricted_countries}>
+          <CountryMultiSelect id="p-r" value={f.restricted} onChange={(v) => setF((x) => ({ ...x, restricted: v }))} />
         </Field>
         {!product && (
           <div className="row">

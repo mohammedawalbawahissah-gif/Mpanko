@@ -67,3 +67,12 @@ def test_config_exposes_whatsapp_and_launch_countries(api, settings):
     settings.WHATSAPP_SUPPORT_NUMBER, settings.LAUNCH_COUNTRIES = "233241234567", ["US"]
     d = api.get("/api/v1/config/").data
     assert d["whatsapp_number"] == "233241234567" and d["launch_countries"] == ["US"]
+
+
+def test_address_rules_offer_region_lists(api):
+    gh = api.get("/api/v1/auth/address-rules/?country=GH").data
+    assert "Northern" in gh["regions"] and len(gh["regions"]) == 16
+    us = api.get("/api/v1/auth/address-rules/?country=US").data["regions"]
+    assert "Texas" in us and "District of Columbia" in us
+    assert "Northern Ireland" in api.get("/api/v1/auth/address-rules/?country=GB").data["regions"]
+    assert api.get("/api/v1/auth/address-rules/?country=FJ").data["regions"] == []  # no clean list: shopper types it

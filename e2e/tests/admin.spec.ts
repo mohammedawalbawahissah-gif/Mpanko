@@ -18,7 +18,7 @@ async function placeGuestOrder(page: Page): Promise<string | null> {
   await page.getByLabel("Country", { exact: true }).selectOption("GH");
   await page.getByLabel("Street address").fill("3 Test Road");
   await page.getByLabel("Town or city").fill("Tamale");
-  await page.getByLabel(/^Region/).fill("Northern");
+  await page.getByLabel(/^Region/).selectOption("Northern");
   await page.getByRole("button", { name: "Use this address" }).click();
   const delivery = page.getByRole("radiogroup", { name: "Delivery" }).getByRole("radio").first();
   await expect(delivery).toBeVisible({ timeout: 15_000 });

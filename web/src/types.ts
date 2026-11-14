@@ -171,4 +171,5 @@ export interface AddressRules {
   region_required: boolean;
   region_label: string;
   postal_example: string;
+  regions?: string[];
 }

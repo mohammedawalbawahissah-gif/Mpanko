@@ -19,7 +19,7 @@ test("a shopper pays by Zelle and finance confirms the payment in the admin", as
   await page.getByLabel("Country", { exact: true }).selectOption("US");
   await page.getByLabel("Street address").fill("1 Main Street");
   await page.getByLabel("Town or city").fill("Austin");
-  await page.getByLabel(/^Region|^State/).fill("TX");
+  await page.getByLabel(/^Region|^State/).selectOption("Texas");
   await page.getByLabel(/ZIP|Postal/i).fill("73301");
   await page.getByRole("button", { name: "Use this address" }).click();
   const delivery = page.getByRole("radiogroup", { name: "Delivery" }).getByRole("radio").first();
