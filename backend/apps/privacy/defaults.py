@@ -43,7 +43,7 @@ Use the Help page in your account to reach us.
 You can ask to return items within {days} days of delivery from your order page. Tell us what is wrong and we will review your request and email you our decision.
 
 # What we refund
-If we approve your return, we refund the price of the returned items to your original payment method after the items reach us. Delivery costs are refunded only where the item was faulty or wrongly sent.
+If we approve your return, we refund the price of the returned items to your original payment method after the items reach us, within 7 days of receiving them. Delivery costs are refunded only where the item was faulty or wrongly sent.
 
 # Who pays for return shipping
 Return shipping is paid by the customer unless the item arrived damaged, faulty or was not what you ordered.
