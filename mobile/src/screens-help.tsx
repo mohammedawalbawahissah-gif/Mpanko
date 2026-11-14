@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, WhatsAppButton, s, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, WhatsAppButton, Select, s, useAsync, usePullRefresh } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -174,11 +174,10 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
       {!!problem && <Notice>{problem}</Notice>}
       <Text style={s.label}>{t("m.whatAbout")}</Text>
       <TextInput accessibilityLabel={t("m.subject")} style={s.input} maxLength={150} value={subject} onChangeText={setSubject} />
-      <Text style={[s.label, { marginTop: 14 }]}>{t("m.whichOrder")}</Text>
-      <Pressable accessibilityRole="radio" accessibilityState={{ selected: order === "" }} onPress={() => setOrder("")} style={[s.choice, order === "" && s.choiceOn]}><Text>{t("m.notAboutOrder")}</Text></Pressable>
-      {orders.data?.results.slice(0, 8).map((o) => (
-        <Pressable key={o.number} accessibilityRole="radio" accessibilityState={{ selected: order === o.number }} onPress={() => setOrder(o.number)} style={[s.choice, order === o.number && s.choiceOn]}><Text>{o.number}</Text></Pressable>
-      ))}
+      <View style={{ marginTop: 14 }}>
+        <Select label={t("m.whichOrder")} value={order} onChange={setOrder} placeholder={t("m.notAboutOrder")}
+          options={[{ value: "", label: t("m.notAboutOrder") }, ...(orders.data?.results ?? []).map((o) => ({ value: o.number, label: o.number }))]} />
+      </View>
       <Text style={[s.label, { marginTop: 6 }]}>{t("m.tellMore")}</Text>
       <TextInput accessibilityLabel={t("m.message")} style={[s.input, { minHeight: 120, textAlignVertical: "top" }]} multiline maxLength={4000} value={message} onChangeText={setMessage} />
       <View style={{ height: 16 }} />
