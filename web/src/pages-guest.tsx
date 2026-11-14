@@ -6,7 +6,7 @@ import { Alert, Field, Loading, StatusPill, statusLabel, useAsync } from "./comp
 import { useAuth, useCart, useCurrency } from "./context";
 import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
-import { Checkout, CheckoutComplete, providerName } from "./pages-checkout";
+import { Checkout, CheckoutComplete, goToPayment, providerName } from "./pages-checkout";
 import { readGuestSession, saveGuestSession } from "./guest-session";
 import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from "./types";
 
@@ -148,12 +148,12 @@ export function GuestCheckout() {
   const canPlace = emailOk && !!address && !!service && !!provider && restricted.length === 0 && !placing && terms && (!international || duties);
 
   const pay = async (o: PlacedGuest) => {
-    const attempt = await api<{ authorization_url: string }>("/payments/guest/initiate/", {
+    const attempt = await api<{ authorization_url: string; reference: string }>("/payments/guest/initiate/", {
       method: "POST",
       body: { order_number: o.number, provider, token: o.guest_token },
       headers: { "Idempotency-Key": `pay-${o.number}-${provider}` },
     });
-    window.location.href = attempt.authorization_url;
+    goToPayment(attempt);
   };
 
   const place = async () => {
@@ -334,12 +334,12 @@ export function GuestOrder() {
     setBusy(true);
     setActionError("");
     try {
-      const attempt = await api<{ authorization_url: string }>("/payments/guest/initiate/", {
+      const attempt = await api<{ authorization_url: string; reference: string }>("/payments/guest/initiate/", {
         method: "POST",
         body: { order_number: order.number, provider, token },
         headers: { "Idempotency-Key": `pay-${order.number}-${provider}-${Date.now()}` },
       });
-      window.location.href = attempt.authorization_url;
+      goToPayment(attempt);
     } catch (e) {
       setActionError(e instanceof ApiError ? e.message : "Couldn't start payment.");
       setBusy(false);

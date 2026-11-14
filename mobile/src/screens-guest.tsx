@@ -177,7 +177,7 @@ export function GuestCheckoutScreen() {
       });
       await clearGuestBag();
       nav.navigate("GuestOrder", { number: order.number, token: order.guest_token, reference: attempt.reference } as RootParams["GuestOrder"]);
-      await WebBrowser.openBrowserAsync(attempt.authorization_url);
+      if (attempt.authorization_url) await WebBrowser.openBrowserAsync(attempt.authorization_url);
     } catch (e) {
       if (e instanceof ApiError) {
         const f = flatErrors(e.data);
@@ -316,7 +316,8 @@ export function GuestOrderScreen({ route }: { route: { params: { number: string;
     try {
       const a = await api<Attempt>("/payments/guest/initiate/", { method: "POST", body: { order_number: order.number, provider, token }, headers: { "Idempotency-Key": `pay-${order.number}-${provider}-${Date.now()}` } });
       setReference(a.reference);
-      await WebBrowser.openBrowserAsync(a.authorization_url);
+      if (a.authorization_url) await WebBrowser.openBrowserAsync(a.authorization_url);
+      else setMsg(t("done.phonePrompt"));
     } catch (e) {
       setMsg(e instanceof Error ? e.message : t("m.couldntPay"));
     } finally {

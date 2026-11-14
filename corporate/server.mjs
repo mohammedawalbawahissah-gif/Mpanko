@@ -106,8 +106,8 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
 
   async function context() {
     const res = await api.site();
-    if (res.status === "ok") return { site, profile: res.data.profile, businesses: res.data.businesses, live: true };
-    return { site, profile: fallbackProfile, businesses: fallbackBusinesses, live: false };
+    if (res.status === "ok") return { site, profile: { ...res.data.profile, whatsapp_number: res.data.whatsapp_number || "" }, businesses: res.data.businesses, live: true };
+    return { site, profile: { ...fallbackProfile, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER || "" }, businesses: fallbackBusinesses, live: false };
   }
 
   const send = (req, res, status, html, extra = {}) => {

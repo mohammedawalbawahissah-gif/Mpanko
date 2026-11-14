@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "./api";
 import { Alert, Field } from "./components";
+import { useShopConfig } from "./guest-config";
 import { useT } from "./i18n";
 import type { Address, AddressRules } from "./types";
 
@@ -24,6 +25,7 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof EMPTY, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
   const { t } = useT();
+  const launch = useShopConfig()?.launch_countries ?? [];
   const [rules, setRules] = useState<AddressRules | null>(null);
 
   // Ask the server what this country needs, so the form labels and hints match what it will accept.
@@ -83,7 +85,7 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
       </div>
       <Field id="a-country" label="Country" error={errors.country}>
         <select id="a-country" className="select" style={{ width: "100%" }} value={form.country} onChange={(e) => set("country", e.target.value)}>
-          {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          {COUNTRIES.filter(([code]) => !launch.length || launch.includes(code) || code === form.country).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </select>
       </Field>
       <Field id="a-l1" label="Street address" error={errors.line1}>

@@ -236,11 +236,12 @@ class MockProvider(PaymentProvider):
 
 def _registry():
     from .providers_extra import FlutterwaveProvider, PayPalProvider, StripeProvider
+    from .providers_momo import MtnMomoProvider
     from .providers_more import CashAppProvider, CashProvider, HubtelProvider, ZelleProvider
 
     return {
         "paystack": PaystackProvider, "mock": MockProvider, "stripe": StripeProvider, "paypal": PayPalProvider, "flutterwave": FlutterwaveProvider,
-        "hubtel": HubtelProvider, "zelle": ZelleProvider, "cashapp": CashAppProvider, "cash": CashProvider,
+        "hubtel": HubtelProvider, "mtn_momo": MtnMomoProvider, "zelle": ZelleProvider, "cashapp": CashAppProvider, "cash": CashProvider,
     }
 
 

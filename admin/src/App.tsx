@@ -6,6 +6,7 @@ import { Dashboard, OrderDetail, Orders, ShipmentDetail, Shipments } from "./pag
 import { Products, Stock } from "./pages-catalog";
 import { Emails } from "./pages-emails";
 import { ShippingRules } from "./pages-shipping";
+import { PickupLocations, ProductTypes } from "./pages-launch";
 import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Returns, StaffPage, Support, SupportDetail } from "./pages-store";
 import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
@@ -19,6 +20,8 @@ const NAV: { to: string; name: string; roles: string[] }[] = [
   { to: "/manual-payments", name: "Manual payments", roles: ["super_admin", "store_admin", "finance"] },
   { to: "/shipments", name: "Shipments", roles: ["super_admin", "store_admin", "fulfillment", "carrier"] },
   { to: "/shipping-rules", name: "Shipping rules", roles: ["super_admin", "store_admin", "fulfillment"] },
+  { to: "/pickup-locations", name: "Pickup locations", roles: ["super_admin", "store_admin", "fulfillment"] },
+  { to: "/product-types", name: "Product types", roles: ["super_admin", "store_admin"] },
   { to: "/returns", name: "Returns", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"] },
   { to: "/support", name: "Support", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"] },
   { to: "/customers", name: "Customers", roles: ["super_admin", "store_admin", "support"] },
@@ -105,6 +108,8 @@ export default function App() {
             <Route path="shipments" element={route("/shipments", <Shipments />)} />
             <Route path="shipments/:id" element={route("/shipments", <ShipmentDetail />)} />
             <Route path="shipping-rules" element={route("/shipping-rules", <ShippingRules />)} />
+            <Route path="pickup-locations" element={route("/pickup-locations", <PickupLocations />)} />
+            <Route path="product-types" element={route("/product-types", <ProductTypes />)} />
             <Route path="products" element={route("/products", <Products />)} />
             <Route path="stock" element={route("/stock", <Stock />)} />
             <Route path="reports" element={route("/reports", <Reports />)} />

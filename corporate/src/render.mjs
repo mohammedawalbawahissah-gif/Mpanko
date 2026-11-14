@@ -74,6 +74,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
   const contactBits = [
     profile.contact_email ? `<a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a>` : "",
     profile.phone ? `<a href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a>` : "",
+    profile.whatsapp_number ? `<a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a>` : "",
     profile.address ? esc(profile.address) : "",
   ].filter(Boolean);
   return `<!doctype html>
@@ -236,6 +237,7 @@ export function contactPage(ctx, form = {}) {
   const direct = [
     profile.contact_email ? `<dt>Email</dt><dd><a href="mailto:${esc(profile.contact_email)}">${esc(profile.contact_email)}</a></dd>` : "",
     profile.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${esc(profile.phone)}</a></dd>` : "",
+    profile.whatsapp_number ? `<dt>WhatsApp</dt><dd><a href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">Chat on WhatsApp</a></dd>` : "",
     profile.address ? `<dt>Address</dt><dd>${esc(profile.address)}</dd>` : "",
   ].join("");
   const sent = form.state === "sent";

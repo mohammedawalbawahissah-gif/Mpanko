@@ -8,7 +8,7 @@ interface Product {
   id: number; name: string; slug: string; description: string; category: number | null; category_name: string | null;
   origin_country: string; maker: string; base_price: string; currency: string; status: string; weight_grams: number;
   length_mm?: number; width_mm?: number; height_mm?: number; is_dangerous_goods?: boolean; dg_class?: string; un_number?: string; hs_code?: string;
-  restricted_countries: string[]; variants: Variant[]; images?: Photo[];
+  restricted_countries: string[]; variants: Variant[]; images?: Photo[]; product_type?: number | null; made_to_order?: boolean; lead_time_days?: number | null;
 }
 interface Category { id: number; name: string }
 
@@ -52,6 +52,8 @@ export function Products() {
 function ProductForm({ product, onDone }: { product: Product | null; onDone: () => void }) {
   const cats = useAsync(() => api<Page<Category> | Category[]>("/categories/"), []);
   const money = useAsync(() => api<{ currencies: string[]; names: Record<string, string> }>("/currency/rates/"), []);
+  const types = useAsync(() => api<Page<{ id: number; name: string }> | { id: number; name: string }[]>("/product-types/"), []);
+  const typeList = Array.isArray(types.data) ? types.data : types.data?.results ?? [];
   const catList: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
   const [f, setF] = useState({
     name: product?.name ?? "", description: product?.description ?? "", category: product?.category ? String(product.category) : "",
@@ -59,6 +61,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
     status: product?.status ?? "draft", weight_grams: String(product?.weight_grams ?? 500),
     length_mm: String(product?.length_mm ?? 0), width_mm: String(product?.width_mm ?? 0), height_mm: String(product?.height_mm ?? 0),
     dangerous: product?.is_dangerous_goods ?? false, dg_class: product?.dg_class ?? "", un_number: product?.un_number ?? "", hs_code: product?.hs_code ?? "", restricted: (product?.restricted_countries ?? []).join(", "),
+    product_type: product?.product_type ? String(product.product_type) : "", made_to_order: product?.made_to_order ?? false, lead_time_days: product?.lead_time_days ? String(product.lead_time_days) : "",
   });
   const [variantName, setVariantName] = useState("Standard");
   const [sku, setSku] = useState("");
@@ -77,6 +80,7 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
       maker: f.maker, base_price: f.base_price, currency: f.currency, status: f.status, weight_grams: Number(f.weight_grams) || 0,
       length_mm: Number(f.length_mm) || 0, width_mm: Number(f.width_mm) || 0, height_mm: Number(f.height_mm) || 0,
       is_dangerous_goods: f.dangerous, dg_class: f.dangerous ? f.dg_class.trim() : "", un_number: f.dangerous ? f.un_number.trim().toUpperCase() : "", hs_code: f.hs_code.trim(),
+      product_type: f.product_type ? Number(f.product_type) : null, made_to_order: f.made_to_order, lead_time_days: f.made_to_order && f.lead_time_days ? Number(f.lead_time_days) : null,
       restricted_countries: f.restricted.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean),
     };
     if (!product) body.variants = [{ sku, name: variantName }];
@@ -143,6 +147,16 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
             </>
           )}
         </fieldset>
+        <Field id="p-pt" label="Product type (decides where it can ship)" error={errors.product_type}>
+          <select id="p-pt" className="select" value={f.product_type} onChange={(e) => set("product_type", e.target.value)}>
+            <option value="">None</option>
+            {typeList.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </Field>
+        <label className="small"><input type="checkbox" checked={f.made_to_order} onChange={(e) => set("made_to_order", e.target.checked)} /> Made to order (stock is not counted)</label>
+        {f.made_to_order && (
+          <Field id="p-lt" label="Days to make before it ships" error={errors.lead_time_days}><input id="p-lt" className="input" inputMode="numeric" value={f.lead_time_days} onChange={(e) => set("lead_time_days", e.target.value)} required /></Field>
+        )}
         <Field id="p-r" label="Can't ship to (country codes, comma-separated)" error={errors.restricted_countries}>
           <input id="p-r" className="input" value={f.restricted} onChange={(e) => set("restricted", e.target.value)} />
         </Field>

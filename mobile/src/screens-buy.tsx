@@ -200,7 +200,7 @@ export function CheckoutScreen() {
       });
       await refreshCart();
       nav.navigate("OrderDetail", { number: order.number });
-      await WebBrowser.openBrowserAsync(attempt.authorization_url);
+      if (attempt.authorization_url) await WebBrowser.openBrowserAsync(attempt.authorization_url);
     } catch (e) {
       if (e instanceof ApiError) {
         const f = e.fields();
@@ -356,7 +356,8 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
     setMsg("");
     try {
       const a = await api<Attempt>("/payments/initiate/", { method: "POST", body: { order_number: o.number, provider }, headers: { "Idempotency-Key": `pay-${o.number}-${provider}-${Date.now()}` } });
-      await WebBrowser.openBrowserAsync(a.authorization_url);
+      if (a.authorization_url) await WebBrowser.openBrowserAsync(a.authorization_url);
+      else setMsg(t("done.phonePrompt"));
       reload();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : t("m.couldntPay"));

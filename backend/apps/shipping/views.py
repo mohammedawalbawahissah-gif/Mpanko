@@ -14,9 +14,9 @@ from apps.accounts.permissions import FulfillmentStaff, has_role
 from apps.catalog.models import Product
 
 from . import providers
-from .models import BlockedDestination, Carrier, Shipment, ShipmentItem, ShipmentStatus, ShippingRate, ShippingZone
+from .models import BlockedDestination, Carrier, PickupLocation, Shipment, ShipmentItem, ShipmentStatus, ShippingRate, ShippingZone
 from .serializers import (
-    BlockedDestinationSerializer, ShippingRateSerializer, ShippingZoneSerializer,
+    BlockedDestinationSerializer, PickupLocationSerializer, ShippingRateSerializer, ShippingZoneSerializer,
 )
 from .serializers import DeclineSerializer, ProofOfDeliverySerializer, ShipmentSerializer, StatusUpdateSerializer
 from .providers import TrackingError
@@ -213,6 +213,12 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             raise ValidationError({"detail": f"{live.label} credentials are not set up on the server yet."})
         if shipment.label_file:
             raise ValidationError({"detail": "This shipment already has a label."})
+        if request.data.get("pickup"):
+            place = PickupLocation.objects.filter(pk=request.data["pickup"], is_active=True).first() if str(request.data["pickup"]).isdigit() else None
+            if not place:
+                raise ValidationError({"pickup": "Choose one of the active pickup locations."})
+            shipment.pickup = place
+            shipment.save(update_fields=["pickup"])
         order = shipment.order
         code = request.data.get("service_code") or (order.shipping_service or {}).get("service_code", "")
         prefix, _, bare = code.partition(":")
@@ -334,3 +340,9 @@ class BlockedDestinationViewSet(_RulesViewSet):
     queryset = BlockedDestination.objects.all()
     serializer_class = BlockedDestinationSerializer
     audit_name = "blocked_destination"
+
+
+class PickupLocationViewSet(_RulesViewSet):
+    queryset = PickupLocation.objects.all()
+    serializer_class = PickupLocationSerializer
+    audit_name = "pickup_location"

@@ -1,5 +1,5 @@
 import type { ProductPhoto } from "./core/images";
-export interface Variant { id: number; sku: string; name: string; price: string; in_stock: boolean; on_backorder?: boolean; backorder_days?: number | null; is_active: boolean }
+export interface Variant { id: number; sku: string; name: string; price: string; in_stock: boolean; on_backorder?: boolean; backorder_days?: number | null; made_to_order?: boolean; lead_time_days?: number | null; is_active: boolean }
 export interface Product {
   id: number; name: string; slug: string; description: string; category: number | null; category_name: string | null;
   origin_country: string; maker: string; base_price: string; currency: string; variants: Variant[]; images?: ProductPhoto[];

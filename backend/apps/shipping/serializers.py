@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import BlockedDestination, Shipment, ShipmentItem, ShipmentStatus, ShippingRate, ShippingZone, TrackingEvent
+from .models import BlockedDestination, PickupLocation, Shipment, ShipmentItem, ShipmentStatus, ShippingRate, ShippingZone, TrackingEvent
 
 
 class TrackingEventSerializer(serializers.ModelSerializer):
@@ -30,6 +30,7 @@ class ShipmentSerializer(serializers.ModelSerializer):
     carrier_name = serializers.CharField(source="carrier.name", read_only=True, default=None)
     order_number = serializers.CharField(source="order.number", read_only=True)
     has_label = serializers.SerializerMethodField()
+    pickup_name = serializers.CharField(source="pickup.name", read_only=True, default=None)
 
     def get_has_label(self, obj):
         return bool(obj.label_file)
@@ -37,7 +38,7 @@ class ShipmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shipment
         fields = (
-            "has_label", "service_code", "id", "order_number", "carrier", "carrier_name", "service_name", "tracking_number",
+            "pickup", "pickup_name", "has_label", "service_code", "id", "order_number", "carrier", "carrier_name", "service_name", "tracking_number",
             "label_reference", "status", "override_reason", "created_at", "events", "items",
             "pod_recipient", "pod_note", "pod_photo_url", "pod_photo", "delivered_at",
         )
@@ -132,4 +133,16 @@ class BlockedDestinationSerializer(serializers.ModelSerializer):
         value = value.strip().upper()
         if len(value) != 2 or not value.isalpha():
             raise serializers.ValidationError("Use a 2-letter country code, for example KP.")
+        return value
+
+
+class PickupLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PickupLocation
+        fields = ("id", "name", "contact_name", "phone", "email", "line1", "city", "region", "postal_code", "country", "is_default", "is_active")
+
+    def validate_country(self, value):
+        value = (value or "").strip().upper()
+        if len(value) != 2 or not value.isalpha():
+            raise serializers.ValidationError("Use a two-letter country code, for example GH.")
         return value

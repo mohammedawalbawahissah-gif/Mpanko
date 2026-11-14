@@ -10,12 +10,12 @@ from apps.accounts.models import AuditLog
 from apps.accounts.permissions import CatalogManager, ReadOnlyOrCatalogManager
 
 from .models import (
-    Category, Inventory, OutOfStock, Product, ProductImage, ProductStatus, ProductVariant, adjust_stock,
+    Category, Inventory, OutOfStock, Product, ProductImage, ProductStatus, ProductType, ProductVariant, adjust_stock,
 )
 MAX_IMAGES = 10
 
 from .serializers import (
-    CategorySerializer, ProductImageSerializer, ProductSerializer, StockAdjustSerializer,
+    CategorySerializer, ProductImageSerializer, ProductSerializer, ProductTypeSerializer, StockAdjustSerializer,
     StockMovementSerializer, StaffVariantSerializer, VariantSerializer,
 )
 
@@ -43,6 +43,27 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return qs
 
 
+class ProductTypeViewSet(viewsets.ModelViewSet):
+    """Kinds of goods and the countries each cannot be shipped to. Anyone may read; catalog staff manage."""
+
+    queryset = ProductType.objects.all()
+    serializer_class = ProductTypeSerializer
+    permission_classes = [ReadOnlyOrCatalogManager]
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        obj = serializer.save()
+        AuditLog.record(self.request.user, "product_type.create", obj, name=obj.name)
+
+    def perform_update(self, serializer):
+        obj = serializer.save()
+        AuditLog.record(self.request.user, "product_type.update", obj, restricted=obj.restricted_countries)
+
+    def perform_destroy(self, instance):
+        AuditLog.record(self.request.user, "product_type.delete", instance, name=instance.name)
+        instance.delete()
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [ReadOnlyOrCatalogManager]
@@ -52,7 +73,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ["base_price", "created_at", "name"]
 
     def get_queryset(self):
-        qs = Product.objects.select_related("category").prefetch_related("images", "variants__inventory")
+        qs = Product.objects.select_related("category", "product_type").prefetch_related("images", "variants__inventory", "variants__product")
         user = self.request.user
         if user.is_authenticated and user.is_staff_role:
             return qs

@@ -70,6 +70,40 @@ class BlockedDestination(models.Model):
         return self.country
 
 
+class PickupLocation(models.Model):
+    """A place in Ghana (or elsewhere) parcels can leave from. Staff pick one when they book a shipment."""
+
+    name = models.CharField(max_length=100, unique=True, help_text="For staff, e.g. 'Tamale workshop'")
+    contact_name = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(max_length=32, blank=True)
+    email = models.EmailField(blank=True)
+    line1 = models.CharField(max_length=200, blank=True)
+    city = models.CharField(max_length=100)
+    region = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=2, default="GH")
+    is_default = models.BooleanField(default=False, help_text="Used for rate quotes and when staff do not choose another")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-is_default", "name"]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_default:  # only one default
+            PickupLocation.objects.exclude(pk=self.pk).filter(is_default=True).update(is_default=False)
+
+    def as_origin(self):
+        """The same shape as settings.SHIP_FROM, which is what the carrier adapters read."""
+        return {
+            "name": self.contact_name or self.name, "phone": self.phone, "email": self.email, "line1": self.line1,
+            "city": self.city, "region": self.region, "postal_code": self.postal_code, "country": self.country.upper(),
+        }
+
+    def __str__(self):
+        return f"{self.name} ({self.city})"
+
+
 class ShipmentStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     ASSIGNED = "assigned", "Assigned to carrier"
@@ -92,6 +126,7 @@ class Shipment(models.Model):
     label_format = models.CharField(max_length=8, blank=True)
     service_code = models.CharField(max_length=60, blank=True, help_text="Carrier service the shipment was booked on, e.g. 'dhl:P'")
     status = models.CharField(max_length=20, choices=ShipmentStatus.choices, default=ShipmentStatus.PENDING)
+    pickup = models.ForeignKey(PickupLocation, null=True, blank=True, on_delete=models.SET_NULL, related_name="shipments")
     override_reason = models.CharField(max_length=255, blank=True, help_text="Required when staff override the customer's chosen service")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     # Proof of delivery (FR-SHP-08)

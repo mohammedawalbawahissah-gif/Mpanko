@@ -43,6 +43,7 @@ const en = {
   "footer.track": "Track an order",
   "footer.policies": "Policies",
   "footer.privacy": "Privacy policy",
+  "footer.whatsapp": "Chat on WhatsApp",
   "footer.terms": "Terms of sale",
   "footer.returns": "Returns policy",
   "footer.cookies": "Cookie notice",
@@ -134,6 +135,7 @@ const en = {
   "shop.pricesIn": "Prices in {currency}",
   "product.backorder": "Available on backorder",
   "product.backorderDays": "Ships in about {days} days",
+  "product.madeToOrder": "Made to order",
   "common.backorder": "Backorder",
   "prefs.whatsapp": "WhatsApp messages about my orders",
   "guest.checkout": "Check out as a guest",
@@ -348,6 +350,7 @@ const en = {
   "checkout.manualHint": "You'll see how to pay on the next page. We confirm your order when your payment arrives.",
   "done.manualTitle": "Pay to finish your order",
   "done.manualBody": "We're holding your order. We'll confirm it and email you as soon as your payment arrives.",
+  "done.phonePrompt": "Approve the payment on your phone with your Mobile Money PIN. This page updates when it goes through.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -386,6 +389,7 @@ const fr: Dict = {
   "footer.track": "Suivre une commande",
   "footer.policies": "Politiques",
   "footer.privacy": "Politique de confidentialité",
+  "footer.whatsapp": "Discuter sur WhatsApp",
   "footer.terms": "Conditions de vente",
   "footer.returns": "Politique de retour",
   "footer.cookies": "Avis sur les cookies",
@@ -477,6 +481,7 @@ const fr: Dict = {
   "shop.pricesIn": "Prix en {currency}",
   "product.backorder": "Disponible en précommande",
   "product.backorderDays": "Expédié sous environ {days} jours",
+  "product.madeToOrder": "Fait sur commande",
   "common.backorder": "Précommande",
   "prefs.whatsapp": "Messages WhatsApp sur mes commandes",
   "guest.checkout": "Commander en tant qu’invité",
@@ -691,6 +696,7 @@ const fr: Dict = {
   "checkout.manualHint": "Vous verrez comment payer sur la page suivante. Nous confirmons votre commande dès que votre paiement arrive.",
   "done.manualTitle": "Payez pour finaliser votre commande",
   "done.manualBody": "Nous gardons votre commande. Nous la confirmerons et vous écrirons dès que votre paiement arrivera.",
+  "done.phonePrompt": "Approuvez le paiement sur votre téléphone avec votre code Mobile Money. Cette page se met à jour dès qu'il est passé.",
 };
 
 const es: Dict = {
@@ -726,6 +732,7 @@ const es: Dict = {
   "footer.track": "Seguir un pedido",
   "footer.policies": "Políticas",
   "footer.privacy": "Política de privacidad",
+  "footer.whatsapp": "Chatear por WhatsApp",
   "footer.terms": "Condiciones de venta",
   "footer.returns": "Política de devoluciones",
   "footer.cookies": "Aviso de cookies",
@@ -817,6 +824,7 @@ const es: Dict = {
   "shop.pricesIn": "Precios en {currency}",
   "product.backorder": "Disponible bajo pedido",
   "product.backorderDays": "Se envía en unos {days} días",
+  "product.madeToOrder": "Hecho por encargo",
   "common.backorder": "Bajo pedido",
   "prefs.whatsapp": "Mensajes de WhatsApp sobre mis pedidos",
   "guest.checkout": "Pagar como invitado",
@@ -1031,6 +1039,7 @@ const es: Dict = {
   "checkout.manualHint": "En la siguiente página verás cómo pagar. Confirmamos tu pedido cuando llegue tu pago.",
   "done.manualTitle": "Paga para terminar tu pedido",
   "done.manualBody": "Estamos reservando tu pedido. Lo confirmaremos y te escribiremos en cuanto llegue tu pago.",
+  "done.phonePrompt": "Aprueba el pago en tu teléfono con tu PIN de Mobile Money. Esta página se actualiza cuando se completa.",
 };
 
 // Hausa. Written without a native reviewer: have a Hausa speaker read it before launch.
@@ -1068,6 +1077,7 @@ const ha: Dict = {
   "footer.track": "Bi diddigin oda",
   "footer.policies": "Manufofi",
   "footer.privacy": "Manufar sirri",
+  "footer.whatsapp": "Yi hira ta WhatsApp",
   "footer.terms": "Sharuddan siyarwa",
   "footer.returns": "Manufar mayarwa",
   "footer.cookies": "Sanarwar kuki",
@@ -1161,6 +1171,7 @@ const ha: Dict = {
   "shop.pricesIn": "Farashi a {currency}",
   "product.backorder": "Ana iya yin oda a gaba",
   "product.backorderDays": "Ana aikawa cikin kusan kwana {days}",
+  "product.madeToOrder": "Ana yi bisa oda",
   "bag.emptyHint": "Ka samo wani abu da aka yi da kulawa, zai jira ka a nan.",
   "bag.each": "{price} kowanne",
   "bag.items": "Kayayyaki",
@@ -1372,6 +1383,7 @@ const ha: Dict = {
   "checkout.manualHint": "Za ka ga yadda ake biya a shafi na gaba. Za mu tabbatar da odarka idan biyan ya iso.",
   "done.manualTitle": "Biya don kammala odarka",
   "done.manualBody": "Muna riƙe odarka. Za mu tabbatar da ita mu aiko maka imel da zarar biyan ya iso.",
+  "done.phonePrompt": "Ka amince da biyan a wayarka da lambar sirrin Mobile Money. Wannan shafi zai sabunta idan ya wuce.",
 };
 
 export const MESSAGES: Record<string, Dict> = { en, fr, es, ha };

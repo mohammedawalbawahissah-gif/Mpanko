@@ -38,3 +38,10 @@ Tick each line when it is done and write the date. This is the last page to fini
 - [ ] Someone used the shop with a keyboard only and with a screen reader (automated checks are not enough).
 
 Signed off by (name, date): ______________________
+
+## Open items for handover
+
+- The domain name is bought by Dr. Med; transfer it to the client at handover.
+- French, Spanish and Hausa text has not been checked by native readers. `docs/TRANSLATION-REVIEW.csv` lists every line with a column for corrections. Send it to a native reader per language.
+- Support staff accounts are not created yet. Add them under Staff in the admin app.
+- The mobile app has not been tried on a real phone.

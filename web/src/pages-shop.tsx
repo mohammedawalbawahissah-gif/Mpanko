@@ -272,7 +272,8 @@ export function ProductPage() {
               </div>
             </>
           )}
-          {variant && (variant.on_backorder
+          {variant?.made_to_order && <p className="stock-ok">{t("product.madeToOrder")}{variant.lead_time_days ? `. ${t("product.backorderDays", { days: variant.lead_time_days })}` : ""}</p>}
+          {variant && !variant.made_to_order && (variant.on_backorder
             ? <p className="stock-ok">{t("product.backorder")}{variant.backorder_days ? `. ${t("product.backorderDays", { days: variant.backorder_days })}` : ""}</p>
             : variant.in_stock ? <p className="stock-ok">In stock</p> : <p className="stock-out">Sold out</p>)}
           <div className="buy-row">

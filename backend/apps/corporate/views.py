@@ -37,6 +37,7 @@ class SiteView(APIView):
         return Response({
             "profile": SiteProfileSerializer(SiteProfile.get()).data,
             "businesses": PublicBusinessSerializer(_published(), many=True, context={"request": request}).data,
+            "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
         })
 
 

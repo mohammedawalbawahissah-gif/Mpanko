@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Inventory, Product, ProductImage, ProductVariant, StockMovement
+from .models import Category, Inventory, Product, ProductImage, ProductType, ProductVariant, StockMovement
 
 
 class VariantInline(admin.TabularInline):
@@ -11,6 +11,11 @@ class VariantInline(admin.TabularInline):
 class ImageInline(admin.TabularInline):
     model = ProductImage
     extra = 0
+
+
+@admin.register(ProductType)
+class ProductTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "restricted_countries")
 
 
 @admin.register(Product)

@@ -49,8 +49,14 @@ class Booking:
     reference: str = ""
 
 
-def origin():
-    return dict(settings.SHIP_FROM)
+def origin(shipment=None):
+    """Where the parcel leaves from: the shipment's own pickup place, else the default pickup place, else SHIP_FROM."""
+    from .models import PickupLocation
+
+    place = getattr(shipment, "pickup", None)
+    if place is None or not place.is_active:
+        place = PickupLocation.objects.filter(is_default=True, is_active=True).first()
+    return place.as_origin() if place else dict(settings.SHIP_FROM)
 
 
 def parcel_for(weight_grams, dims=None):
@@ -151,7 +157,7 @@ class DHLExpress(LiveCarrier):
         return out
 
     def book(self, shipment, dest, weight_grams, service_code, dims=None):
-        o, p = origin(), parcel_for(weight_grams, dims)
+        o, p = origin(shipment), parcel_for(weight_grams, dims)
         order = shipment.order
         international = o["country"].upper() != dest["country"].upper()
 
@@ -250,7 +256,7 @@ class FedEx(LiveCarrier):
         return out
 
     def book(self, shipment, dest, weight_grams, service_code, dims=None):
-        o, p = origin(), parcel_for(weight_grams, dims)
+        o, p = origin(shipment), parcel_for(weight_grams, dims)
         order = shipment.order
         international = o["country"].upper() != dest["country"].upper()
         body = {
@@ -340,8 +346,8 @@ class UPS(LiveCarrier):
         return {"AddressLine": [x for x in (a.get("line1"), a.get("line2")) if x] or ["-"], "City": a.get("city", ""),
                 "StateProvinceCode": (a.get("region") or "")[:2].upper(), "PostalCode": a.get("postal_code", ""), "CountryCode": a["country"]}
 
-    def _shipment_block(self, dest, p, service_code=None):
-        o = origin()
+    def _shipment_block(self, dest, p, service_code=None, shipment=None):
+        o = origin(shipment)
         block = {
             "Shipper": {"Name": o["name"], "ShipperNumber": settings.UPS_ACCOUNT, "Address": self._addr(o)},
             "ShipTo": {"Name": dest.get("recipient_name", "-"), "Address": self._addr(dest)},
@@ -379,8 +385,8 @@ class UPS(LiveCarrier):
 
     def book(self, shipment, dest, weight_grams, service_code, dims=None):
         p = parcel_for(weight_grams, dims)
-        o = origin()
-        block = self._shipment_block(dest, p, service_code)
+        o = origin(shipment)
+        block = self._shipment_block(dest, p, service_code, shipment)
         block["Description"] = f"Order {shipment.order.number}"
         block["PaymentInformation"] = {"ShipmentCharge": {"Type": "01", "BillShipper": {"AccountNumber": settings.UPS_ACCOUNT}}}
         block["Shipper"]["Phone"] = {"Number": o["phone"] or "0000000000"}

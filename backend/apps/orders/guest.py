@@ -154,7 +154,11 @@ class PublicConfigView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        return Response({"guest_checkout": settings.GUEST_CHECKOUT_ENABLED})
+        return Response({
+            "guest_checkout": settings.GUEST_CHECKOUT_ENABLED,
+            "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
+            "launch_countries": settings.LAUNCH_COUNTRIES,
+        })
 
 
 def guest_payment_order(number, token):

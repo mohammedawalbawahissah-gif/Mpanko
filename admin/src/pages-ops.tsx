@@ -381,10 +381,13 @@ export function ShipmentDetail() {
     }
   };
   const [labelService, setLabelService] = useState("");
+  const pickups = useAsync(() => api<Page<{ id: number; name: string; is_default: boolean; is_active: boolean }> | { id: number; name: string; is_default: boolean; is_active: boolean }[]>("/shipping/pickups/").catch(() => [] as { id: number; name: string; is_default: boolean; is_active: boolean }[]), []);
+  const pickupList = (Array.isArray(pickups.data) ? pickups.data : pickups.data?.results ?? []).filter((p) => p.is_active);
+  const [pickup, setPickup] = useState("");
   const createLabel = async () => {
     setMsg(null);
     try {
-      await api(`/shipments/${s.id}/label/`, { method: "POST", body: labelService ? { service_code: labelService.trim() } : {} });
+      await api(`/shipments/${s.id}/label/`, { method: "POST", body: { ...(labelService ? { service_code: labelService.trim() } : {}), ...(pickup ? { pickup: Number(pickup) } : {}) } });
       setMsg({ kind: "ok", text: "Label created and tracking number saved." });
       reload();
     } catch (err) {
@@ -424,6 +427,14 @@ export function ShipmentDetail() {
               <Field id="l-s" label="Carrier service code">
                 <input id="l-s" className="input" placeholder="dhl:P, fedex:INTERNATIONAL_PRIORITY or ups:65" value={labelService} onChange={(e) => setLabelService(e.target.value)} />
               </Field>
+              {pickupList.length > 0 && (
+                <Field id="l-p" label="Collect from">
+                  <select id="l-p" className="select" value={pickup} onChange={(e) => setPickup(e.target.value)}>
+                    <option value="">Default pickup location</option>
+                    {pickupList.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </Field>
+              )}
               <button className="btn" onClick={createLabel}>Create label</button>
               <p className="small" style={{ margin: 0 }}>Works for DHL, FedEx and UPS carriers. Leave the code blank to use the service the customer chose.</p>
             </div>

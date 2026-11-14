@@ -107,7 +107,11 @@ class TableProvider(ShippingProvider):
 def blocked_reason(country):
     from .models import BlockedDestination
 
-    row = BlockedDestination.objects.filter(country=(country or "").upper()).first()
+    country = (country or "").upper()
+    launch = [c.upper() for c in getattr(settings, "LAUNCH_COUNTRIES", [])]
+    if launch and country not in launch:
+        return "We don't deliver to this country yet."
+    row = BlockedDestination.objects.filter(country=country).first()
     return None if row is None else (row.reason or "We can't ship to this country.")
 
 

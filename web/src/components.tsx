@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type CSSProperties, type ErrorInfo, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, useCart, useCurrency } from "./context";
+import { useShopConfig } from "./guest-config";
 import { LanguageSelect, useT } from "./i18n";
 import { reportError } from "./report";
 import type { Product } from "./types";
@@ -66,6 +67,7 @@ export function Layout() {
   const { count } = useCart();
   const { currency, currencies, names, setCurrency } = useCurrency();
   const { t } = useT();
+  const whatsapp = (useShopConfig()?.whatsapp_number ?? "").replace(/\D/g, "");
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -142,6 +144,7 @@ export function Layout() {
             <ul>
               <li><Link to="/account">{t("footer.profile")}</Link></li>
               <li><Link to="/orders">{t("footer.track")}</Link></li>
+              {whatsapp && <li><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">{t("footer.whatsapp")}</a></li>}
             </ul>
           </div>
           <div>

@@ -222,6 +222,10 @@ MANUAL_FX_RATES = {
 FX_PROVIDER_URL = os.environ.get("FX_PROVIDER_URL", "https://open.er-api.com/v6/latest/{base}")  # free, no key
 FX_MAX_AGE_HOURS = int(os.environ.get("FX_MAX_AGE_HOURS", "48"))  # older live rates are ignored
 STORE_COUNTRY = os.environ.get("STORE_COUNTRY", "GH")  # shipments to other countries are "international" (duty declaration required)
+# Countries we deliver to at launch (two-letter codes). Blank = no limit. Everything else is refused at checkout.
+LAUNCH_COUNTRIES = [c.upper() for c in env_list("LAUNCH_COUNTRIES", "")]
+# WhatsApp number customers can message for support, digits only with the country code, e.g. 233240000000. Blank = no button.
+WHATSAPP_SUPPORT_NUMBER = "".join(ch for ch in os.environ.get("WHATSAPP_SUPPORT_NUMBER", "") if ch.isdigit())
 SHIPPING_FLAT_RATE = os.environ.get("SHIPPING_FLAT_RATE", "15.00")  # in BASE_CURRENCY (OD-09)
 STOCK_RESERVATION_MINUTES = int(os.environ.get("STOCK_RESERVATION_MINUTES", "30"))
 
@@ -284,7 +288,7 @@ WHATSAPP_TEMPLATE_SIDS = os.environ.get("WHATSAPP_TEMPLATE_SIDS", "")  # JSON: e
 
 APP_SCHEME = os.environ.get("APP_SCHEME", "mpanko")  # deep-link scheme of the mobile app
 EXPO_ACCESS_TOKEN = os.environ.get("EXPO_ACCESS_TOKEN", "")  # optional; raises Expo push limits
-RETURN_WINDOW_DAYS = int(os.environ.get("RETURN_WINDOW_DAYS", "14"))  # days after delivery; confirm with the client (OD-11)
+RETURN_WINDOW_DAYS = int(os.environ.get("RETURN_WINDOW_DAYS", "14"))  # days after delivery (decided: OD-11)
 RETURN_ALLOW_CHANGED_MIND = env_bool("RETURN_ALLOW_CHANGED_MIND", True)
 
 # --- Shipping carriers --------------------------------------------------------
@@ -334,6 +338,12 @@ PAYPAL_ENV = os.environ.get("PAYPAL_ENV", "sandbox")  # "live" for real money
 FLUTTERWAVE_SECRET_KEY = os.environ.get("FLUTTERWAVE_SECRET_KEY", "")
 FLUTTERWAVE_WEBHOOK_HASH = os.environ.get("FLUTTERWAVE_WEBHOOK_HASH", "")  # the "secret hash" set in the dashboard
 API_PUBLIC_URL = os.environ.get("API_PUBLIC_URL", "").rstrip("/")  # this API's own public address; gateways that need a callback URL use it
+MTN_MOMO_API_USER = os.environ.get("MTN_MOMO_API_USER", "")
+MTN_MOMO_API_KEY = os.environ.get("MTN_MOMO_API_KEY", "")
+MTN_MOMO_SUBSCRIPTION_KEY = os.environ.get("MTN_MOMO_SUBSCRIPTION_KEY", "")  # the Collections product's primary key
+MTN_MOMO_ENVIRONMENT = os.environ.get("MTN_MOMO_ENVIRONMENT", "sandbox")  # "sandbox", or "mtnghana" for live Ghana
+MTN_MOMO_BASE_URL = os.environ.get("MTN_MOMO_BASE_URL", "https://sandbox.momodeveloper.mtn.com")
+MTN_MOMO_CURRENCY = os.environ.get("MTN_MOMO_CURRENCY", "EUR" if MTN_MOMO_ENVIRONMENT == "sandbox" else "GHS")
 HUBTEL_CLIENT_ID = os.environ.get("HUBTEL_CLIENT_ID", "")
 HUBTEL_CLIENT_SECRET = os.environ.get("HUBTEL_CLIENT_SECRET", "")
 HUBTEL_MERCHANT_ACCOUNT = os.environ.get("HUBTEL_MERCHANT_ACCOUNT", "")  # the POS / merchant account number

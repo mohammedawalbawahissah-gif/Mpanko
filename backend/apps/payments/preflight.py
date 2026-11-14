@@ -123,6 +123,13 @@ def _provider_check(name, offline):
         out = [Result(g, "Hubtel callback address", PASS if settings.API_PUBLIC_URL else FAIL, "" if settings.API_PUBLIC_URL else "API_PUBLIC_URL is not set.", "Set API_PUBLIC_URL to this API's public address so Hubtel can reach /api/v1/payments/webhooks/hubtel/.")]
         out.append(Result(g, "Hubtel not yet tested here", WARN, "This adapter was written from Hubtel's documentation and has not run against a Hubtel account. Place a test payment before launch."))
         return out
+    elif name == "mtn_momo":
+        if not (settings.MTN_MOMO_API_USER and settings.MTN_MOMO_API_KEY and settings.MTN_MOMO_SUBSCRIPTION_KEY):
+            return [Result(g, "MTN MoMo credentials", FAIL, "", "Set MTN_MOMO_API_USER, MTN_MOMO_API_KEY and MTN_MOMO_SUBSCRIPTION_KEY.")]
+        live = settings.MTN_MOMO_ENVIRONMENT != "sandbox" and settings.MTN_MOMO_CURRENCY == "GHS"
+        return [Result(g, "MTN MoMo uses live settings", PASS if live else FAIL, "" if live else "Still pointing at MTN's sandbox.", "Set MTN_MOMO_ENVIRONMENT=mtnghana, MTN_MOMO_BASE_URL to MTN's live address, and MTN_MOMO_CURRENCY=GHS."),
+                Result(g, "MTN MoMo callback address", PASS if settings.API_PUBLIC_URL.startswith("https://") else WARN, "" if settings.API_PUBLIC_URL.startswith("https://") else "API_PUBLIC_URL is not https, so MTN cannot call back; shoppers' payments are found by polling instead."),
+                Result(g, "MTN MoMo not yet tested here", WARN, "Written from MTN's documentation and not run against a live MTN account. Place a test payment before launch.")]
     elif name == "mock":
         return [Result(g, "Mock gateway is off", FAIL if not settings.DEBUG else WARN, "The test gateway accepts any payment.", "Remove mock from PAYMENT_PROVIDERS_ENABLED.")]
     else:
@@ -149,10 +156,15 @@ def check_payments(offline):
     real = [n for n in names if n != "mock"]
     if not real:
         out.append(Result("Payments", "At least one real gateway", FAIL, "None enabled.", "Set PAYMENT_PROVIDERS_ENABLED=paystack (or stripe, paypal, flutterwave)."))
-    for n in ("paystack", "stripe", "paypal", "flutterwave", "hubtel", "zelle", "cashapp", "cash"):
+    for n in ("paystack", "stripe", "paypal", "flutterwave", "hubtel", "mtn_momo", "zelle", "cashapp", "cash"):
         out.extend(_provider_check(n, offline))
     if "mock" in names:
         out.extend(_provider_check("mock", offline))
+    out.append(Result("Launch", "Launch countries are set", PASS if settings.LAUNCH_COUNTRIES else WARN,
+                      ", ".join(settings.LAUNCH_COUNTRIES) if settings.LAUNCH_COUNTRIES else "LAUNCH_COUNTRIES is blank, so the shop would try to deliver everywhere.",
+                      "Set LAUNCH_COUNTRIES=US,GB,CA,DE,GH."))
+    out.append(Result("Launch", "WhatsApp number is set", PASS if settings.WHATSAPP_SUPPORT_NUMBER else WARN,
+                      "" if settings.WHATSAPP_SUPPORT_NUMBER else "The Chat on WhatsApp button stays hidden.", "Set WHATSAPP_SUPPORT_NUMBER, digits only with country code."))
     from .providers import chargeable_currencies
 
     try:

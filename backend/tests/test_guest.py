@@ -47,7 +47,7 @@ def place(api, variant, key="g-1", **over):
 def test_guest_checkout_is_closed_until_switched_on(api, settings):
     settings.GUEST_CHECKOUT_ENABLED = False  # do not depend on the developer's .env
     _, variant = make_product()
-    assert api.get("/api/v1/config/").data == {"guest_checkout": False}
+    assert api.get("/api/v1/config/").data["guest_checkout"] is False
     assert place(api, variant).status_code == 404
     assert api.get("/api/v1/orders/guest/MP-1/?token=x").status_code == 404
     assert api.post("/api/v1/orders/guest/lookup/", {"number": "MP-1", "email": "a@b.co"}, format="json").status_code == 404
@@ -56,7 +56,7 @@ def test_guest_checkout_is_closed_until_switched_on(api, settings):
 
 
 def test_config_reports_when_it_is_on(api, guest_on):
-    assert api.get("/api/v1/config/").data == {"guest_checkout": True}
+    assert api.get("/api/v1/config/").data["guest_checkout"] is True
 
 
 # --- placing an order -----------------------------------------------------------------------------------------

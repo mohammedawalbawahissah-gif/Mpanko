@@ -8,6 +8,8 @@ export interface Variant {
   in_stock: boolean;
   on_backorder?: boolean;
   backorder_days?: number | null;
+  made_to_order?: boolean;
+  lead_time_days?: number | null;
 }
 
 export interface ProductImage {

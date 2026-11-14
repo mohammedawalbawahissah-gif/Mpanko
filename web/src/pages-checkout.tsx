@@ -121,7 +121,7 @@ export function Checkout() {
       body: { order_number: o.number, provider },
       headers: { "Idempotency-Key": `pay-${o.number}-${provider}` },
     });
-    window.location.href = attempt.authorization_url;
+    goToPayment(attempt);
   };
 
   const place = async () => {
@@ -318,11 +318,17 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
   );
 }
 
+/** Send the shopper to the gateway's page. Phone-prompt methods such as MTN MoMo have no page, so wait for approval instead. */
+export function goToPayment(attempt: { authorization_url: string; reference: string }) {
+  window.location.href = attempt.authorization_url || `/checkout/complete?reference=${encodeURIComponent(attempt.reference)}&phone=1`;
+}
+
 export function providerName(provider: string, currency: string, t?: (key: "checkout.methodMomo" | "checkout.methodCard" | "checkout.methodCash") => string): string {
   const momo = t ? t("checkout.methodMomo") : "Mobile Money or card";
   const card = t ? t("checkout.methodCard") : "Card";
   if (provider === "paystack") return currency === "GHS" ? momo : card;
   if (provider === "hubtel") return `Hubtel (${momo})`;
+  if (provider === "mtn_momo") return "MTN Mobile Money";
   if (provider === "cashapp") return "Cash App";
   if (provider === "cash") return t ? t("checkout.methodCash") : "Cash";
   if (provider === "mock") return "Test payment (development only)";
@@ -360,7 +366,7 @@ export function CheckoutComplete() {
         const r = await api<Verified>(guest ? `/payments/guest/verify/${reference}/?token=${encodeURIComponent(guest.token)}` : `/payments/verify/${reference}/`);
         if (cancelled) return;
         setResult(r);
-        if (r.payment_status === "pending" && !r.manual && tries++ < 6) setTimeout(check, 2500);
+        if (r.payment_status === "pending" && !r.manual && tries++ < 36) setTimeout(check, 2500);
         else {
           if (guest && r.payment_status === "succeeded") {
             try {
@@ -412,7 +418,7 @@ export function CheckoutComplete() {
       {result.payment_status === "pending" && !result.manual && (
         <>
           <h1>{t("done.confirming")}</h1>
-          <p>{t("done.confirmingBody")}</p>
+          <p>{params.get("phone") ? t("done.phonePrompt") : t("done.confirmingBody")}</p>
           <Link className="btn" to={orderLink(result.order_number)}>{t("done.view")}</Link>
         </>
       )}
@@ -494,7 +500,7 @@ export function OrderDetail() {
         body: { order_number: order.number, provider },
         headers: { "Idempotency-Key": `pay-${order.number}-${provider}-${Date.now()}` },
       });
-      window.location.href = attempt.authorization_url;
+      goToPayment(attempt);
     } catch (e) {
       setActionError(e instanceof ApiError ? e.message : "Couldn't start payment.");
       setBusy(false);

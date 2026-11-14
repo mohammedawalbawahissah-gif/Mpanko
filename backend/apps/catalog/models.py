@@ -25,6 +25,33 @@ class Category(models.Model):
         return self.name
 
 
+class ProductType(models.Model):
+    """
+    A kind of goods that shares shipping rules (food, cosmetics, plant products ...). Staff list the countries
+    a type cannot be sent to once, and every product of that type follows it, on top of the product's own list.
+    """
+
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=90, unique=True, blank=True)
+    notes = models.CharField(max_length=300, blank=True, help_text="Internal: licences, labels or paperwork this kind of goods needs")
+    restricted_countries = models.JSONField(default=list, blank=True, help_text='Countries this kind of goods cannot be shipped to, e.g. ["AU", "NZ"]')
+    restriction_note = models.CharField(max_length=200, blank=True, help_text="Shown to staff next to the restriction")
+
+    class Meta:
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name) or "type"
+        super().save(*args, **kwargs)
+
+    def can_ship_to(self, country_code):
+        return (country_code or "").upper() not in {c.upper() for c in (self.restricted_countries or [])}
+
+    def __str__(self):
+        return self.name
+
+
 class ProductStatus(models.TextChoices):
     DRAFT = "draft", "Draft"
     PUBLISHED = "published", "Published"
@@ -51,6 +78,11 @@ class Product(models.Model):
     dg_class = models.CharField(max_length=10, blank=True, help_text="UN hazard class, e.g. 9 (batteries), 2.1 (aerosols), 3 (flammable liquids)")
     un_number = models.CharField(max_length=10, blank=True, help_text="e.g. UN3481")
     hs_code = models.CharField(max_length=12, blank=True, help_text="Customs tariff code, printed on invoices for international parcels")
+    # Kind of goods; its country restrictions apply to every product of the type.
+    product_type = models.ForeignKey(ProductType, null=True, blank=True, on_delete=models.SET_NULL, related_name="products")
+    # Made to order: always orderable, no stock counted; shoppers see the lead time instead.
+    made_to_order = models.BooleanField(default=False)
+    lead_time_days = models.PositiveIntegerField(null=True, blank=True, help_text="Days from payment until it ships (made-to-order products)")
     # Shipping restrictions (FR-SHP-09): empty list = no restriction
     restricted_countries = models.JSONField(default=list, blank=True, help_text='e.g. ["KP", "IR"]')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,7 +102,9 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     def can_ship_to(self, country_code):
-        return (country_code or "").upper() not in {c.upper() for c in (self.restricted_countries or [])}
+        if (country_code or "").upper() in {c.upper() for c in (self.restricted_countries or [])}:
+            return False
+        return self.product_type is None or self.product_type.can_ship_to(country_code)
 
     def __str__(self):
         return self.name
@@ -154,13 +188,18 @@ class OutOfStock(Exception):
         self.sku = sku
 
 
+AUTOMATIC_REASONS = (StockMovement.Reason.ORDER, StockMovement.Reason.ORDER_RELEASE, StockMovement.Reason.RETURN)
+
+
 @transaction.atomic
 def adjust_stock(variant_id, delta, reason, actor=None, note="", order_ref="", enforce=True):
     """
     Concurrency-safe stock change. Locks the inventory row so parallel checkouts cannot oversell
     (FR-CAT-04). Raises OutOfStock if `enforce` and the result would be negative without backorder.
     """
-    inv = Inventory.objects.select_for_update().select_related("variant").get(variant_id=variant_id)
+    inv = Inventory.objects.select_for_update().select_related("variant__product").get(variant_id=variant_id)
+    if inv.variant.product.made_to_order and reason in AUTOMATIC_REASONS:
+        return inv  # made to order: nothing is counted out of or back into stock
     new_qty = inv.quantity + delta
     if enforce and new_qty < 0 and not inv.allow_backorder:
         raise OutOfStock(inv.variant.sku)

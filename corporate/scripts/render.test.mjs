@@ -115,3 +115,9 @@ test("helpers", () => {
   assert.deepEqual(paragraphs("a\n\n\n b \n\nc"), ["a", "b", "c"]);
   assert.ok(fallbackBusinesses.length >= 1);
 });
+
+test("contact page shows a WhatsApp link only when a number is set", () => {
+  const withNumber = contactPage({ site, profile: { ...fallbackProfile, whatsapp_number: "+233 24 123 4567" }, businesses: [] });
+  assert.match(withNumber, /https:\/\/wa\.me\/233241234567/);
+  assert.doesNotMatch(contactPage({ site, profile: { ...fallbackProfile }, businesses: [] }), /wa\.me/);
+});

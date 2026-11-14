@@ -90,7 +90,7 @@ def _guest_items(items):
     merged = {}
     for variant_id, qty in items:
         merged[int(variant_id)] = merged.get(int(variant_id), 0) + int(qty)
-    variants = {v.pk: v for v in ProductVariant.objects.select_related("product", "inventory").filter(pk__in=merged)}
+    variants = {v.pk: v for v in ProductVariant.objects.select_related("product__product_type", "inventory").filter(pk__in=merged)}
     if len(variants) != len(merged):
         raise CheckoutError("Something in your bag is no longer available.", "cart")
     return [_GuestItem(variants[pk], min(merged[pk], 99)) for pk in sorted(merged)]
@@ -98,7 +98,7 @@ def _guest_items(items):
 
 def _cart_lines(cart, country, items=None):
     lines = []
-    source = items if items is not None else cart.items.select_related("variant__product", "variant__inventory").order_by("variant_id")
+    source = items if items is not None else cart.items.select_related("variant__product__product_type", "variant__inventory").order_by("variant_id")
     for item in source:
         variant, product = item.variant, item.variant.product
         if product.status != ProductStatus.PUBLISHED or not variant.is_active:

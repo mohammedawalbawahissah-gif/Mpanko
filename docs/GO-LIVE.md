@@ -155,3 +155,28 @@ Set `WHATSAPP_BACKEND=twilio` and `TWILIO_WHATSAPP_FROM` (your approved WhatsApp
 ## Serving the web and admin apps with security headers
 
 `npm run build` then `npm start` in `web/` and `admin/` serves the site with a strict Content-Security-Policy, HSTS, no framing and a locked-down permissions policy. Set `API_ORIGIN` (your API's address, for example `https://api.example.com`) so the pages are allowed to call it, and optionally `IMG_ORIGINS` to limit where images may load from. Railway: set the start command to `npm start`. Test the shop after the first deploy; if something that used to load is blocked, the browser console names the blocked address.
+
+## Launch settings added for the first release
+
+Set these as variables on Railway (backend service):
+
+| Variable | Value | What it does |
+|---|---|---|
+| `LAUNCH_COUNTRIES` | `US,GB,CA,DE,GH` | We deliver only to these countries. Blank means no limit, so set it before launch. |
+| `GUEST_CHECKOUT_ENABLED` | `true` | Lets people buy without an account. |
+| `WHATSAPP_SUPPORT_NUMBER` | digits only, with country code, for example `233241234567` | Shows "Chat on WhatsApp" in the shop, the app and the corporate site. Hidden while blank. |
+| `PAYMENT_PROVIDERS_ENABLED` | add `mtn_momo` | Turns on native MTN Mobile Money for Ghana (GHS). |
+| `MTN_MOMO_API_USER`, `MTN_MOMO_API_KEY`, `MTN_MOMO_SUBSCRIPTION_KEY` | from the MTN MoMo developer portal | Credentials. |
+| `MTN_MOMO_ENVIRONMENT`, `MTN_MOMO_BASE_URL`, `MTN_MOMO_CURRENCY` | `mtnghana`, MTN's live address, `GHS` | Switch from sandbox to live after MTN approves the business. |
+
+MTN MoMo was written from MTN's documentation and tested with mocked responses only. Place a real test payment on the sandbox, then on live, before taking customers. MTN's live approval needs the client's business documents.
+
+Returns: 14-day window after delivery, change-of-mind returns allowed (customer pays return postage), refunds within 7 days. Change with `RETURN_WINDOW_DAYS` and `RETURN_ALLOW_CHANGED_MIND`.
+
+Run `python manage.py preflight` after setting these. It warns about anything missing.
+
+## Staff screens added
+
+- Product types: shipping rules by kind of product (Admin > Product types).
+- Pickup locations: where couriers collect from; choose one when creating a label.
+- Product form: "Made to order" and days to make.

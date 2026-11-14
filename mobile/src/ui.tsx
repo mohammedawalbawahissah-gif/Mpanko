@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { api } from "./api";
 import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
 import { photoLabel, type ProductPhoto } from "./core/images";
@@ -49,6 +50,17 @@ export function useCachedAsync<T>(key: string, fn: () => Promise<T>, deps: unkno
   }, [run]);
   useEffect(load, [load]);
   return { data, error, loading, savedAt, reload: load };
+}
+
+/** "Chat on WhatsApp". Shown only once the shop has set its WhatsApp number. */
+export function WhatsAppButton() {
+  const { t } = usePrefs();
+  const [number, setNumber] = useState("");
+  useEffect(() => {
+    api<{ whatsapp_number?: string }>("/config/").then((c) => setNumber((c.whatsapp_number ?? "").replace(/\D/g, ""))).catch(() => undefined);
+  }, []);
+  if (!number) return null;
+  return <Button title={t("footer.whatsapp")} kind="quiet" onPress={() => Linking.openURL(`https://wa.me/${number}`)} />;
 }
 
 export function Button({ title, onPress, disabled, kind = "primary" }: { title: string; onPress: () => void; disabled?: boolean; kind?: "primary" | "quiet" | "danger" }) {
@@ -163,6 +175,7 @@ export function statusText(t: (key: MessageKey) => string, v: string): string {
 export function methodLabel(t: (key: MessageKey) => string, provider: string, currency: string): string {
   if (provider === "paystack") return currency === "GHS" ? t("checkout.methodMomo") : t("checkout.methodCard");
   if (provider === "hubtel") return `Hubtel (${t("checkout.methodMomo")})`;
+  if (provider === "mtn_momo") return "MTN Mobile Money";
   if (provider === "zelle") return "Zelle";
   if (provider === "cashapp") return "Cash App";
   if (provider === "cash") return t("checkout.methodCash");

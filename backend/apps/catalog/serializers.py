@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Inventory, Product, ProductImage, ProductVariant, StockMovement
+from .models import Category, Inventory, Product, ProductImage, ProductType, ProductVariant, StockMovement
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -31,25 +31,33 @@ class VariantSerializer(serializers.ModelSerializer):
     quantity = serializers.SerializerMethodField()
     on_backorder = serializers.SerializerMethodField()
     backorder_days = serializers.SerializerMethodField()
+    made_to_order = serializers.BooleanField(source="product.made_to_order", read_only=True)
+    lead_time_days = serializers.IntegerField(source="product.lead_time_days", read_only=True)
 
     class Meta:
         model = ProductVariant
-        fields = ("id", "sku", "name", "attributes", "price_override", "price", "is_active", "in_stock", "quantity", "on_backorder", "backorder_days")
+        fields = ("id", "sku", "name", "attributes", "price_override", "price", "is_active", "in_stock", "quantity", "on_backorder", "backorder_days", "made_to_order", "lead_time_days")
 
     def _inv(self, obj):
         return getattr(obj, "inventory", None)
 
     def get_in_stock(self, obj):
         inv = self._inv(obj)
+        if obj.product.made_to_order:
+            return True
         return bool(inv and (inv.quantity > 0 or inv.allow_backorder))
 
     def get_on_backorder(self, obj):
         """True when the shopper can still order it, but it ships after a wait."""
         inv = self._inv(obj)
+        if obj.product.made_to_order:
+            return False
         return bool(inv and inv.allow_backorder and inv.quantity <= 0)
 
     def get_backorder_days(self, obj):
         inv = self._inv(obj)
+        if obj.product.made_to_order:
+            return None
         return inv.backorder_days if inv and inv.allow_backorder and inv.quantity <= 0 else None
 
     def get_quantity(self, obj):
@@ -83,10 +91,12 @@ class ProductSerializer(serializers.ModelSerializer):
     variants = VariantSerializer(many=True, required=False)
     images = ProductImageSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True, default=None)
+    product_type_name = serializers.CharField(source="product_type.name", read_only=True, default=None)
 
     class Meta:
         model = Product
         fields = (
+            "product_type", "product_type_name", "made_to_order", "lead_time_days",
             "id", "name", "slug", "description", "category", "category_name", "origin_country", "maker",
             "base_price", "currency", "status", "weight_grams", "length_mm", "width_mm", "height_mm",
             "is_dangerous_goods", "dg_class", "un_number", "hs_code", "restricted_countries",
@@ -98,6 +108,10 @@ class ProductSerializer(serializers.ModelSerializer):
         dims = [attrs.get(k, getattr(self.instance, k, 0)) for k in ("length_mm", "width_mm", "height_mm")]
         if any(dims) and not all(dims):
             raise serializers.ValidationError({"length_mm": "Give length, width and height together, or leave all three at 0."})
+        mto = attrs.get("made_to_order", getattr(self.instance, "made_to_order", False))
+        days = attrs.get("lead_time_days", getattr(self.instance, "lead_time_days", None))
+        if mto and not days:
+            raise serializers.ValidationError({"lead_time_days": "Say how many days a made-to-order product takes before it ships."})
         dg = attrs.get("is_dangerous_goods", getattr(self.instance, "is_dangerous_goods", False))
         if dg and not (attrs.get("dg_class", getattr(self.instance, "dg_class", "")) or "").strip():
             raise serializers.ValidationError({"dg_class": "Say which UN hazard class applies to a dangerous-goods product."})
@@ -114,6 +128,24 @@ class ProductSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         validated_data.pop("variants", None)  # variants are managed through their own endpoints
         return super().update(instance, validated_data)
+
+
+class ProductTypeSerializer(serializers.ModelSerializer):
+    product_count = serializers.IntegerField(source="products.count", read_only=True)
+
+    class Meta:
+        model = ProductType
+        fields = ("id", "name", "slug", "notes", "restricted_countries", "restriction_note", "product_count")
+        read_only_fields = ("slug",)
+
+    def validate_restricted_countries(self, value):
+        codes = []
+        for c in value or []:
+            c = str(c).strip().upper()
+            if len(c) != 2 or not c.isalpha():
+                raise serializers.ValidationError(f"'{c}' is not a two-letter country code, for example AU.")
+            codes.append(c)
+        return sorted(set(codes))
 
 
 class StockAdjustSerializer(serializers.Serializer):
