@@ -119,48 +119,58 @@ export function Layout() {
       <a className="skip" href="#main">{t("nav.skip")}</a>
       <header className="site-header">
         <div className="wrap">
-          <Link to="/" className="logo" aria-label="Mpanko home">
-            <img src="/logo.svg" alt="" width={59} height={56} />
-          </Link>
-          <nav className="nav" aria-label="Main">
-            <NavLink to="/shop">{t("nav.shop")}</NavLink>
-            {user && <NavLink to="/orders">{t("nav.orders")}</NavLink>}
-            {user && <NavLink to="/support">{t("nav.help")}</NavLink>}
-          </nav>
-          <button type="button" className="menu-toggle link-button" aria-expanded={menuOpen} aria-controls="header-tools" onClick={() => setMenuOpen((o) => !o)}>{t("nav.menu")}</button>
-          <div id="header-tools" className={`header-tools${menuOpen ? " open" : ""}`}>
-            {currencies.length > 1 && (
-              <label>
-                <span className="sr-only">{t("nav.currency")}</span>
-                <select className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  {currencies.map((c) => (
-                    <option key={c} value={c}>{names[c] ? `${c} · ${names[c]}` : c}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <LanguageSelect />
+          <div className="header-left">
+            <Link to="/" className="logo" aria-label="Mpanko home">
+              <img src="/logo.svg" alt="" width={59} height={56} />
+            </Link>
+            <div className="header-links">
+              <nav className="nav" aria-label="Main">
+                <NavLink to="/shop">{t("nav.shop")}</NavLink>
+                {user && <NavLink to="/orders">{t("nav.orders")}</NavLink>}
+                {user && <NavLink to="/support">{t("nav.help")}</NavLink>}
+                <button type="button" className="menu-toggle link-button" aria-expanded={menuOpen} aria-controls="header-selects" onClick={() => setMenuOpen((o) => !o)}>{t("nav.menu")}</button>
+              </nav>
+              <div id="header-selects" className={`header-selects${menuOpen ? " open" : ""}`}>
+                {currencies.length > 1 && (
+                  <label>
+                    <span className="sr-only">{t("nav.currency")}</span>
+                    <select className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                      {currencies.map((c) => (
+                        <option key={c} value={c}>{names[c] ? `${c} · ${names[c]}` : c}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <LanguageSelect />
+              </div>
+            </div>
+          </div>
+          <div className="header-tools">
             {user ? (
               <>
                 <NotificationBell />
-                <Link to="/account">{t("nav.account")}</Link>
+                <Link to="/account" className="icon-link" aria-label={t("nav.account")} title={t("nav.account")}><HeaderIcon name="user" /></Link>
                 <button
-                  className="link-button"
+                  type="button"
+                  className="icon-link"
+                  aria-label={t("nav.signOut")}
+                  title={t("nav.signOut")}
                   onClick={async () => {
                     await logout();
                     navigate("/");
                   }}
                 >
-                  {t("nav.signOut")}
+                  <HeaderIcon name="out" />
                 </button>
               </>
             ) : (
               <Link to="/login">{t("nav.signIn")}</Link>
             )}
+            <Link to="/bag" className="icon-link bag-link" aria-label={t("nav.bagItems", { count })} title={t("nav.bag")}>
+              <HeaderIcon name="bag" />
+              <span className="bag-count" aria-hidden="true">{count}</span>
+            </Link>
           </div>
-          <Link to="/bag" className="bag-link" aria-label={t("nav.bagItems", { count })}>
-            {t("nav.bag")} <span className="bag-count">{count}</span>
-          </Link>
         </div>
       </header>
       <main id="main">
@@ -246,6 +256,21 @@ export function ProductTile({ product }: { product: Product }) {
         {product.category_name && <span className="cat">{product.category_name}</span>}
       </span>
     </Link>
+  );
+}
+
+const HEADER_ICONS = {
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+  out: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>,
+  bag: <><path d="M5 8h14l-1 12H6L5 8z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
+};
+
+/** The small pictures that stand in for Account, Sign out and Bag in the header. */
+function HeaderIcon({ name }: { name: keyof typeof HEADER_ICONS }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      {HEADER_ICONS[name]}
+    </svg>
   );
 }
 
