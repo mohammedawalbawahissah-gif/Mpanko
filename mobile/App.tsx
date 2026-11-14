@@ -84,6 +84,25 @@ function useOpenFromNotification() {
 
 installGlobalErrorReporting();
 
+function RootNav() {
+  const { t } = usePrefs();
+  return (
+    <Root.Navigator screenOptions={header}>
+      <Root.Screen name="Tabs" component={TabsNav} options={{ headerShown: false }} />
+      <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: t("checkout.title") }} />
+      <Root.Screen name="GuestCheckout" component={GuestCheckoutScreen} options={{ title: t("checkout.title") }} />
+      <Root.Screen name="GuestOrder" component={GuestOrderScreen} options={{ title: t("orders.order") }} />
+      <Root.Screen name="FindOrder" component={FindOrderScreen} options={{ title: t("guest.find") }} />
+      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: t("orders.order") }} />
+      <Root.Screen name="Return" component={ReturnScreen} options={{ title: t("m.returnItems") }} />
+      <Root.Screen name="Profile" component={ProfileScreen} options={{ title: t("prefs.title") }} />
+      <Root.Screen name="SupportList" component={SupportListScreen} options={{ title: t("m.helpSupport") }} />
+      <Root.Screen name="SupportNew" component={SupportNewScreen} options={{ title: t("m.askUs") }} />
+      <Root.Screen name="SupportThread" component={SupportThreadScreen} options={{ title: t("m.request") }} />
+    </Root.Navigator>
+  );
+}
+
 export default function App() {
   useOpenFromNotification();
   const navRef = useNavigationContainerRef<RootParams>();
@@ -94,19 +113,7 @@ export default function App() {
       <AuthProvider>
         <NavigationContainer ref={navRef} linking={linking} onStateChange={() => setCurrentScreen(navRef.getCurrentRoute()?.name ?? "")}>
           <StatusBar style="light" />
-          <Root.Navigator screenOptions={header}>
-            <Root.Screen name="Tabs" component={TabsNav} options={{ headerShown: false }} />
-            <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: "Checkout" }} />
-            <Root.Screen name="GuestCheckout" component={GuestCheckoutScreen} options={{ title: "Checkout" }} />
-            <Root.Screen name="GuestOrder" component={GuestOrderScreen} options={{ title: "Order" }} />
-            <Root.Screen name="FindOrder" component={FindOrderScreen} options={{ title: "Find my order" }} />
-            <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: "Order" }} />
-            <Root.Screen name="Return" component={ReturnScreen} options={{ title: "Return items" }} />
-            <Root.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile and preferences" }} />
-            <Root.Screen name="SupportList" component={SupportListScreen} options={{ title: "Help and support" }} />
-            <Root.Screen name="SupportNew" component={SupportNewScreen} options={{ title: "Ask us something" }} />
-            <Root.Screen name="SupportThread" component={SupportThreadScreen} options={{ title: "Request" }} />
-          </Root.Navigator>
+          <RootNav />
         </NavigationContainer>
       </AuthProvider>
       </PrefsProvider>

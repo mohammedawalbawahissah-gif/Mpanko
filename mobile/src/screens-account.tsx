@@ -39,8 +39,8 @@ export function AccountScreen() {
       if (e instanceof ApiError) {
         const f = e.fields();
         setErrors(f);
-        setMsg({ kind: "error", text: f.detail || f.non_field_errors || (Object.keys(f).length ? "Check the highlighted fields." : e.message) });
-      } else setMsg({ kind: "error", text: e instanceof Error ? e.message : "Something went wrong." });
+        setMsg({ kind: "error", text: f.detail || f.non_field_errors || (Object.keys(f).length ? t("m.checkFields") : e.message) });
+      } else setMsg({ kind: "error", text: e instanceof Error ? e.message : t("m.wrong") });
     } finally {
       setBusy(false);
     }
@@ -54,10 +54,10 @@ export function AccountScreen() {
         <Text style={s.muted}>{user.email}</Text>
         {!user.email_verified && (
           <View style={{ marginTop: 12 }}>
-            <Notice kind="info">Your email isn't verified yet.</Notice>
-            <Button title="Send verification email" kind="quiet" onPress={() => run(async () => {
+            <Notice kind="info">{t("m.emailNotVerified")}</Notice>
+            <Button title={t("m.sendVerification")} kind="quiet" onPress={() => run(async () => {
               await api("/auth/verify-email/request/", { method: "POST", body: {} });
-              setMsg({ kind: "ok", text: "Verification email sent. Check your inbox." });
+              setMsg({ kind: "ok", text: t("m.verificationSent") });
             })} />
           </View>
         )}
@@ -65,89 +65,89 @@ export function AccountScreen() {
         <View style={{ height: 16 }} />
         <Button title={t("prefs.title")} onPress={() => nav.navigate("Profile")} />
         <View style={{ height: 8 }} />
-        <Button title="Help and support" kind="quiet" onPress={() => nav.navigate("SupportList")} />
+        <Button title={t("m.helpSupport")} kind="quiet" onPress={() => nav.navigate("SupportList")} />
         <View style={{ height: 8 }} />
-        <Button title="Sign out" kind="quiet" onPress={logout} />
+        <Button title={t("nav.signOut")} kind="quiet" onPress={logout} />
 
-        <Text style={s.h2}>Your data</Text>
-        <Text style={s.muted}>Get a copy of everything we hold about you, or delete your account. Order records stay, without your personal details.</Text>
+        <Text style={s.h2}>{t("m.yourData")}</Text>
+        <Text style={s.muted}>{t("m.dataIntro")}</Text>
         <View style={{ height: 8 }} />
-        <Button title="Share a copy of my data" kind="quiet" onPress={() => run(async () => {
+        <Button title={t("m.shareData")} kind="quiet" onPress={() => run(async () => {
           const data = await api<unknown>("/me/export/");
-          await Share.share({ title: "My Mpanko data", message: JSON.stringify(data, null, 2) });
+          await Share.share({ title: t("m.myData"), message: JSON.stringify(data, null, 2) });
         })} />
         <View style={{ height: 8 }} />
         {deleting ? (
           <View>
-            <Notice kind="info">Deleting your account can't be undone.</Notice>
-            <Input label="Enter your password to confirm" value={delPw} onChangeText={setDelPw} error={errors.password} secureTextEntry autoCapitalize="none" />
-            <Button title={busy ? "Deleting…" : "Delete my account"} kind="danger" disabled={busy || !delPw} onPress={() => run(async () => {
+            <Notice kind="info">{t("m.deleteWarn")}</Notice>
+            <Input label={t("m.confirmPassword")} value={delPw} onChangeText={setDelPw} error={errors.password} secureTextEntry autoCapitalize="none" />
+            <Button title={busy ? t("m.deleting") : t("m.deleteAccount")} kind="danger" disabled={busy || !delPw} onPress={() => run(async () => {
               await api("/me/delete/", { method: "POST", body: { password: delPw } });
-              Alert.alert("Account deleted", "Your account and personal details have been removed.");
+              Alert.alert(t("m.accountDeleted"), t("m.accountDeletedBody"));
               await logout();
             })} />
             <View style={{ height: 8 }} />
-            <Button title="Keep my account" kind="quiet" onPress={() => { setDeleting(false); setDelPw(""); }} />
+            <Button title={t("m.keepAccount")} kind="quiet" onPress={() => { setDeleting(false); setDelPw(""); }} />
           </View>
         ) : (
-          <Button title="Delete my account" kind="quiet" onPress={() => setDeleting(true)} />
+          <Button title={t("m.deleteAccount")} kind="quiet" onPress={() => setDeleting(true)} />
         )}
         <View style={{ height: 8 }} />
-        <Button title="Privacy policy" kind="quiet" onPress={() => Linking.openURL(`${webUrl}/privacy`)} />
+        <Button title={t("m.privacyPolicy")} kind="quiet" onPress={() => Linking.openURL(`${webUrl}/privacy`)} />
       </ScrollView>
     );
   }
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <Text style={s.h1}>{mode === "in" ? "Sign in" : mode === "phone" ? "Sign in with a code" : mode === "up" ? "Create your account" : "Reset your password"}</Text>
+      <Text style={s.h1}>{mode === "in" ? t("login.title") : mode === "phone" ? t("m.signInCodeTitle") : mode === "up" ? t("register.title") : t("m.resetTitle")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
       {mode === "phone" && (
         <View>
-          <Input label="Mobile number" value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" editable={!codeSent} />
-          {codeSent && <Input label="Code from the SMS" value={code} onChangeText={setCode} error={errors.code} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />}
+          <Input label={t("phone.number")} value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" editable={!codeSent} />
+          {codeSent && <Input label={t("phone.code")} value={code} onChangeText={setCode} error={errors.code} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />}
           <Button
-            title={busy ? "…" : codeSent ? "Sign in" : "Send code"}
+            title={busy ? "…" : codeSent ? t("login.submit") : t("login.sendCode")}
             disabled={busy || !phone.trim() || (codeSent && code.length < 6)}
             onPress={() => run(async () => {
               if (!codeSent) {
                 await requestPhoneCode(phone);
                 setCodeSent(true);
-                setMsg({ kind: "ok", text: "If that number is verified on an account, a code is on its way." });
+                setMsg({ kind: "ok", text: t("m.codeOnWay") });
               } else await loginWithPhone(phone, code);
             })}
           />
-          <Text style={[s.muted, { marginTop: 8 }]}>Only numbers you have verified in your profile can sign in this way.</Text>
+          <Text style={[s.muted, { marginTop: 8 }]}>{t("m.onlyVerified")}</Text>
         </View>
       )}
-      {mode === "up" && <Input label="Full name" value={name} onChangeText={setName} error={errors.full_name} autoComplete="name" />}
-      {mode !== "phone" && <Input label="Email" value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />}
-      {mode !== "forgot" && mode !== "phone" && <Input label={mode === "up" ? "Password (at least 8 characters)" : "Password"} value={password} onChangeText={setPassword} error={errors.password} secureTextEntry autoCapitalize="none" />}
-      {mode === "in" && <Button title={busy ? "Signing in…" : "Sign in"} disabled={busy} onPress={() => run(() => login(email, password))} />}
+      {mode === "up" && <Input label={t("register.name")} value={name} onChangeText={setName} error={errors.full_name} autoComplete="name" />}
+      {mode !== "phone" && <Input label={t("login.email")} value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />}
+      {mode !== "forgot" && mode !== "phone" && <Input label={mode === "up" ? t("register.password") : t("login.password")} value={password} onChangeText={setPassword} error={errors.password} secureTextEntry autoCapitalize="none" />}
+      {mode === "in" && <Button title={busy ? t("login.submitting") : t("login.submit")} disabled={busy} onPress={() => run(() => login(email, password))} />}
       {mode === "up" && (
         <View>
           <View style={[s.row, { marginBottom: 6 }]}>
-            <Text style={{ flex: 1 }} onPress={() => setAgree(!agree)}>I accept the terms of sale and privacy policy</Text>
-            <Switch accessibilityLabel="Accept terms and privacy policy" value={agree} onValueChange={setAgree} />
+            <Text style={{ flex: 1 }} onPress={() => setAgree(!agree)}>{t("register.agree")} {t("register.terms")} {t("register.and")} {t("register.privacy")}</Text>
+            <Switch accessibilityLabel={t("m.acceptTermsPrivacy")} value={agree} onValueChange={setAgree} />
           </View>
-          <Text style={{ color: color.indigo, marginBottom: 10 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>Read the terms</Text>
+          <Text style={{ color: color.indigo, marginBottom: 10 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
           {!!errors.accept_terms && <Text style={s.fieldError}>{errors.accept_terms}</Text>}
           <View style={[s.row, { marginBottom: 14 }]}>
-            <Text style={{ flex: 1 }} onPress={() => setMarketing(!marketing)}>Send me news and offers (optional)</Text>
-            <Switch accessibilityLabel="Send me news and offers" value={marketing} onValueChange={setMarketing} />
+            <Text style={{ flex: 1 }} onPress={() => setMarketing(!marketing)}>{t("register.marketing")}</Text>
+            <Switch accessibilityLabel={t("register.marketing")} value={marketing} onValueChange={setMarketing} />
           </View>
-          <Button title={busy ? "Creating account…" : "Create account"} disabled={busy || !agree} onPress={() => run(() => register(email, password, name, marketing))} />
+          <Button title={busy ? t("register.creating") : t("register.create")} disabled={busy || !agree} onPress={() => run(() => register(email, password, name, marketing))} />
         </View>
       )}
-      {mode === "forgot" && <Button title={busy ? "Sending…" : "Send reset link"} disabled={busy} onPress={() => run(async () => {
+      {mode === "forgot" && <Button title={busy ? t("m.sending") : t("m.sendReset")} disabled={busy} onPress={() => run(async () => {
         await api("/auth/password-reset/", { method: "POST", body: { email } });
-        setMsg({ kind: "ok", text: `If an account exists for ${email}, we've sent a link to reset the password.` });
+        setMsg({ kind: "ok", text: t("m.resetSent", { email }) });
       })} />}
       <View style={{ height: 12 }} />
-      {mode !== "in" && <Button title="I already have an account" kind="quiet" onPress={() => { setMode("in"); setMsg(null); }} />}
-      {mode === "in" && <Button title="Create an account" kind="quiet" onPress={() => { setMode("up"); setMsg(null); }} />}
-      {mode === "in" && <View style={{ marginTop: 8 }}><Button title="Sign in with a text-message code" kind="quiet" onPress={() => { setMode("phone"); setMsg(null); setCodeSent(false); setCode(""); }} /></View>}
-      {mode === "in" && <View style={{ marginTop: 8 }}><Button title="Forgot your password?" kind="quiet" onPress={() => { setMode("forgot"); setMsg(null); }} /></View>}
+      {mode !== "in" && <Button title={t("m.alreadyHave")} kind="quiet" onPress={() => { setMode("in"); setMsg(null); }} />}
+      {mode === "in" && <Button title={t("login.create")} kind="quiet" onPress={() => { setMode("up"); setMsg(null); }} />}
+      {mode === "in" && <View style={{ marginTop: 8 }}><Button title={t("m.signInSms")} kind="quiet" onPress={() => { setMode("phone"); setMsg(null); setCodeSent(false); setCode(""); }} /></View>}
+      {mode === "in" && <View style={{ marginTop: 8 }}><Button title={t("login.forgot")} kind="quiet" onPress={() => { setMode("forgot"); setMsg(null); }} /></View>}
     </ScrollView>
   );
 }

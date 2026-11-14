@@ -11,7 +11,7 @@ async function scan(page: Page, label: string) {
   expect(summary, `accessibility problems on ${label}`).toEqual([]);
 }
 
-const PUBLIC = ["/", "/shop", "/shop/kente-scarf", "/bag", "/login", "/register", "/forgot-password", "/privacy", "/terms", "/returns-policy", "/cookies"];
+const PUBLIC = ["/", "/shop", "/shop/kente-scarf", "/bag", "/login", "/register", "/forgot-password", "/orders/find", "/does-not-exist", "/privacy", "/terms", "/returns-policy", "/cookies"];
 
 for (const path of PUBLIC) {
   test(`web ${path} has no automated accessibility violations`, async ({ page }) => {
@@ -22,6 +22,7 @@ for (const path of PUBLIC) {
 }
 
 test("signed-in web pages have no automated accessibility violations", async ({ page }) => {
+  test.setTimeout(180_000); // registers, then scans five pages; slow computers need longer than the 60 s default
   const email = `a11y-${Date.now()}@example.com`;
   await page.goto("/shop/kente-scarf");
   await page.getByRole("button", { name: "Add to bag" }).click();
@@ -31,7 +32,9 @@ test("signed-in web pages have no automated accessibility violations", async ({ 
   await page.getByLabel(/^Password/).fill("A11y-pass-12345");
   await page.getByLabel(/I accept the/).check();
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/checkout/);
+  // Match the path, not the whole address: the register page is /register?next=/checkout and also contains "/checkout".
+  await page.waitForURL((url) => url.pathname === "/checkout");
+  await expect(page.getByRole("heading", { level: 1, name: "Checkout" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await scan(page, "/checkout");
   for (const path of ["/account", "/orders", "/support", "/support/new"]) {
@@ -59,12 +62,13 @@ test("admin sign-in page has no automated accessibility violations", async ({ pa
 });
 
 test("admin pages have no automated accessibility violations", async ({ page }) => {
+  test.setTimeout(240_000); // nineteen pages
   await page.goto(`${ADMIN}/login`);
   await page.getByLabel("Email").fill("admin@mpanko.test");
   await page.getByLabel("Password").fill("Mpanko-demo-123");
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page.getByRole("navigation").first()).toBeVisible({ timeout: 15_000 });
-  for (const path of ["/", "/orders", "/products", "/shipping", "/chargebacks", "/tax"]) {
+  for (const path of ["/", "/orders", "/returns", "/support", "/customers", "/coupons", "/pages", "/staff", "/audit", "/security", "/shipments", "/shipping-rules", "/products", "/stock", "/reports", "/emails", "/chargebacks", "/tax", "/reconciliation"]) {
     await page.goto(`${ADMIN}${path}`);
     await page.waitForLoadState("networkidle");
     await scan(page, `admin ${path}`);

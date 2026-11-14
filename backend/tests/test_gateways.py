@@ -208,6 +208,47 @@ def test_flutterwave_webhook_hash(gateway):
         p.parse_webhook(body, {})
 
 
+def _fw_chargeback(p, **data):
+    body = json.dumps({"event": "chargeback.updated", "data": data}).encode()
+    return p.parse_webhook(body, {"verif-hash": "hash-x"})
+
+
+def test_flutterwave_chargeback_opens_a_dispute(gateway):
+    # UNVERIFIED payload shape: built from Flutterwave's documentation, not from a real sandbox chargeback.
+    ev = _fw_chargeback(get_provider("flutterwave"), id=91, status="pending", stage="initiated", tx_ref="R9", amount=20, currency="ghs", due_date="2026-12-01T00:00:00Z")
+    assert ev.dispute["id"] == "91" and ev.dispute["resolved"] is False and ev.dispute["currency"] == "GHS"
+    assert ev.reference == "R9" and ev.status == "pending" and ev.dispute["respond_by"].startswith("2026-12-01")
+
+
+def test_flutterwave_chargeback_outcomes(gateway):
+    p = get_provider("flutterwave")
+    for status, final in [("won", True), ("lost", True), ("accepted", True), ("declined", False), ("pending", False)]:
+        ev = _fw_chargeback(p, id=1, status=status, tx_ref="R9", amount=5, currency="GHS")
+        assert ev.dispute["resolved"] is final and (ev.dispute["resolution"] == status if final else ev.dispute["resolution"] == "")
+
+
+def test_flutterwave_chargeback_finds_the_payment_by_transaction_id(gateway, attempt):
+    attempt.provider, attempt.provider_reference = "flutterwave", "777"
+    attempt.save()
+    ev = _fw_chargeback(get_provider("flutterwave"), id=2, status="pending", transaction_id=777, amount=5, currency="GHS")
+    assert ev.reference == attempt.reference
+
+
+def test_flutterwave_chargeback_end_to_end(gateway, attempt):
+    from apps.payments.disputes import record_dispute
+    from apps.payments.models import Dispute
+
+    attempt.provider, attempt.provider_reference = "flutterwave", "777"
+    attempt.save()
+    p = get_provider("flutterwave")
+    ev = _fw_chargeback(p, id=3, status="pending", stage="initiated", tx_ref=attempt.reference, amount=str(attempt.amount), currency="USD")
+    record_dispute("flutterwave", ev.dispute, ev.reference)
+    assert Dispute.objects.get().status == "open"
+    ev = _fw_chargeback(p, id=3, status="lost", tx_ref=attempt.reference, amount=str(attempt.amount), currency="USD")
+    record_dispute("flutterwave", ev.dispute, ev.reference)
+    assert Dispute.objects.get().status == "lost"
+
+
 def test_flutterwave_refund(gateway, attempt):
     gateway.routes[("GET", "/transactions/verify_by_reference")] = {"status": "success", "data": {"id": 777, "status": "successful", "amount": 55, "currency": "GHS"}}
     gateway.routes[("POST", "/transactions/777/refund")] = {"status": "success", "data": {"id": 42}}

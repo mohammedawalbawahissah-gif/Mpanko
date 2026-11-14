@@ -108,3 +108,24 @@ test.describe("when something is missing or goes wrong", () => {
     await expect(page.getByRole("heading", { name: "Check out as a guest" })).toBeVisible();
   });
 });
+
+test.describe("loading, empty and error states", () => {
+  test("a search with no results says so", async ({ page }) => {
+    await page.goto("/shop?q=zzzz-no-such-product");
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("link", { name: /Kente/i })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  });
+
+  test("a failing orders request on the find-order page shows an error", async ({ page }) => {
+    await page.route("**/api/v1/orders/guest/**", (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"detail":"Server error."}' }));
+    await page.goto("/orders/guest/MP-TEST?token=x");
+    await expect(page.getByRole("alert").or(page.getByRole("heading", { name: /isn't valid|couldn't/i }))).toBeVisible();
+  });
+
+  test("a failing product page shows an error, not a blank page", async ({ page }) => {
+    await page.route("**/api/v1/products/kente-scarf/**", (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"detail":"Server error."}' }));
+    await page.goto("/shop/kente-scarf");
+    await expect(page.getByRole("alert").or(page.getByRole("heading", { name: /couldn't|not found|isn't/i }))).toBeVisible();
+  });
+});

@@ -48,6 +48,7 @@ class WebhookEventData:
 class PaymentProvider:
     name = "base"
     currencies: set = set()
+    manual = False  # True for methods a person confirms by hand (Cash, Zelle, Cash App): no gateway page, no webhook
 
     def supports_currency(self, currency):
         return currency.upper() in self.currencies
@@ -235,8 +236,12 @@ class MockProvider(PaymentProvider):
 
 def _registry():
     from .providers_extra import FlutterwaveProvider, PayPalProvider, StripeProvider
+    from .providers_more import CashAppProvider, CashProvider, HubtelProvider, ZelleProvider
 
-    return {"paystack": PaystackProvider, "mock": MockProvider, "stripe": StripeProvider, "paypal": PayPalProvider, "flutterwave": FlutterwaveProvider}
+    return {
+        "paystack": PaystackProvider, "mock": MockProvider, "stripe": StripeProvider, "paypal": PayPalProvider, "flutterwave": FlutterwaveProvider,
+        "hubtel": HubtelProvider, "zelle": ZelleProvider, "cashapp": CashAppProvider, "cash": CashProvider,
+    }
 
 
 def enabled_providers():

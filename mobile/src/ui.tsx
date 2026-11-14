@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
+import { photoLabel, type ProductPhoto } from "./core/images";
 import { usePrefs } from "./prefs";
 import { color, stripes } from "./theme";
 
@@ -64,6 +66,7 @@ export function Button({ title, onPress, disabled, kind = "primary" }: { title: 
 
 export function Input({ label, error, secureTextEntry, ...props }: TextInputProps & { label: string; error?: string }) {
   const [hidden, setHidden] = useState(true);
+  const { t } = usePrefs();
   const isSecret = !!secureTextEntry;
   return (
     <View style={{ marginBottom: 14 }}>
@@ -79,12 +82,12 @@ export function Input({ label, error, secureTextEntry, ...props }: TextInputProp
         {isSecret && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={hidden ? "Show password" : "Hide password"}
+            accessibilityLabel={hidden ? t("m.showPassword") : t("m.hidePassword")}
             onPress={() => setHidden((h) => !h)}
             hitSlop={8}
             style={{ position: "absolute", right: 0, top: 0, bottom: 0, paddingHorizontal: 14, justifyContent: "center" }}
           >
-            <Text style={{ color: color.indigo, fontWeight: "700" }}>{hidden ? "Show" : "Hide"}</Text>
+            <Text style={{ color: color.indigo, fontWeight: "700" }}>{hidden ? t("m.show") : t("m.hide")}</Text>
           </Pressable>
         )}
       </View>
@@ -102,11 +105,12 @@ export function Notice({ kind = "error", children }: { kind?: "error" | "ok" | "
   );
 }
 
-export function Busy({ what = "Loading" }: { what?: string }) {
+export function Busy({ what }: { what?: string }) {
+  const { t } = usePrefs();
   return (
     <View style={{ padding: 24, alignItems: "center" }}>
       <ActivityIndicator color={color.indigo} />
-      <Text style={{ color: color.muted, marginTop: 8 }}>{what}…</Text>
+      <Text style={{ color: color.muted, marginTop: 8 }}>{what ?? t("m.loading")}…</Text>
     </View>
   );
 }
@@ -117,6 +121,23 @@ export function Art({ seed, height = 120 }: { seed: string; height?: number }) {
     <View style={{ height, flexDirection: "row" }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {c.map((col, i) => <View key={i} style={{ flex: i % 3 === 0 ? 2 : 1, backgroundColor: col }} />)}
     </View>
+  );
+}
+
+/** A product photo, saved on the phone after the first load; the striped pattern shows when there is none or it fails. */
+export function Photo({ photo, seed, name, height = 120 }: { photo: ProductPhoto | null; seed: string; name: string; height?: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!photo || failed) return <Art seed={seed} height={height} />;
+  return (
+    <Image
+      source={{ uri: photo.image }}
+      style={{ height, width: "100%", backgroundColor: color.cotton }}
+      contentFit="cover"
+      cachePolicy="disk"
+      transition={150}
+      accessibilityLabel={photoLabel(photo, name)}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -141,6 +162,10 @@ export function statusText(t: (key: MessageKey) => string, v: string): string {
 /** How a payment method is named to the shopper. */
 export function methodLabel(t: (key: MessageKey) => string, provider: string, currency: string): string {
   if (provider === "paystack") return currency === "GHS" ? t("checkout.methodMomo") : t("checkout.methodCard");
+  if (provider === "hubtel") return `Hubtel (${t("checkout.methodMomo")})`;
+  if (provider === "zelle") return "Zelle";
+  if (provider === "cashapp") return "Cash App";
+  if (provider === "cash") return t("checkout.methodCash");
   if (provider === "mock") return t("m.testPayment");
   return provider;
 }

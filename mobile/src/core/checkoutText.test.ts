@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LANGUAGES, translate } from "./i18n";
 
-const KEYS = ["m.wrongNoCharge", "m.cantShip", "m.cancelTitle", "m.saveAddress", "m.errCountry", "status.pending_payment", "checkout.pay", "orders.cancel"] as const;
+const KEYS = ["m.wrongNoCharge", "m.cantShip", "m.cancelTitle", "m.saveAddress", "m.errCountry", "status.pending_payment", "checkout.pay", "orders.cancel", "m.askUs", "m.returnIntro", "m.addToBag", "m.show"] as const;
 
 describe("mobile checkout text", () => {
   it("is available in every language, with its placeholders", () => {

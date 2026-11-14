@@ -245,11 +245,43 @@ class FlutterwaveProvider(PaymentProvider):
         payload = json.loads(raw_body)
         d = payload.get("data") or {}
         etype = payload.get("event") or payload.get("event.type", "")
+        if "chargeback" in etype.lower() or "dispute" in etype.lower():
+            return self._chargeback(payload, etype, d)
         return WebhookEventData(
             event_id=f"{etype}:{d.get('id', d.get('tx_ref', ''))}:{d.get('status', '')}", event_type=etype,
             reference=d.get("tx_ref", ""), status=self._status(d.get("status")),
             amount=_dec(d["amount"]) if d.get("amount") is not None else None, currency=(d.get("currency") or "").upper(),
             provider_reference=str(d.get("id", "")), payload=payload,
+        )
+
+    # Flutterwave's own words for where a chargeback stands. UNVERIFIED against a real Flutterwave sandbox payload:
+    # the field names below follow their public documentation and must be checked with a test chargeback before go-live.
+    CHARGEBACK_FINAL = {"won", "lost", "accepted"}
+
+    def _chargeback(self, payload, etype, d):
+        """Turn a Flutterwave chargeback webhook into a dispute. Reads several likely field names so one rename does not drop a case."""
+        txn = d.get("transaction") if isinstance(d.get("transaction"), dict) else {}
+        reference = d.get("tx_ref") or txn.get("tx_ref") or ""
+        if not reference:
+            # Some payloads carry only Flutterwave's own transaction id; match it to the payment we stored from verify().
+            from .models import PaymentAttempt
+
+            tid = str(d.get("transaction_id") or txn.get("id") or "")
+            found = PaymentAttempt.objects.filter(provider="flutterwave", provider_reference=tid).first() if tid else None
+            reference = found.reference if found else ""
+        status = str(d.get("status") or "").lower()
+        resolved = status in self.CHARGEBACK_FINAL
+        amount = d.get("amount") if d.get("amount") is not None else txn.get("amount")
+        return WebhookEventData(
+            event_id=f"{etype}:{d.get('id', '')}:{status}:{d.get('stage', '')}", event_type=etype, reference=reference, status="pending",
+            amount=None, currency="", provider_reference="", payload=payload,
+            dispute={
+                "id": str(d.get("id", "")), "status": status, "category": str(d.get("stage") or d.get("reason") or ""),
+                "amount": _dec(amount) if amount is not None else None,
+                "currency": (d.get("currency") or txn.get("currency") or "").upper(),
+                "respond_by": d.get("due_date") or "",
+                "resolution": status if resolved else "", "resolved": resolved,
+            },
         )
 
     def refund(self, attempt, amount, reason=""):

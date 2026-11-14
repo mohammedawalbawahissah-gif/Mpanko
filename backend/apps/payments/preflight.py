@@ -106,6 +106,23 @@ def _provider_check(name, offline):
 
             PayPalProvider()._token()
             return type("R", (), {"ok": True, "status_code": 200})()
+    elif name in ("zelle", "cashapp", "cash"):
+        label = {"zelle": "Zelle", "cashapp": "Cash App", "cash": "Cash"}[name]
+        if name == "zelle":
+            ok, fix, what = bool(settings.ZELLE_RECIPIENT), "Set ZELLE_RECIPIENT to the email or phone number registered with Zelle.", "Zelle recipient"
+        elif name == "cashapp":
+            ok, fix, what = bool(settings.CASHAPP_CASHTAG), "Set CASHAPP_CASHTAG to the shop's $cashtag.", "Cash App $cashtag"
+        else:
+            ok, fix, what = bool(settings.CASH_INSTRUCTIONS), "Set CASH_INSTRUCTIONS to tell shoppers where and how to pay.", "Cash instructions"
+        return [Result(g, f"{label}: {what}", PASS if ok else FAIL, "" if ok else "Not set, so shoppers would not know how to pay.", fix),
+                Result(g, f"{label}: finance confirms each payment", WARN, "No gateway confirms these. Finance must press Payment received in the admin.")]
+    elif name == "hubtel":
+        key = settings.HUBTEL_CLIENT_ID and settings.HUBTEL_CLIENT_SECRET and settings.HUBTEL_MERCHANT_ACCOUNT
+        if not key:
+            return [Result(g, "Hubtel credentials", FAIL, "", "Set HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET and HUBTEL_MERCHANT_ACCOUNT.")]
+        out = [Result(g, "Hubtel callback address", PASS if settings.API_PUBLIC_URL else FAIL, "" if settings.API_PUBLIC_URL else "API_PUBLIC_URL is not set.", "Set API_PUBLIC_URL to this API's public address so Hubtel can reach /api/v1/payments/webhooks/hubtel/.")]
+        out.append(Result(g, "Hubtel not yet tested here", WARN, "This adapter was written from Hubtel's documentation and has not run against a Hubtel account. Place a test payment before launch."))
+        return out
     elif name == "mock":
         return [Result(g, "Mock gateway is off", FAIL if not settings.DEBUG else WARN, "The test gateway accepts any payment.", "Remove mock from PAYMENT_PROVIDERS_ENABLED.")]
     else:
@@ -132,7 +149,7 @@ def check_payments(offline):
     real = [n for n in names if n != "mock"]
     if not real:
         out.append(Result("Payments", "At least one real gateway", FAIL, "None enabled.", "Set PAYMENT_PROVIDERS_ENABLED=paystack (or stripe, paypal, flutterwave)."))
-    for n in ("paystack", "stripe", "paypal", "flutterwave"):
+    for n in ("paystack", "stripe", "paypal", "flutterwave", "hubtel", "zelle", "cashapp", "cash"):
         out.extend(_provider_check(n, offline))
     if "mock" in names:
         out.extend(_provider_check("mock", offline))

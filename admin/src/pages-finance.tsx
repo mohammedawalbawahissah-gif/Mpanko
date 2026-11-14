@@ -283,3 +283,66 @@ function DisputeCase({ dispute, onSaved }: { dispute: DisputeRow; onSaved: () =>
     </div>
   );
 }
+
+/* -------------------------------------------------------- manual payments */
+
+interface ManualRow { reference: string; order_number: string; provider: string; amount: string; currency: string; contact_email: string; created_at: string; expires_at: string | null }
+
+export function ManualPayments() {
+  const list = useAsync(() => api<ManualRow[]>("/payments/manual/"), []);
+  const [received, setReceived] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const confirm = async (row: ManualRow) => {
+    const amount = (received[row.reference] ?? "").trim();
+    if (!amount) {
+      setMsg({ kind: "error", text: `Type the amount you received for ${row.order_number}.` });
+      return;
+    }
+    if (!window.confirm(`Confirm that ${row.currency} ${amount} arrived for order ${row.order_number}? The order will be marked paid.`)) return;
+    setBusy(row.reference);
+    setMsg(null);
+    try {
+      await api(`/payments/manual/${row.reference}/confirm/`, { method: "POST", body: { amount } });
+      setMsg({ kind: "ok", text: `Order ${row.order_number} is paid.` });
+      list.reload();
+    } catch (err) {
+      setMsg({ kind: "error", text: errText(err) });
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <>
+      <h1>Manual payments</h1>
+      <p className="muted">
+        Cash, Zelle and Cash App payments wait here until you have checked that the money really arrived (in Zelle, Cash App, your bank app or your cash book).
+        Type the exact amount you received and press Payment received. If the amount differs from the order, it is refused: sort that out with the customer first.
+      </p>
+      {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      {list.loading && <Loading />}
+      {list.error && <Alert>{list.error}</Alert>}
+      {list.data && (
+        <table className="table">
+          <thead><tr><th>Order</th><th>Method</th><th className="num">Amount due</th><th>Placed</th><th>Held until</th><th>Amount received</th><th></th></tr></thead>
+          <tbody>
+            {list.data.map((r) => (
+              <tr key={r.reference}>
+                <td><Link to={`/orders/${r.order_number}`}>{r.order_number}</Link><div className="small muted">{r.contact_email}</div></td>
+                <td>{label(r.provider)}</td>
+                <td className="num">{r.currency} {r.amount}</td>
+                <td>{when(r.created_at)}</td>
+                <td>{when(r.expires_at)}</td>
+                <td>
+                  <input aria-label={`Amount received for ${r.order_number}`} className="input" inputMode="decimal" value={received[r.reference] ?? ""} onChange={(e) => setReceived({ ...received, [r.reference]: e.target.value })} />
+                </td>
+                <td><button className="btn" disabled={busy === r.reference} onClick={() => confirm(r)}>Payment received</button></td>
+              </tr>
+            ))}
+            {list.data.length === 0 && <tr><td colSpan={7} className="muted">No manual payments are waiting.</td></tr>}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
+}

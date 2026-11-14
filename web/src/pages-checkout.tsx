@@ -250,7 +250,7 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
                     <input type="radio" name="provider" checked={m.provider === provider} onChange={() => setProvider(m.provider)} />
                     <span>
                       <strong>{providerName(m.provider, currency, t)}</strong>
-                      <br /><span className="muted small">{t("checkout.finishSecure")}</span>
+                      <br /><span className="muted small">{m.manual ? t("checkout.manualHint") : t("checkout.finishSecure")}</span>
                     </span>
                   </label>
                 ))}
@@ -318,10 +318,13 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
   );
 }
 
-export function providerName(provider: string, currency: string, t?: (key: "checkout.methodMomo" | "checkout.methodCard") => string): string {
+export function providerName(provider: string, currency: string, t?: (key: "checkout.methodMomo" | "checkout.methodCard" | "checkout.methodCash") => string): string {
   const momo = t ? t("checkout.methodMomo") : "Mobile Money or card";
   const card = t ? t("checkout.methodCard") : "Card";
   if (provider === "paystack") return currency === "GHS" ? momo : card;
+  if (provider === "hubtel") return `Hubtel (${momo})`;
+  if (provider === "cashapp") return "Cash App";
+  if (provider === "cash") return t ? t("checkout.methodCash") : "Cash";
   if (provider === "mock") return "Test payment (development only)";
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
@@ -329,6 +332,8 @@ export function providerName(provider: string, currency: string, t?: (key: "chec
 /* ------------------------------------------------------ after the payment */
 
 interface Verified {
+  manual?: boolean;
+  instructions?: string;
   payment_status: string;
   order_number: string;
   order_status: string;
@@ -355,7 +360,7 @@ export function CheckoutComplete() {
         const r = await api<Verified>(guest ? `/payments/guest/verify/${reference}/?token=${encodeURIComponent(guest.token)}` : `/payments/verify/${reference}/`);
         if (cancelled) return;
         setResult(r);
-        if (r.payment_status === "pending" && tries++ < 6) setTimeout(check, 2500);
+        if (r.payment_status === "pending" && !r.manual && tries++ < 6) setTimeout(check, 2500);
         else {
           if (guest && r.payment_status === "succeeded") {
             try {
@@ -396,7 +401,15 @@ export function CheckoutComplete() {
           <Link className="btn" to={orderLink(result.order_number)}>{t("done.view")}</Link>
         </>
       )}
-      {result.payment_status === "pending" && (
+      {result.payment_status === "pending" && result.manual && (
+        <>
+          <h1>{t("done.manualTitle")}</h1>
+          {result.instructions && <p>{result.instructions}</p>}
+          <p>{t("done.manualBody")}</p>
+          <Link className="btn" to={orderLink(result.order_number)}>{t("done.view")}</Link>
+        </>
+      )}
+      {result.payment_status === "pending" && !result.manual && (
         <>
           <h1>{t("done.confirming")}</h1>
           <p>{t("done.confirmingBody")}</p>

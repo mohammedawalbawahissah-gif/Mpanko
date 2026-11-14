@@ -331,6 +331,16 @@ PAYPAL_WEBHOOK_ID = os.environ.get("PAYPAL_WEBHOOK_ID", "")
 PAYPAL_ENV = os.environ.get("PAYPAL_ENV", "sandbox")  # "live" for real money
 FLUTTERWAVE_SECRET_KEY = os.environ.get("FLUTTERWAVE_SECRET_KEY", "")
 FLUTTERWAVE_WEBHOOK_HASH = os.environ.get("FLUTTERWAVE_WEBHOOK_HASH", "")  # the "secret hash" set in the dashboard
+API_PUBLIC_URL = os.environ.get("API_PUBLIC_URL", "").rstrip("/")  # this API's own public address; gateways that need a callback URL use it
+HUBTEL_CLIENT_ID = os.environ.get("HUBTEL_CLIENT_ID", "")
+HUBTEL_CLIENT_SECRET = os.environ.get("HUBTEL_CLIENT_SECRET", "")
+HUBTEL_MERCHANT_ACCOUNT = os.environ.get("HUBTEL_MERCHANT_ACCOUNT", "")  # the POS / merchant account number
+# Manual methods (USD): the shopper is told how to pay; finance confirms in the admin once the money has arrived.
+ZELLE_RECIPIENT = os.environ.get("ZELLE_RECIPIENT", "")  # the email or phone number registered with Zelle
+ZELLE_NAME = os.environ.get("ZELLE_NAME", "")
+CASHAPP_CASHTAG = os.environ.get("CASHAPP_CASHTAG", "")  # the shop's $cashtag, for example $WolbiRoyal
+CASH_INSTRUCTIONS = os.environ.get("CASH_INSTRUCTIONS", "")
+MANUAL_PAYMENT_HOLD_HOURS = int(os.environ.get("MANUAL_PAYMENT_HOLD_HOURS", "72"))  # how long stock is held for a manual payment
 PAYMENT_RETURN_URL = os.environ.get("PAYMENT_RETURN_URL", f"{FRONTEND_URL}/checkout/complete")
 
 # --- Security -----------------------------------------------------------------

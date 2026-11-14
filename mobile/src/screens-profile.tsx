@@ -10,15 +10,16 @@ import { disablePush, enablePush } from "./push";
 import { color } from "./theme";
 import type { Address, User } from "./types";
 import { Busy, Button, Input, Notice, s, useAsync } from "./ui";
+import type { MessageKey } from "./core/i18n";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
 
-function errorText(e: unknown): { text: string; fields: Record<string, string> } {
+function errorText(e: unknown, t: (k: MessageKey) => string): { text: string; fields: Record<string, string> } {
   if (e instanceof ApiError) {
     const f = e.fields();
-    return { text: f.detail || (Object.keys(f).length ? "Check the highlighted fields." : e.message), fields: f };
+    return { text: f.detail || (Object.keys(f).length ? t("m.checkFields") : e.message), fields: f };
   }
-  return { text: e instanceof Error ? e.message : "Something went wrong.", fields: {} };
+  return { text: e instanceof Error ? e.message : t("m.wrong"), fields: {} };
 }
 
 /** Profile, phone verification, display and notification preferences, and saved addresses (FR-PRF). */
@@ -51,7 +52,7 @@ export function ProfileScreen() {
       await refreshUser();
       setMsg({ kind: "ok", text: t("prefs.saved") });
     } catch (e) {
-      const { text, fields } = errorText(e);
+      const { text, fields } = errorText(e, t);
       setErrors(fields);
       setMsg({ kind: "error", text });
     } finally {
@@ -64,17 +65,17 @@ export function ProfileScreen() {
     try {
       if (on) {
         if (await enablePush()) setPush(true);
-        else setMsg({ kind: "error", text: "Notifications are blocked. Allow them for Mpanko in your phone settings." });
+        else setMsg({ kind: "error", text: t("m.notifBlocked") });
       } else {
         await disablePush();
         setPush(false);
       }
     } catch (e) {
-      setMsg({ kind: "error", text: errorText(e).text });
+      setMsg({ kind: "error", text: errorText(e, t).text });
     }
   };
 
-  if (!user) return <View style={[s.screen, s.pad]}><Text style={s.muted}>Sign in from the Account tab.</Text></View>;
+  if (!user) return <View style={[s.screen, s.pad]}><Text style={s.muted}>{t("m.signInTab")}</Text></View>;
   const matches = searchCurrencies(rates, search);
 
   return (
@@ -135,6 +136,7 @@ function Toggle({ label, value, onChange, disabled, hint }: { label: string; val
 
 function PhoneVerify() {
   const { user, refreshUser } = useAuth();
+  const { t } = usePrefs();
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
@@ -148,7 +150,7 @@ function PhoneVerify() {
     try {
       await fn();
     } catch (e) {
-      const { text, fields } = errorText(e);
+      const { text, fields } = errorText(e, t);
       setErrors(fields);
       setMsg({ kind: "error", text });
     } finally {
@@ -157,12 +159,12 @@ function PhoneVerify() {
   };
   return (
     <View style={{ marginTop: 4 }}>
-      <Input label="Mobile number" value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" editable={!sent} />
-      <Text style={[s.muted, { marginBottom: 8 }]}>{user?.phone_verified && !sent ? "Verified. You can sign in with a text-message code." : "Not verified. Verify it to sign in by SMS and get order updates by text."}</Text>
+      <Input label={t("phone.number")} value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" editable={!sent} />
+      <Text style={[s.muted, { marginBottom: 8 }]}>{user?.phone_verified && !sent ? t("m.phoneVerifiedLine") : t("m.phoneNotVerifiedLine")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
-      {sent && <Input label="Code from the SMS" value={code} onChangeText={setCode} error={errors.code} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />}
+      {sent && <Input label={t("phone.code")} value={code} onChangeText={setCode} error={errors.code} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />}
       <Button
-        title={busy ? "…" : sent ? "Confirm number" : "Send code"}
+        title={busy ? "…" : sent ? t("phone.confirm") : t("phone.send")}
         kind="quiet"
         disabled={busy || !phone.trim() || (sent && code.length < 6)}
         onPress={() => run(async () => {
@@ -174,7 +176,7 @@ function PhoneVerify() {
             setSent(false);
             setCode("");
             await refreshUser();
-            setMsg({ kind: "ok", text: "Number verified." });
+            setMsg({ kind: "ok", text: t("phone.done") });
           }
         })}
       />
@@ -212,7 +214,7 @@ function Addresses() {
       setAdding(false);
       list.reload();
     } catch (e) {
-      setErrors(errorText(e).fields);
+      setErrors(errorText(e, t).fields);
     } finally {
       setBusy(false);
     }
@@ -232,12 +234,12 @@ function Addresses() {
       ))}
       {adding ? (
         <View>
-          <Input label="Full name" value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
-          <Input label="Phone number for the courier" value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
-          <Input label="Country (2-letter code, e.g. GH, US, GB)" value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
-          <Input label="Street address" value={f.line1} onChangeText={set("line1")} error={errors.line1} />
-          <Input label="Apartment or landmark (optional)" value={f.line2} onChangeText={set("line2")} error={errors.line2} />
-          <Input label="Town or city" value={f.city} onChangeText={set("city")} error={errors.city} />
+          <Input label={t("m.fullName")} value={f.recipient_name} onChangeText={set("recipient_name")} error={errors.recipient_name} autoComplete="name" />
+          <Input label={t("m.phoneCourier")} value={f.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" />
+          <Input label={t("m.countryCode")} value={f.country} onChangeText={set("country")} error={errors.country} autoCapitalize="characters" maxLength={2} />
+          <Input label={t("m.street")} value={f.line1} onChangeText={set("line1")} error={errors.line1} />
+          <Input label={t("m.line2")} value={f.line2} onChangeText={set("line2")} error={errors.line2} />
+          <Input label={t("m.city")} value={f.city} onChangeText={set("city")} error={errors.city} />
           <Input label={hints.regionLabel} value={f.region} onChangeText={set("region")} error={errors.region} />
           {hints.showPostal && <Input label={t(hints.postalLabel)} placeholder={hints.postalPlaceholder} value={f.postal_code} onChangeText={set("postal_code")} error={errors.postal_code} autoCapitalize="characters" />}
           <Button title={busy ? "…" : t("prefs.save")} disabled={busy} onPress={add} />
