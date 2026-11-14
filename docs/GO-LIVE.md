@@ -144,6 +144,17 @@ Once the live keys are set on the api service, run `python manage.py preflight` 
 
 This checks that your accounts accept the keys. It does not replace one real test payment, one real refund and one real parcel label before launch.
 
+## Dress rehearsal (run after the first deploy)
+
+`python manage.py rehearse` places a test order, pays it with the built-in test gateway (no money moves), ships it, adds a tracking update and refunds it, then checks the site is up. It uses your real database, shipping rates, launch-country limit and guest-checkout switch, so it catches settings mistakes before a customer does. E-mail goes to memory (nobody is contacted) and, unless you add `--keep`, everything it wrote is undone, so reports and stock are untouched.
+
+- `python manage.py rehearse` - a Ghana order.
+- `python manage.py rehearse --country US` (also `GB`, `CA`, `DE`) - an international order; a country outside `LAUNCH_COUNTRIES` fails at the shipping step with the reason.
+- `python manage.py rehearse --keep` - leave the order in place so you can open it in the admin.
+- `python manage.py rehearse --skip-preflight` - skip the settings check (it runs by default and lists anything that must be fixed).
+
+On Railway, open the api service's shell and run it there. Exit code 1 means a step failed; the FAIL line names it. The rehearsal proves our code and settings. It does not prove the live Paystack, MTN MoMo or carrier accounts: do one real small payment per gateway in test mode as well (see sections 5 and 6).
+
 ## Extra payment gateways
 
 `paystack` is on by default. To add Stripe, PayPal or Flutterwave, set their variables (see `.env.example`), add the name to `PAYMENT_PROVIDERS_ENABLED`, and create each gateway's webhook pointing at `https://YOUR-API/api/v1/payments/webhooks/<name>/` (`stripe`, `paypal` or `flutterwave`). Stripe and PayPal charge in USD, EUR, GBP, CAD and AUD; Flutterwave in GHS, NGN, KES, ZAR, USD, EUR and GBP. Stripe, PayPal and Flutterwave were built from each gateway's documentation and tested with simulated responses. Make one small real payment and one refund through each before announcing it.

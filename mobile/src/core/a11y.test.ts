@@ -38,3 +38,12 @@ describe("mobile accessibility guard rails", () => {
     for (const { f, text } of files) expect(text, f).not.toMatch(/<Text style=\{s\.(h1|h2)\}>/);
   });
 });
+
+describe("forms and the keyboard", () => {
+  it("no screen puts an Input or AddressForm inside a bare ScrollView (use FormScreen so the keyboard never covers the field)", () => {
+    for (const { f, text } of files) {
+      if (f === "ui.tsx") continue;
+      for (const m of text.matchAll(/<ScrollView(?![^>]*horizontal)[^>]*>([\s\S]*?)<\/ScrollView>/g)) expect(m[1], f).not.toMatch(/<Input|<TextInput|<AddressForm/);
+    }
+  });
+});

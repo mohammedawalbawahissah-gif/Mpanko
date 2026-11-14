@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { Busy, Button, ErrorRetry, Notice, Pill, s, useAsync } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, s, useAsync } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -89,7 +89,7 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
     }
   };
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("m.returnItems")}</Text>
       <Text style={s.muted}>{t("m.returnIntro", { days: e.window_days })}</Text>
       {!!problem && <View style={{ marginTop: 12 }}><Notice>{problem}</Notice></View>}
@@ -115,7 +115,7 @@ export function ReturnScreen({ route }: { route: { params: { number: string } } 
       <TextInput accessibilityLabel={t("m.note")} style={[s.input, { minHeight: 90, textAlignVertical: "top" }]} multiline maxLength={1000} value={note} onChangeText={setNote} />
       <View style={{ height: 16 }} />
       <Button title={busy ? t("m.sending") : t("m.requestReturn")} disabled={busy || chosen.length === 0 || !reason} onPress={submit} />
-    </ScrollView>
+    </FormScreen>
   );
 }
 
@@ -163,7 +163,7 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
     }
   };
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("m.askUs")}</Text>
       {!!problem && <Notice>{problem}</Notice>}
       <Text style={s.label}>{t("m.whatAbout")}</Text>
@@ -177,7 +177,7 @@ export function SupportNewScreen({ route }: { route: { params?: { order?: string
       <TextInput accessibilityLabel={t("m.message")} style={[s.input, { minHeight: 120, textAlignVertical: "top" }]} multiline maxLength={4000} value={message} onChangeText={setMessage} />
       <View style={{ height: 16 }} />
       <Button title={busy ? t("m.sending") : t("m.send")} disabled={busy || !subject.trim() || !message.trim()} onPress={submit} />
-    </ScrollView>
+    </FormScreen>
   );
 }
 
@@ -204,7 +204,7 @@ export function SupportThreadScreen({ route }: { route: { params: { number: stri
     }
   };
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{c.subject}</Text>
       <Pill value={c.status} />
       {c.messages.map((m) => (
@@ -224,6 +224,6 @@ export function SupportThreadScreen({ route }: { route: { params: { number: stri
           <Button title={busy ? t("m.sending") : t("m.send")} disabled={busy || !body.trim()} onPress={send} />
         </View>
       )}
-    </ScrollView>
+    </FormScreen>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 import { api, ApiError, type Page } from "./api";
 import { useAuth } from "./auth";
 import { fieldHints, type AddressRules } from "./core/addressRules";
@@ -9,7 +9,7 @@ import { usePrefs } from "./prefs";
 import { disablePush, enablePush } from "./push";
 import { color } from "./theme";
 import type { Address, User } from "./types";
-import { Busy, Button, ErrorRetry, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
 import type { MessageKey } from "./core/i18n";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
@@ -79,7 +79,7 @@ export function ProfileScreen() {
   const matches = searchCurrencies(rates, search);
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("prefs.title")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
 
@@ -118,7 +118,7 @@ export function ProfileScreen() {
       <Button title={busy ? "…" : t("prefs.save")} disabled={busy} onPress={save} />
 
       <Addresses />
-    </ScrollView>
+    </FormScreen>
   );
 }
 

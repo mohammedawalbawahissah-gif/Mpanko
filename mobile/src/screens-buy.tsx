@@ -11,7 +11,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -220,7 +220,7 @@ export function CheckoutScreen() {
   if (cart.length === 0 && !orderRef.current) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text></View>;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <FormScreen>
       {!!error && <Notice>{error}</Notice>}
       <Text accessibilityRole="header" style={s.h2}>{t("m.sendTo")}</Text>
       {addrs.loading && <Busy />}
@@ -303,7 +303,7 @@ export function CheckoutScreen() {
         <Switch value={terms} onValueChange={setTerms} accessibilityLabel={t("m.acceptTerms")} />
       </View>
       <Button title={placing ? t("checkout.taking") : t("checkout.pay")} disabled={placing || !address || !svc || !provider || restricted.length > 0 || !terms || (address.country !== "GH" && !duties)} onPress={pay} />
-    </ScrollView>
+    </FormScreen>
   );
 }
 

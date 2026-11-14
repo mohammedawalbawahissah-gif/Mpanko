@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Alert, Linking, ScrollView, Share, Switch, Text, View } from "react-native";
+import { Alert, Linking, Share, Switch, Text, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { api, ApiError, BASE } from "./api";
 import type { RootParams } from "./screens-buy";
 import { useAuth } from "./auth";
 import { color } from "./theme";
 import { usePrefs } from "./prefs";
-import { Button, Input, Notice, WhatsAppButton, s } from "./ui";
+import { FormScreen, Button, Input, Notice, WhatsAppButton, s } from "./ui";
 
 const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? BASE.replace(/\/api\/v1\/?$/, "").replace(":8000", ":5173");
 
@@ -48,7 +48,7 @@ export function AccountScreen() {
 
   if (user) {
     return (
-      <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+      <FormScreen>
         <Text accessibilityRole="header" style={s.h1}>{t("account.profile")}</Text>
         <Text style={{ fontWeight: "700" }}>{user.full_name}</Text>
         <Text style={s.muted}>{user.email}</Text>
@@ -96,12 +96,12 @@ export function AccountScreen() {
         )}
         <View style={{ height: 8 }} />
         <Button title={t("m.privacyPolicy")} kind="quiet" onPress={() => Linking.openURL(`${webUrl}/privacy`)} />
-      </ScrollView>
+      </FormScreen>
     );
   }
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{mode === "in" ? t("login.title") : mode === "phone" ? t("m.signInCodeTitle") : mode === "up" ? t("register.title") : t("m.resetTitle")}</Text>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
       {mode === "phone" && (
@@ -150,6 +150,6 @@ export function AccountScreen() {
       {mode === "in" && <Button title={t("login.create")} kind="quiet" onPress={() => { setMode("up"); setMsg(null); }} />}
       {mode === "in" && <View style={{ marginTop: 8 }}><Button title={t("m.signInSms")} kind="quiet" onPress={() => { setMode("phone"); setMsg(null); setCodeSent(false); setCode(""); }} /></View>}
       {mode === "in" && <View style={{ marginTop: 8 }}><Button title={t("login.forgot")} kind="quiet" onPress={() => { setMode("forgot"); setMsg(null); }} /></View>}
-    </ScrollView>
+    </FormScreen>
   );
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { api } from "./api";
 import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
@@ -92,7 +92,7 @@ export function Select({ label, value, options, onChange, error, placeholder }: 
       </Pressable>
       {!!error && <Text style={{ color: color.bad, marginTop: 4 }}>{error}</Text>}
       <Modal visible={open} animationType="slide" onRequestClose={close}>
-        <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, paddingTop: 48 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: "#fff", padding: 16, paddingTop: 48 }}>
           <Text accessibilityRole="header" style={s.h2}>{label}</Text>
           {options.length > 12 && <TextInput accessibilityLabel={t("m.searchList")} placeholder={t("m.searchList")} placeholderTextColor={color.muted} style={s.input} value={q} onChangeText={setQ} autoCapitalize="none" />}
           <FlatList
@@ -107,7 +107,7 @@ export function Select({ label, value, options, onChange, error, placeholder }: 
             )}
           />
           <Button title={t("common.cancel")} kind="quiet" onPress={close} />
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -125,6 +125,25 @@ export function Button({ title, onPress, disabled, kind = "primary", label }: { 
     >
       <Text style={[s.btnText, kind === "quiet" && { color: color.teal }]}>{title}</Text>
     </Pressable>
+  );
+}
+
+/**
+ * A scrolling screen for forms. On iPhone the content lifts and scrolls so the keyboard never covers the
+ * field being typed in; on Android the system already resizes the window. Dragging closes the keyboard,
+ * and a button tapped while the keyboard is open works on the first tap.
+ */
+export function FormScreen({ children }: { children: ReactNode }) {
+  return (
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={[s.pad, { paddingBottom: 40 }]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      automaticallyAdjustKeyboardInsets
+    >
+      {children}
+    </ScrollView>
   );
 }
 

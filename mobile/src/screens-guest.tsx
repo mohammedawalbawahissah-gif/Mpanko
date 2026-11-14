@@ -11,7 +11,7 @@ import { checkoutItems, isEmail, loadGuestOrder, saveGuestOrder } from "./core/g
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from "./types";
-import { Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText } from "./ui";
 import type { RootParams } from "./screens-buy";
 
 type Nav = NavigationProp<RootParams>;
@@ -198,7 +198,7 @@ export function GuestCheckoutScreen() {
   if (guestLines.length === 0 && !placed.current) return <View style={[s.screen, s.pad]}><Text accessibilityRole="header" style={s.h1}>{t("bag.empty")}</Text></View>;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("guest.title")}</Text>
       {!!error && <Notice>{error}</Notice>}
       <Input label={t("guest.email")} value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
@@ -262,7 +262,7 @@ export function GuestCheckoutScreen() {
         <Switch value={terms} onValueChange={setTerms} accessibilityLabel={t("m.acceptTerms")} />
       </View>
       <Button title={placing ? t("checkout.taking") : t("checkout.pay")} disabled={!canPay} onPress={pay} />
-    </ScrollView>
+    </FormScreen>
   );
 }
 
@@ -394,7 +394,7 @@ export function FindOrderScreen() {
   };
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+    <FormScreen>
       <Text accessibilityRole="header" style={s.h1}>{t("guest.find")}</Text>
       {saved && <View style={{ marginBottom: 16 }}><Button title={t("m.openLast", { number: saved.number })} onPress={() => nav.navigate("GuestOrder", { number: saved.number, token: saved.token })} /></View>}
       {done ? <Notice kind="info">{t("guest.findSent")}</Notice> : (
@@ -406,6 +406,6 @@ export function FindOrderScreen() {
           <Button title={busy ? t("m.sending") : t("guest.send")} disabled={busy || !number.trim() || !isEmail(email)} onPress={send} />
         </>
       )}
-    </ScrollView>
+    </FormScreen>
   );
 }
