@@ -47,3 +47,18 @@ describe("forms and the keyboard", () => {
     }
   });
 });
+
+describe("lists that change on the server", () => {
+  it("the shop list, orders and support list can be pulled down to refresh", () => {
+    for (const f of ["screens-shop.tsx", "screens-buy.tsx", "screens-help.tsx"]) {
+      const text = files.find((x) => x.f === f)!.text;
+      expect(text, f).toMatch(/usePullRefresh/);
+      expect(text, f).toMatch(/refreshControl=\{pull\.control\}/);
+    }
+  });
+  it("every tab has an icon and the product screen is titled with the product", () => {
+    const app = readFileSync(join(dir, "..", "App.tsx"), "utf8");
+    expect(app).toMatch(/tabBarIcon: \(\{ color: tint \}\) => <TabIcon/);
+    expect(files.find((x) => x.f === "screens-shop.tsx")!.text).toMatch(/setOptions\(\{ title: productName \}\)/);
+  });
+});

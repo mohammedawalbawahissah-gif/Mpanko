@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { api } from "./api";
 import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
@@ -51,6 +51,24 @@ export function useCachedAsync<T>(key: string, fn: () => Promise<T>, deps: unkno
   }, [run]);
   useEffect(load, [load]);
   return { data, error, loading, savedAt, reload: load };
+}
+
+/** Pull-to-refresh for a list or scroll view: `<ScrollView refreshControl={pull.control}>`. Shows the spinner only for a pull, not the first load. */
+export function usePullRefresh(reload: () => void) {
+  const [refreshing, setRefreshing] = useState(false);
+  const control = (
+    <RefreshControl
+      refreshing={refreshing}
+      tintColor={color.teal}
+      colors={[color.teal]}
+      onRefresh={() => {
+        setRefreshing(true);
+        reload();
+        setTimeout(() => setRefreshing(false), 800);
+      }}
+    />
+  );
+  return { control };
 }
 
 /** "Chat on WhatsApp". Shown only once the shop has set its WhatsApp number. */

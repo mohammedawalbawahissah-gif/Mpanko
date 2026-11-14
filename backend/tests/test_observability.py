@@ -65,3 +65,9 @@ def test_preflight_checks_https_redirect_and_log_format(settings):
 
     names = {r.name: r for r in check_core(offline=True)}
     assert "HTTPS redirect is on" in names and "Logs carry request IDs in JSON" in names
+
+
+def test_wrong_password_message_is_plain_and_does_not_reveal_which_part_is_wrong(api):
+    r = api.post("/api/v1/auth/login/", {"email": "nobody@example.com", "password": "nope-nope-1"}, format="json")
+    assert r.status_code == 401
+    assert "Email or password is wrong" in str(r.data) and "active account" not in str(r.data)

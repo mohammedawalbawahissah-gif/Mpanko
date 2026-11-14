@@ -10,7 +10,7 @@ import pycountry
 
 # country -> (postal_regex or None, postal_required, region_required, region_label, postal_example)
 _RULES = {
-    "GH": (r"[A-Z]{2}-\d{3}-\d{4}", False, True, "Region", "GA-123-4567 (GhanaPost digital address, optional)"),
+    "GH": (r"[A-Z]{2}-\d{3}-\d{4}", False, True, "Region", "GA-123-4567"),
     "NG": (r"\d{6}", False, True, "State", "100001"),
     "US": (r"\d{5}(-\d{4})?", True, True, "State", "73301"),
     "CA": (r"[A-Z]\d[A-Z] ?\d[A-Z]\d", True, True, "Province", "K1A 0B1"),

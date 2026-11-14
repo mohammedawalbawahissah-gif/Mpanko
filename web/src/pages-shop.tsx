@@ -89,6 +89,7 @@ const SORTS = [
 ];
 
 export function Shop() {
+  const { t } = useT();
   useSeo("Shop African-made products", "Textiles, beauty, home and fashion made by African makers, shipped worldwide with tracking.");
   const [params, setParams] = useSearchParams();
   const category = params.get("category") ?? "";
@@ -102,7 +103,7 @@ export function Shop() {
   const [loading, setLoading] = useState(true);
   const cats = useAsync(() => api<Category[]>("/categories/"), []);
 
-  useEffect(() => setDraft(search), [search]);
+  useEffect(() => setDraft((d) => (d.trim() === search ? d : search)), [search]);
   useEffect(() => setPage(1), [category, search, ordering]);
 
   useEffect(() => {
@@ -125,6 +126,15 @@ export function Shop() {
     };
   }, [category, search, ordering, page]);
 
+  // Results follow the typing after a short pause; the Search button and Enter still work straight away.
+  useEffect(() => {
+    const value = draft.trim();
+    if (value === search) return;
+    const id = window.setTimeout(() => update("q", value), 350);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -145,7 +155,10 @@ export function Shop() {
             }}
           >
             <label htmlFor="q" className="sr-only">Search products</label>
-            <input id="q" className="input" type="search" placeholder="Search products" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <div className="search-row">
+              <input id="q" className="input" type="search" placeholder="Search products" value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <button className="btn quiet" type="submit">{t("shop.searchButton")}</button>
+            </div>
           </form>
           <div>
             <h3>Categories</h3>
@@ -238,7 +251,7 @@ export function ProductPage() {
 
   return (
     <div className="wrap page">
-      <p className="small"><Link to="/shop">All products</Link>{product.category_name && <span className="muted"> / {product.category_name}</span>}</p>
+      <p className="small crumbs"><Link to="/shop">All products</Link>{product.category_name && <span className="muted"> / {product.category_name}</span>}</p>
       <div className="product">
         <div className="gallery">
           {product.images.length > 0 ? (

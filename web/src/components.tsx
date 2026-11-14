@@ -4,6 +4,7 @@ import { useAuth, useCart, useCurrency } from "./context";
 import { useShopConfig } from "./guest-config";
 import { LanguageSelect, useT } from "./i18n";
 import { reportError } from "./report";
+import type { MessageKey } from "./locales";
 import type { Product } from "./types";
 
 /* ---------------------------------------------------------------- weave patterns */
@@ -62,6 +63,28 @@ export function ProductArt({ product }: { product: Pick<Product, "name" | "slug"
 
 /* ---------------------------------------------------------------------- layout */
 
+/** Title for pages that do not set their own, so the tab never keeps the previous page's name. */
+export function routeTitle(pathname: string, t: (key: MessageKey) => string): string | undefined {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  const table: [RegExp, () => string][] = [
+    [/^\/bag$/, () => t("bag.title")],
+    [/^\/login$/, () => t("login.title")],
+    [/^\/register$/, () => t("register.title")],
+    [/^\/forgot-password$/, () => t("login.forgot")],
+    [/^\/reset-password$/, () => t("login.forgot")],
+    [/^\/checkout\/complete$/, () => t("checkout.title")],
+    [/^\/checkout$/, () => t("checkout.title")],
+    [/^\/orders\/find$/, () => t("guest.find")],
+    [/^\/orders(\/.*)?$/, () => t("orders.title")],
+    [/^\/verify-email$/, () => t("register.title")],
+    [/^\/support(\/.*)?$/, () => t("nav.help")],
+    [/^\/account$/, () => t("prefs.title")],
+  ];
+  for (const [re, label] of table) if (re.test(p)) return label();
+  if (p === "/" || p.startsWith("/shop") || ["/privacy", "/terms", "/returns-policy", "/cookies"].includes(p)) return undefined;
+  return "Page not found";
+}
+
 export function Layout() {
   const { user, logout } = useAuth();
   const { count } = useCart();
@@ -71,9 +94,16 @@ export function Layout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const title = routeTitle(pathname, t);
   useEffect(() => {
     window.scrollTo(0, 0);
+    setMenuOpen(false);
   }, [pathname]);
+  // Pages that set their own title (shop, product, policies) do so themselves; every other page gets one here.
+  useEffect(() => {
+    if (title) document.title = `${title} \u00b7 Mpanko`;
+  }, [title]);
 
   return (
     <>
@@ -88,7 +118,8 @@ export function Layout() {
             {user && <NavLink to="/orders">{t("nav.orders")}</NavLink>}
             {user && <NavLink to="/support">{t("nav.help")}</NavLink>}
           </nav>
-          <div className="header-tools">
+          <button type="button" className="menu-toggle link-button" aria-expanded={menuOpen} aria-controls="header-tools" onClick={() => setMenuOpen((o) => !o)}>{t("nav.menu")}</button>
+          <div id="header-tools" className={`header-tools${menuOpen ? " open" : ""}`}>
             {currencies.length > 1 && (
               <label>
                 <span className="sr-only">{t("nav.currency")}</span>
@@ -116,10 +147,10 @@ export function Layout() {
             ) : (
               <Link to="/login">{t("nav.signIn")}</Link>
             )}
-            <Link to="/bag" className="bag-link" aria-label={t("nav.bagItems", { count })}>
-              {t("nav.bag")} <span className="bag-count">{count}</span>
-            </Link>
           </div>
+          <Link to="/bag" className="bag-link" aria-label={t("nav.bagItems", { count })}>
+            {t("nav.bag")} <span className="bag-count">{count}</span>
+          </Link>
         </div>
       </header>
       <main id="main">

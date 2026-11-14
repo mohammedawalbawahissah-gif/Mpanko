@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError, type Page } from "./api";
@@ -7,7 +7,7 @@ import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { Busy, Button, ErrorRetry, Notice, Photo, s, useCachedAsync } from "./ui";
+import { Busy, Button, ErrorRetry, Notice, Photo, s, useCachedAsync, usePullRefresh } from "./ui";
 
 export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
@@ -17,6 +17,11 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<number | null>(null);
+  // Search as you type: wait for a short pause so each keystroke is not a request.
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(q.trim()), 350);
+    return () => clearTimeout(id);
+  }, [q]);
   const cats = useCachedAsync("categories", () => api<Page<Category> | Category[]>("/categories/"), []);
   const list: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
   const products = useCachedAsync(
@@ -24,6 +29,10 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
     () => api<Page<Product>>(`/products/?ordering=-created_at${cat ? `&category=${cat}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
     [cat, query]
   );
+  const pull = usePullRefresh(() => {
+    products.reload();
+    cats.reload();
+  });
   return (
     <View style={s.screen}>
       <View style={{ padding: 12, paddingBottom: 4 }}>
@@ -34,7 +43,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
           returnKeyType="search"
           value={q}
           onChangeText={setQ}
-          onSubmitEditing={() => setQuery(q)}
+          onSubmitEditing={() => setQuery(q.trim())}
           style={[s.input]}
         />
       </View>
@@ -58,6 +67,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         data={products.data?.results ?? []}
         keyExtractor={(p) => p.slug}
         numColumns={2}
+        refreshControl={pull.control}
         contentContainerStyle={{ padding: 8 }}
         columnWrapperStyle={{ gap: 8 }}
         ListEmptyComponent={products.loading ? undefined : <Text style={[s.muted, { padding: 16 }]}>{t("m.nothingMatches")}</Text>}
@@ -85,6 +95,10 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const { width } = useWindowDimensions();
+  const productName = p?.name;
+  useEffect(() => {
+    if (productName) navigation.setOptions({ title: productName });
+  }, [productName, navigation]);
 
   if (loading) return <Busy />;
   if (error || !p) return <View style={s.pad}>{error ? <ErrorRetry message={error} onRetry={reload} /> : <Notice>{t("m.productNotFound")}</Notice>}</View>;

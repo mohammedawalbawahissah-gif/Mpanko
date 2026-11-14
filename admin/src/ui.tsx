@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { ALL_COUNTRIES, countryName } from "./countries";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
@@ -53,13 +54,14 @@ export function when(iso: string | null | undefined): string {
   return iso ? new Date(iso).toLocaleString() : "—";
 }
 
-export function Stat({ name, value, tone }: { name: string; value: ReactNode; tone?: "warn" | "ok" }) {
-  return (
-    <div className={`stat ${tone ?? ""}`}>
+export function Stat({ name, value, tone, to }: { name: string; value: ReactNode; tone?: "warn" | "ok"; to?: string }) {
+  const inner = (
+    <>
       <div className="stat-value">{value}</div>
       <div className="stat-name">{name}</div>
-    </div>
+    </>
   );
+  return to ? <Link to={to} className={`stat stat-link ${tone ?? ""}`}>{inner}</Link> : <div className={`stat ${tone ?? ""}`}>{inner}</div>;
 }
 
 export function errText(e: unknown): string {

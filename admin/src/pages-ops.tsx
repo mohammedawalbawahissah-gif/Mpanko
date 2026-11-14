@@ -26,13 +26,13 @@ export function Dashboard() {
   (data.sales_last_7_days ?? []).forEach((s) => (sales[s.currency] = (sales[s.currency] ?? 0) + Number(s.total)));
   return (
     <>
-      <h1>Hello, {user?.full_name.split(" ")[0] || "there"}</h1>
+      <h1>Hello, {user?.full_name.split(" ")[0] || user?.email.split("@")[0] || "there"}</h1>
       <div className="stats">
-        {data.to_ship !== undefined && <Stat name="Orders to ship" value={data.to_ship} />}
-        {data.shipping_exceptions !== undefined && <Stat name="Delivery exceptions" value={data.shipping_exceptions} tone={data.shipping_exceptions ? "warn" : undefined} />}
-        {data.low_stock !== undefined && <Stat name="Low-stock variants" value={data.low_stock} tone={data.low_stock ? "warn" : undefined} />}
-        {data.payment_exceptions !== undefined && <Stat name="Payment mismatches" value={data.payment_exceptions} tone={data.payment_exceptions ? "warn" : undefined} />}
-        {data.unresolved_reconciliation !== undefined && <Stat name="Unresolved reconciliation items" value={data.unresolved_reconciliation} tone={data.unresolved_reconciliation ? "warn" : undefined} />}
+        {data.to_ship !== undefined && <Stat name="Orders to ship" value={data.to_ship} to="/orders" />}
+        {data.shipping_exceptions !== undefined && <Stat name="Delivery exceptions" value={data.shipping_exceptions} tone={data.shipping_exceptions ? "warn" : undefined} to="/shipments" />}
+        {data.low_stock !== undefined && <Stat name="Low-stock variants" value={data.low_stock} tone={data.low_stock ? "warn" : undefined} to="/stock" />}
+        {data.payment_exceptions !== undefined && <Stat name="Payment mismatches" value={data.payment_exceptions} tone={data.payment_exceptions ? "warn" : undefined} to="/reconciliation" />}
+        {data.unresolved_reconciliation !== undefined && <Stat name="Unresolved reconciliation items" value={data.unresolved_reconciliation} tone={data.unresolved_reconciliation ? "warn" : undefined} to="/reconciliation" />}
         {Object.entries(sales).map(([cur, total]) => <Stat key={cur} name={`Sales, last 7 days (${cur})`} value={total.toLocaleString(undefined, { maximumFractionDigits: 2 })} />)}
       </div>
       <h2>Orders by status</h2>

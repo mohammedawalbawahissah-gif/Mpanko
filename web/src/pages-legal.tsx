@@ -53,9 +53,12 @@ export function CookieNotice() {
     setShow(false);
   };
   return (
+    <>
+    <div className="cookie-spacer" aria-hidden="true" />
     <div className="cookie-notice" role="region" aria-label="Cookie notice">
       <p className="small">Mpanko only stores what it needs to keep you signed in and remember your bag and currency. No advertising or tracking. <Link to="/cookies">Read more</Link></p>
       <button className="btn quiet" onClick={dismiss}>Got it</button>
     </div>
+    </>
   );
 }

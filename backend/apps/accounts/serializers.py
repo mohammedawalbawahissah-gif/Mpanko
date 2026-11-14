@@ -97,6 +97,8 @@ class MpankoTokenSerializer(TokenObtainSerializer):
     tokens here — only a short-lived ticket that must be exchanged with a valid TOTP code (FR-AUTH-06).
     """
 
+    default_error_messages = {"no_active_account": "Email or password is wrong. Try again, or reset your password."}
+
     def validate(self, attrs):
         super().validate(attrs)  # authenticates and sets self.user; raises on bad credentials
         user = self.user

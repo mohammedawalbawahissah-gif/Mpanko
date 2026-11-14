@@ -172,7 +172,14 @@ export function Checkout() {
   const prepaid = estimate?.duties?.mode === "prepaid";
   const grandTotal = itemsTotal - discount + shippingTotal + tax + (prepaid ? dutyTotal : 0);
 
-const canPlace = !!address && !!service && !!provider && restricted.length === 0 && !placing && terms && (!international || duties);
+  const missing = [
+    !address && t("checkout.need.address"),
+    !!address && services !== null && !service && restricted.length === 0 && t("checkout.need.delivery"),
+    !provider && t("checkout.need.payment"),
+    !terms && t("checkout.need.terms"),
+    international && !duties && t("checkout.need.duties"),
+  ].filter((x): x is string => !!x);
+  const canPlace = !!address && !!service && !!provider && restricted.length === 0 && !placing && terms && (!international || duties);
 
   return (
     <div className="wrap page">
@@ -270,10 +277,10 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
           <dl style={{ marginTop: "1rem" }}>
             <dt>{t("checkout.items")}</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
             {coupon && !coupon.free_shipping && <><dt>{t("checkout.code", { code: coupon.code })}</dt><dd>−{exact(discount.toFixed(2), currency)}</dd></>}
-            <dt>{t("checkout.delivery")}</dt><dd>{service ? (coupon?.free_shipping ? t("checkout.free", { code: coupon.code }) : exact(shippingTotal.toFixed(2), currency)) : "—"}</dd>
+            <dt>{t("checkout.delivery")}</dt><dd>{service ? (coupon?.free_shipping ? t("checkout.free", { code: coupon.code }) : exact(shippingTotal.toFixed(2), currency)) : t("checkout.afterAddress")}</dd>
             {tax > 0 && <><dt>{t("checkout.tax")}</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
             {prepaid && dutyTotal > 0 && <><dt>{t("checkout.dutiesTitle")}</dt><dd>{exact(dutyTotal.toFixed(2), currency)}</dd></>}
-            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
+            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : t("checkout.afterAddress")}</dd>
           </dl>
           <div className="form" style={{ marginTop: "1rem" }}>
             <Field id="coupon" label={t("checkout.discountCode")} error={couponError}>
@@ -306,9 +313,10 @@ const canPlace = !!address && !!service && !!provider && restricted.length === 0
               <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> {t("checkout.termsAccept")}
             </label>
           </div>
-          <button className="btn block" disabled={!canPlace} onClick={place}>
+          <button className="btn block" disabled={!canPlace} onClick={place} aria-describedby={missing.length ? "pay-hint" : undefined}>
             {placing ? t("checkout.taking") : t("checkout.pay")}
           </button>
+          {missing.length > 0 && !placing && !order && <p id="pay-hint" className="small muted pay-hint" role="status">{t("checkout.stillNeeded", { items: missing.join(", ") })}</p>}
           <p className="small muted" style={{ marginTop: "0.75rem" }}>{t("checkout.finalNote", { currency })}</p>
           <button className="link-button" onClick={() => navigate("/bag")}>{t("checkout.backToBag")}</button>
           {order && <p className="small">Order {order.number} is waiting for payment. <Link to={`/orders/${order.number}`}>View order</Link></p>}

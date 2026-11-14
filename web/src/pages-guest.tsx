@@ -77,6 +77,8 @@ export function GuestCheckout() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [order, setOrder] = useState<PlacedGuest | null>(null);
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
+  const [previewCountry, setPreviewCountry] = useState("");
+  const [from, setFrom] = useState<ShippingService | null>(null);
   const key = useRef(idempotencyKey());
   const slugs = lines.filter((l) => l.slug).map((l) => `${l.slug}:${l.quantity}`).join(",");
 
@@ -97,6 +99,21 @@ export function GuestCheckout() {
       cancelled = true;
     };
   }, [address, slugs]);
+
+  // Before an address is saved, show what delivery to the chosen country starts at.
+  useEffect(() => {
+    if (address || !previewCountry) {
+      setFrom(null);
+      return;
+    }
+    let cancelled = false;
+    api<{ services: ShippingService[] }>(`/shipping/quote/?country=${previewCountry}&products=${slugs}`)
+      .then((r) => !cancelled && setFrom(r.services.length ? r.services.reduce((a, b) => (Number(b.price) < Number(a.price) ? b : a)) : null))
+      .catch(() => !cancelled && setFrom(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [address, previewCountry, slugs]);
 
   useEffect(() => {
     api<PaymentMethod[]>(`/payments/methods/?currency=${currency}`)
@@ -145,6 +162,14 @@ export function GuestCheckout() {
   const grandTotal = itemsTotal + shippingTotal + tax + (prepaid ? dutyTotal : 0);
   const international = !!address && address.country !== "GH";
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
+  const missing = [
+    !emailOk && t("checkout.need.email"),
+    !address && t("checkout.need.address"),
+    !!address && services !== null && !service && restricted.length === 0 && t("checkout.need.delivery"),
+    !provider && t("checkout.need.payment"),
+    !terms && t("checkout.need.terms"),
+    international && !duties && t("checkout.need.duties"),
+  ].filter((x): x is string => !!x);
   const canPlace = emailOk && !!address && !!service && !!provider && restricted.length === 0 && !placing && terms && (!international || duties);
 
   const pay = async (o: PlacedGuest) => {
@@ -217,7 +242,7 @@ export function GuestCheckout() {
                 {!order && <button className="link-button" onClick={() => setAddress(null)}>{t("guest.changeAddress")}</button>}
               </p>
             ) : (
-              <AddressForm local onSaved={(a) => setAddress(a)} />
+              <AddressForm local onSaved={(a) => setAddress(a)} onCountryChange={setPreviewCountry} />
             )}
           </section>
 
@@ -273,10 +298,10 @@ export function GuestCheckout() {
           ))}
           <dl style={{ marginTop: "1rem" }}>
             <dt>{t("checkout.items")}</dt><dd>{exact(itemsTotal.toFixed(2), currency)}</dd>
-            <dt>{t("checkout.delivery")}</dt><dd>{service ? exact(shippingTotal.toFixed(2), currency) : "—"}</dd>
+            <dt>{t("checkout.delivery")}</dt><dd>{service ? exact(shippingTotal.toFixed(2), currency) : from ? t("checkout.deliveryFrom", { amount: money(from.price, from.currency) }) : t("checkout.afterAddress")}</dd>
             {tax > 0 && <><dt>{t("checkout.tax")}</dt><dd>{exact(tax.toFixed(2), currency)}</dd></>}
             {prepaid && dutyTotal > 0 && <><dt>{t("checkout.dutiesTitle")}</dt><dd>{exact(dutyTotal.toFixed(2), currency)}</dd></>}
-            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : "—"}</dd>
+            <dt className="total">{t("checkout.total")}</dt><dd className="total">{service ? exact(grandTotal.toFixed(2), currency) : t("checkout.afterAddress")}</dd>
           </dl>
           <div className="form" style={{ marginTop: "1rem" }}>
             <Field id="notes" label={t("checkout.notes")}>
@@ -291,7 +316,8 @@ export function GuestCheckout() {
               <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> {t("checkout.termsAccept")}
             </label>
           </div>
-          <button className="btn block" disabled={!canPlace} onClick={place}>{placing ? t("checkout.taking") : t("checkout.pay")}</button>
+          <button className="btn block" disabled={!canPlace} onClick={place} aria-describedby={missing.length ? "pay-hint" : undefined}>{placing ? t("checkout.taking") : t("checkout.pay")}</button>
+          {missing.length > 0 && !placing && !order && <p id="pay-hint" className="small muted pay-hint" role="status">{t("checkout.stillNeeded", { items: missing.join(", ") })}</p>}
           <p className="small muted" style={{ marginTop: "0.75rem" }}>{t("checkout.finalNoteShort")}</p>
           <button className="link-button" onClick={() => navigate("/bag")}>{t("checkout.backToBag")}</button>
         </aside>

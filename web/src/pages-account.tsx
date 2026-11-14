@@ -391,21 +391,28 @@ export function Account() {
     <div className="wrap page">
       <h1>Your account</h1>
       {note && <Alert kind="ok">{note}</Alert>}
+      {!user.email_verified && (
+        <Alert kind="info">
+          Your email isn't verified yet. <button className="link-button" onClick={resend}>Send the verification email</button>
+        </Alert>
+      )}
+      <nav className="jump" aria-label="On this page">
+        <a href="#me">Details</a>
+        <a href="#mobile">Mobile number</a>
+        <a href="#password">Password</a>
+        <a href="#addr">Addresses</a>
+        <a href="#priv">Your data</a>
+      </nav>
       <div className="two">
         <section aria-labelledby="me">
           <h2 id="me">Details</h2>
           <p>{user.email}</p>
           <ProfileForm key={`${user.id}-${user.phone}`} onSaved={async () => { await reload(); setNote("Details saved."); }} />
-          <PhonePanel key={`p-${user.phone}-${user.phone_verified}`} onVerified={reload} />
-          {!user.email_verified && (
-            <Alert kind="info">
-              Your email isn't verified yet. <button className="link-button" onClick={resend}>Send the verification email</button>
-            </Alert>
-          )}
+          <div id="mobile"><PhonePanel key={`p-${user.phone}-${user.phone_verified}`} onVerified={reload} /></div>
           <p><Link to="/orders">Your orders</Link></p>
           <button className="btn quiet" onClick={async () => { await logout(); navigate("/"); }}>Sign out</button>
 
-          <h2 style={{ marginTop: "2.5rem" }}>Change password</h2>
+          <h2 id="password" style={{ marginTop: "2.5rem" }}>Change password</h2>
           {pw.message && <Alert>{pw.message}</Alert>}
           <form className="form" onSubmit={changePassword} noValidate>
             <Field id="cur" label="Current password" error={pw.errors.current_password}>

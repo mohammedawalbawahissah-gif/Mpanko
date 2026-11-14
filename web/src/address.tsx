@@ -11,7 +11,7 @@ export const COUNTRIES = ALL_COUNTRIES;
 const EMPTY = { label: "", recipient_name: "", phone: "", line1: "", line2: "", city: "", region: "", postal_code: "", country: "GH", is_default: false };
 
 /** `local` keeps the address in the page (for guests) instead of saving it to an account. */
-export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a: Address) => void; onCancel?: () => void; local?: boolean }) {
+export function AddressForm({ onSaved, onCancel, local = false, onCountryChange }: { onSaved: (a: Address) => void; onCancel?: () => void; local?: boolean; onCountryChange?: (country: string) => void }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [general, setGeneral] = useState("");
@@ -30,6 +30,10 @@ export function AddressForm({ onSaved, onCancel, local = false }: { onSaved: (a:
     return () => {
       cancelled = true;
     };
+  }, [form.country]);
+  useEffect(() => {
+    onCountryChange?.(form.country);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.country]);
   const postalLabel = !rules ? t("address.postalOptional") : rules.postal_code === "required" ? t("address.postalRequired") : rules.postal_code === "none" ? t("address.postalNone") : t("address.postalOptional");
 

@@ -100,7 +100,7 @@ ${og}
     <a class="brand" href="/"><img src="/logo-light.svg" alt="${esc(name)}" width="92" height="68"></a>
     <nav aria-label="Main">
       <ul>
-${NAV.map((n) => `        <li><a href="${n.href}"${path === n.href || (n.href !== "/" && path.startsWith(n.href + "/")) ? ' aria-current="page"' : ""}>${n.label}</a></li>`).join("\n")}
+${[...NAV, ...(site.shopUrl ? [{ label: "Shop", href: site.shopUrl, external: true }] : [])].map((n) => `        <li><a href="${n.href}"${path === n.href || (n.href !== "/" && path.startsWith(n.href + "/")) ? ' aria-current="page"' : ""}>${n.label}</a></li>`).join("\n")}
       </ul>
     </nav>
   </div>

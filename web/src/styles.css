@@ -212,7 +212,7 @@ p { margin: 0 0 1em; max-width: 66ch; }
 .timeline li:first-child::before { background: var(--turq); box-shadow: 0 0 0 3px rgba(18, 181, 174, 0.35); }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.5rem; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
-.empty { padding: 3rem 0; }
+.empty { padding-block: 3rem; }
 
 /* ---------------------------------------------------------- footer */
 .site-footer { background: var(--ink); color: #dfe3f2; padding-block: 3rem; margin-top: 3rem; }
@@ -233,3 +233,29 @@ p { margin: 0 0 1em; max-width: 66ch; }
 
 .cookie-notice { position: fixed; inset: auto 1rem 1rem 1rem; max-width: 34rem; margin-inline: auto; z-index: 50; display: flex; gap: 1rem; align-items: center; background: var(--white); border: 1px solid var(--line, #d9d9e3); border-radius: var(--radius); padding: 0.85rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,0.14); }
 .cookie-notice p { margin: 0; }
+.cookie-notice .btn { white-space: nowrap; flex: none; }
+.cookie-spacer { height: 9rem; }
+@media (min-width: 641px) { .cookie-spacer { height: 6rem; } }
+
+/* ---------------------------------------------------- small screens and touch */
+.menu-toggle { display: none; }
+@media (max-width: 640px) {
+  .logo img { height: 40px; width: auto; }
+  .site-header .wrap { gap: 0.25rem 0.75rem; min-height: 56px; padding-block: 0.25rem; }
+  .menu-toggle { display: inline-flex; align-items: center; min-height: 44px; }
+  .header-tools { display: none; order: 10; width: 100%; flex-direction: row; padding-block: 0.25rem 0.75rem; }
+  .header-tools.open { display: flex; }
+  .header-tools .select { flex: 1 1 9rem; }
+}
+@media (max-width: 860px), (pointer: coarse) {
+  .nav a, .header-tools > a, .bag-link, .link-button, .site-footer li a, .crumbs a, .line strong a { display: inline-flex; align-items: center; min-height: 44px; }
+  .site-footer ul { gap: 0; }
+  .qty button { min-height: 44px; }
+}
+.pay-hint { margin: 0.6rem 0 0; }
+.search-row { display: flex; gap: 0.5rem; }
+.search-row .input { min-width: 0; }
+.search-row .btn { flex: none; min-height: 44px; padding-inline: 1rem; }
+.jump { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-bottom: 1.5rem; }
+.jump a { display: inline-flex; align-items: center; min-height: 44px; }
+#mobile, h2[id] { scroll-margin-top: 5rem; }

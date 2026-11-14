@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { AuthProvider, useAuth } from "./src/auth";
 import { AccountScreen } from "./src/screens-account";
 import { ProfileScreen } from "./src/screens-profile";
@@ -29,7 +29,7 @@ function ShopNav() {
   return (
     <Shop.Navigator screenOptions={header}>
       <Shop.Screen name="List" component={ShopList} options={{ title: "Mpanko" }} />
-      <Shop.Screen name="Product" component={ProductScreen} options={{ title: "" }} />
+      <Shop.Screen name="Product" component={ProductScreen} options={{ title: "Mpanko" }} />
     </Shop.Navigator>
   );
 }
@@ -38,12 +38,48 @@ function TabLabel({ text, focused }: { text: string; focused: boolean }) {
   return <Text style={{ fontSize: 12, fontWeight: focused ? "800" : "500", color: focused ? color.teal : color.muted, marginBottom: 6 }}>{text}</Text>;
 }
 
+/** Small tab icons drawn from plain Views, so the app needs no icon font. Decorative: the label beside each is what is read aloud. */
+function TabIcon({ name, tint }: { name: keyof RootTabs; tint: string }) {
+  const line = { borderColor: tint, borderWidth: 2 } as const;
+  const box = { width: 22, height: 22, alignItems: "center" as const, justifyContent: "center" as const };
+  if (name === "Shop")
+    return (
+      <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={{ width: 20, height: 9, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: tint }} />
+        <View style={[{ width: 16, height: 10, borderTopWidth: 0 }, line]} />
+      </View>
+    );
+  if (name === "Bag")
+    return (
+      <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={[{ width: 9, height: 7, borderBottomWidth: 0, borderTopLeftRadius: 5, borderTopRightRadius: 5, marginBottom: -1 }, line]} />
+        <View style={{ width: 20, height: 13, borderRadius: 3, backgroundColor: tint }} />
+      </View>
+    );
+  if (name === "Orders")
+    return (
+      <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={[{ width: 17, height: 20, borderRadius: 3, justifyContent: "space-evenly", paddingHorizontal: 3 }, line]}>
+          <View style={{ height: 2, backgroundColor: tint }} />
+          <View style={{ height: 2, backgroundColor: tint }} />
+          <View style={{ height: 2, backgroundColor: tint }} />
+        </View>
+      </View>
+    );
+  return (
+    <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: tint }} />
+      <View style={{ width: 19, height: 9, borderTopLeftRadius: 10, borderTopRightRadius: 10, backgroundColor: tint, marginTop: 2 }} />
+    </View>
+  );
+}
+
 function TabsNav() {
   const { cart, user, guestLines } = useAuth();
   const { t } = usePrefs();
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
-    <Tabs.Navigator screenOptions={{ ...header, tabBarIcon: () => null, tabBarActiveTintColor: color.teal }}>
+    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />

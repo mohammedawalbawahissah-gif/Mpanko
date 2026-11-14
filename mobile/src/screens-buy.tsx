@@ -11,7 +11,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -315,6 +315,7 @@ export function OrdersScreen() {
   const nav = useNavigation<Nav>();
   const { data, error, loading, reload } = useAsync(() => (user ? api<Page<OrderSummary>>("/orders/") : Promise.resolve(null)), [user?.id]);
   useFocusEffect(useCallback(() => { if (user) reload(); }, [user, reload]));
+  const pull = usePullRefresh(reload);
   if (!user) {
     return (
       <View style={[s.screen, s.pad]}>
@@ -325,7 +326,7 @@ export function OrdersScreen() {
     );
   }
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={pull.control}>
       <Text accessibilityRole="header" style={s.h1}>{t("orders.title")}</Text>
       {loading && !data && <Busy />}
       {!!error && <ErrorRetry message={error} onRetry={reload} />}
