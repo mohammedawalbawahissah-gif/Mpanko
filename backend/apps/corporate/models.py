@@ -19,6 +19,9 @@ class SiteProfile(models.Model):
     about = models.TextField(
         blank=True, help_text="Who we are. Leave a blank line between paragraphs.",
         default="We started with one idea: good things made in Africa should be easy to buy from anywhere. Today we run more than one business, each with its own team and its own customers.\n\nOur head office is in Tamale, Ghana. We work with partners who handle shipping and payment in each country we serve.")
+    vision = models.TextField(blank=True, help_text="Shown in a card beside the story on the About page.")
+    mission = models.TextField(blank=True, help_text="Shown in a card beside the story on the About page.")
+    approach = models.TextField(blank=True, help_text="Shown in a card beside the story on the About page.")
     contact_email = models.EmailField(blank=True)
     phone = models.CharField(max_length=40, blank=True)
     phone_label = models.CharField(max_length=30, blank=True, help_text="Optional name for the button, such as Sales. Blank shows Call.")

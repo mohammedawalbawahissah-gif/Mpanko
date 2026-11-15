@@ -9,7 +9,7 @@ from .models import Business, ContactMessage, GalleryImage, SitePage, SiteProfil
 class SiteProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteProfile
-        fields = ("company_name", "tagline", "intro", "about", "contact_email", "phone", "phone_label", "phone_2", "phone_2_label", "address",
+        fields = ("company_name", "tagline", "intro", "about", "vision", "mission", "approach", "contact_email", "phone", "phone_label", "phone_2", "phone_2_label", "address",
                   "linkedin_url", "instagram_url", "facebook_url", "x_url")
 
 

@@ -178,3 +178,15 @@ test("a gallery appears only when there are photos, each opening full size, with
   assert.match(aboutPage({ ...ctx(), gallery: g }), /Moments/);
   assert.equal(/class="gallery"/.test(aboutPage(ctx())), false);
 });
+
+test("the About page puts the story on the left with vision, mission and approach cards beside it, and the footer shows the address", async () => {
+  const { aboutPage } = await import("../src/render.mjs");
+  const profile = { company_name: "Mpanko", about: "Story one.", vision: "A vision.", mission: "A mission.", approach: "An approach.", address: "Worcester, Massachusetts, USA", contacts: [] };
+  const html = aboutPage({ site: { url: "", shopUrl: "" }, profile, businesses: [], pages: {}, gallery: [] });
+  assert.ok(html.indexOf(">Our story<") < html.indexOf("<p>Story one.</p>"));
+  assert.ok(html.includes('class="wrap story"') && html.includes('class="pillars"'));
+  for (const t of ["<h3>Vision</h3>", "<h3>Mission</h3>", "<h3>Approach</h3>", "A mission."]) assert.ok(html.includes(t), t);
+  assert.ok(html.includes("<p>Worcester, Massachusetts, USA</p>"));
+  const bare = aboutPage({ site: { url: "", shopUrl: "" }, profile: { ...profile, vision: "", mission: "", approach: "" }, businesses: [], pages: {}, gallery: [] });
+  assert.ok(!bare.includes('class="pillars"'));
+});

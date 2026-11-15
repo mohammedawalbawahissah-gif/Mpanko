@@ -260,13 +260,22 @@ export function homePage(ctx) {
   return layout({ ...ctx, title: "Home", path: "/", body });
 }
 
+/** Vision, mission and approach as three cards beside the story. A statement left blank is not drawn. */
+function pillars(profile) {
+  const rows = [["Vision", profile.vision], ["Mission", profile.mission], ["Approach", profile.approach]].filter(([, t]) => t && String(t).trim());
+  return rows.length ? `<ul class="pillars">${rows.map(([h, t]) => `<li><h3>${h}</h3><p>${esc(t)}</p></li>`).join("")}</ul>` : "";
+}
+
 export function aboutPage(ctx) {
   const { profile, businesses, pages = {} } = ctx;
   const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">About ${esc(profile.company_name)}</h1></div></section>
   <section aria-labelledby="who-h">
-    <div class="wrap">
-      <h2 id="who-h">Our story</h2>
-      <div class="prose">${profile.about ? prose(profile.about) : "<p>We are adding this page. Please check back soon.</p>"}</div>
+    <div class="wrap story">
+      <div>
+        <h2 id="who-h">Our story</h2>
+        <div class="prose">${profile.about ? prose(profile.about) : "<p>We are adding this page. Please check back soon.</p>"}</div>
+      </div>
+      ${pillars(profile)}
     </div>
   </section>
   ${businesses.length ? `<section class="band" aria-labelledby="what-h">

@@ -13,7 +13,7 @@ interface SitePage {
   image_url: string; image_alt: string; is_published: boolean;
 }
 interface Profile {
-  company_name: string; tagline: string; intro: string; about: string; contact_email: string; phone: string; phone_label: string; phone_2: string; phone_2_label: string; address: string;
+  company_name: string; tagline: string; intro: string; about: string; vision: string; mission: string; approach: string; contact_email: string; phone: string; phone_label: string; phone_2: string; phone_2_label: string; address: string;
   linkedin_url: string; instagram_url: string; facebook_url: string; x_url: string;
 }
 interface Enquiry {
@@ -463,6 +463,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
       {text("tagline", "Tagline")}
       <Field id="p-intro" label="Introduction (home page)" error={errors.intro}><textarea id="p-intro" className="input" rows={3} value={f.intro} onChange={set("intro")} /></Field>
       <Field id="p-about" label="About us (leave a blank line between paragraphs)" error={errors.about}><textarea id="p-about" className="input" rows={8} value={f.about} onChange={set("about")} /></Field>
+      <Field id="p-vision" label="Vision (card on the About page)" error={errors.vision}><textarea id="p-vision" className="input" rows={3} value={f.vision} onChange={set("vision")} /></Field>
+      <Field id="p-mission" label="Mission (card on the About page)" error={errors.mission}><textarea id="p-mission" className="input" rows={3} value={f.mission} onChange={set("mission")} /></Field>
+      <Field id="p-approach" label="Approach (card on the About page)" error={errors.approach}><textarea id="p-approach" className="input" rows={3} value={f.approach} onChange={set("approach")} /></Field>
       {text("contact_email", "Contact email", { type: "email", inputMode: "email" })}
       {text("phone", "Phone", { inputMode: "tel" })}
       {text("phone_label", "Phone button name (optional, such as Sales)")}

@@ -257,3 +257,11 @@ footer p { margin: 0; }
 .menu-order { font-weight: 650; color: var(--teal); }
 .menu-order:hover { color: var(--ink); }
 @media (max-width: 34rem) { .menu-list li { grid-template-columns: 1fr auto; } .menu-order { grid-column: 1 / -1; } }
+
+/* About: the story on the left, vision, mission and approach cards on the right */
+.wrap.story { align-items: start; }
+@media (min-width: 56rem) { .wrap.story { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } }
+.pillars { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.pillars li { background: #fff; border: 1px solid var(--mist); border-radius: 16px; padding: 1.25rem 1.5rem; }
+.pillars h3 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--teal); }
+.pillars p { margin: 0; }

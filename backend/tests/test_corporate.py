@@ -335,3 +335,22 @@ def test_staff_manage_the_gallery_and_others_cannot(admin, customer, settings, t
     assert client_for(customer).get("/api/v1/corporate/manage/gallery/").status_code == 403
     assert staff.delete(f"/api/v1/corporate/manage/gallery/{gid}/").status_code == 204
     assert not GalleryImage.objects.filter(pk=gid).exists()
+
+
+@pytest.mark.django_db
+def test_loader_sets_worcester_address_and_about_cards_without_overwriting_staff_wording(api):
+    from django.core.management import call_command
+    from apps.corporate.models import SiteProfile
+    p = SiteProfile.get()
+    p.address, p.vision = "Tamale, Ghana", "Our own vision."
+    p.save()
+    call_command("load_corporate_content")
+    p = SiteProfile.get()
+    assert p.address == "Worcester, Massachusetts, USA"
+    assert p.vision == "Our own vision." and p.mission and p.approach
+    p.address = "1 Main Street, Worcester"
+    p.save()
+    call_command("load_corporate_content")
+    assert SiteProfile.get().address == "1 Main Street, Worcester"
+    data = api.get("/api/v1/corporate/site/").json()
+    assert data["profile"]["mission"] and data["profile"]["address"]

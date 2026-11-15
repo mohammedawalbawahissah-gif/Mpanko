@@ -19,12 +19,15 @@ export const fallbackProfile = {
   intro: "Mpanko is the home of the businesses, services and community work of Teefa Fuseini: food, fashion, events, beauty, insurance and a foundation, all rooted in African heritage.",
   about:
     "Mpanko is the umbrella that brings together everything Teefa Fuseini builds. It is a group of businesses, a shop for African-made goods and a set of community commitments, all under one name and one set of values.\n\nMpanko is rooted in Northern Ghana and led from Massachusetts, USA, and it stands for a simple promise: lead with integrity, preserve heritage and empower the communities we belong to.",
+  vision: "To carry African heritage, food and enterprise from Northern Ghana to the world, and to keep it proud and alive.",
+  mission: "To serve with excellence through food, fashion, events, beauty and guidance, and to support women and vulnerable children through QT Foundation.",
+  approach: "Lead with integrity. Every business starts by listening to the people it serves, and every order, event and service is treated as a promise.",
   contact_email: process.env.CONTACT_EMAIL || "",
   phone: process.env.CONTACT_PHONE || "",
   phone_label: "",
   phone_2: process.env.CONTACT_PHONE_2 || "",
   phone_2_label: "",
-  address: process.env.CONTACT_ADDRESS || "",
+  address: process.env.CONTACT_ADDRESS || "Worcester, Massachusetts, USA",
   linkedin_url: "", instagram_url: "", facebook_url: "", x_url: "",
 };
 

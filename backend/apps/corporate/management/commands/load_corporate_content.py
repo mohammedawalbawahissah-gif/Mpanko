@@ -15,6 +15,11 @@ from apps.corporate.models import Business, GalleryImage, SitePage, SiteProfile
 
 MEDIA = Path(__file__).resolve().parents[2] / "seed_media"
 
+ADDRESS = "Worcester, Massachusetts, USA"
+VISION = "To carry African heritage, food and enterprise from Northern Ghana to the world, and to keep it proud and alive."
+MISSION = "To serve with excellence through food, fashion, events, beauty and guidance, and to support women and vulnerable children through QT Foundation."
+APPROACH = "Lead with integrity. Every business starts by listening to the people it serves, and every order, event and service is treated as a promise."
+
 INTRO = ("Mpanko is the home of the businesses, services and community work of Teefa Fuseini: food, fashion, events, beauty, "
          "insurance and a foundation, all rooted in African heritage.")
 
@@ -208,6 +213,11 @@ class Command(BaseCommand):
             profile.about = ABOUT
         if force or not profile.intro.strip() or profile.intro == default_intro:
             profile.intro = INTRO
+        for field, text in (("vision", VISION), ("mission", MISSION), ("approach", APPROACH)):
+            if force or not getattr(profile, field).strip():
+                setattr(profile, field, text)
+        if force or not profile.address.strip() or profile.address.strip() == "Tamale, Ghana":
+            profile.address = ADDRESS  # the footer shows this
         profile.save()
 
         for row in BUSINESSES:
