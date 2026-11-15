@@ -202,7 +202,16 @@ def check_messaging(offline):
             try:
                 r = _get("https://api.resend.com/domains", headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"})
                 ok = r.ok
-                out.append(Result(g, "Resend accepts the key", PASS if ok else FAIL, "" if ok else f"HTTP {r.status_code}", "Re-copy the key. A key limited to sending only may show a 401 here; use `python manage.py check_email you@example.com` instead."))
+                restricted = False
+                if r.status_code == 401:  # a sending-only key is refused here by design, yet it can still send
+                    try:
+                        restricted = r.json().get("name") == "restricted_api_key"
+                    except ValueError:
+                        pass
+                if restricted:
+                    out.append(Result(g, "Resend accepts the key", PASS, "Sending-only key. Run `python manage.py check_email you@example.com` to confirm it sends."))
+                else:
+                    out.append(Result(g, "Resend accepts the key", PASS if ok else FAIL, "" if ok else f"HTTP {r.status_code}", "Re-copy the key, then run `python manage.py check_email you@example.com`."))
             except Exception as exc:  # noqa: BLE001
                 out.append(Result(g, "Resend accepts the key", FAIL, str(exc)[:160]))
     else:
