@@ -20,7 +20,7 @@ INTRO = ("Mpanko is the home of the businesses, services and community work of T
 
 ABOUT = """Mpanko is the umbrella that brings together everything Teefa Fuseini builds. It is a group of businesses, a shop for African-made goods and a set of community commitments, all under one name and one set of values.
 
-The story took shape in 2020, in the middle of the COVID-19 pandemic, when Teefa founded QT Eatery to serve authentic African cuisine. Her work has grown with the people she serves. It now includes events and 360 photo booth rentals, Rapsana Designz for clothing that carries African heritage, QT Make-Up Artistry, and insurance guidance for individuals and families through World Financial Group. Alongside the businesses sits QT Foundation, which supports women and vulnerable children, and her role as Magazia (Queen Mother), a traditional leadership title rooted in the Dagomba heritage of Northern Ghana.
+The story took shape in 2020, in the middle of the COVID-19 pandemic, when Teefa founded QT Eatery to serve authentic African cuisine. Her work has grown with the people she serves. It now includes events and 360 photo booth rentals, Rabsana Designz for clothing that carries African heritage, QT Make-Up Artistry, and insurance guidance for individuals and families through World Financial Group. Alongside the businesses sits QT Foundation, which supports women and vulnerable children, and her role as Magazia (Queen Mother), a traditional leadership title rooted in the Dagomba heritage of Northern Ghana.
 
 Mpanko is where these pieces meet. It is rooted in Northern Ghana and led from Massachusetts, USA, and it stands for a simple promise: lead with integrity, preserve heritage and empower the communities we belong to."""
 
@@ -55,7 +55,8 @@ BUSINESSES = [
          description=("Abochi Grills was established in 2026. Teefa Fuseini is booked to come and grill your chicken, livestock or any other "
                       "meat, for a fee.\n\nIt runs as its own business alongside QT Eatery. Send us a message with your date, the kind of meat "
                       "and how many people you are feeding, and we will confirm the details and the price."),
-         highlights="Chicken, livestock and other meat\nBooked for your event or gathering\nEstablished in 2026", cta_label="Book a grilling"),
+         highlights="Chicken, livestock and other meat\nBooked for your event or gathering\nEstablished in 2026", cta_label="Book a grilling",
+         logo="abochi-grills-logo.png", logo_alt="Abochi Grills logo: a flame above a grill grate"),
     dict(slug="events-planning", name="Events Planning", sector="Events", location="Worcester, Massachusetts, USA", sort_order=20,
          tagline="H&A 360 Photobooth Rentals, for all events.",
          summary="Events planning, with H&A 360 Photobooth Rentals available for all kinds of events.",
@@ -63,19 +64,22 @@ BUSINESSES = [
                       "booth available for all events.\n\nIt is based in Worcester, Massachusetts, USA. Send us a message to check a date and book."),
          highlights="H&A 360 Photobooth Rentals\nFor all events\nWorcester, Massachusetts, USA",
          image="h-and-a-360-photobooth.jpg", image_alt="H&A 360 Photobooth Rentals flyer: three people dancing on a 360 photo booth platform",
+         logo="h-and-a-360-photobooth-logo.png", logo_alt="H&A 360 Photobooth Rentals logo: a camera inside a rotating ring",
          cta_label="Book now"),
-    dict(slug="rapsana-designz", name="Rapsana Designz", sector="Fashion", sort_order=30,
+    dict(slug="rabsana-designz", name="Rabsana Designz", sector="Fashion", sort_order=30,
          tagline="Clothing that carries African heritage.",
          summary="A fashion brand that promotes African heritage, identity and creativity through clothing.",
-         description=("Rapsana Designz was founded in 2025. It is a fashion brand dedicated to promoting African heritage, identity and creativity "
+         description=("Rabsana Designz was founded in 2025. It is a fashion brand dedicated to promoting African heritage, identity and creativity "
                       "through clothing.\n\nThe brand reflects Teefa's vision of fashion as a platform for cultural expression."),
          highlights="African heritage, identity and creativity\nClothing\nFounded in 2025",
+         logo="rabsana-designz-logo.png", logo_alt="Rabsana Designz logo: the letter R in a ring above a kente-style band",
          cta_label="Go to shop to order", old_cta_label="Ask about the collection", cta_shop=True),
     dict(slug="qt-make-up-artistry", name="QT Make-Up Artistry", sector="Beauty", sort_order=40,
          tagline="Professional make-up artistry.",
          summary="Professional make-up artistry.",
          description="QT Make-Up Artistry is Teefa Fuseini's make-up business. Send us a message to ask about services and to book an appointment.",
-         highlights="", cta_label="Book an appointment"),
+         highlights="", cta_label="Book an appointment",
+         logo="qt-make-up-artistry-logo.png", logo_alt="QT Make-Up Artistry logo: pink lips above the letters QT"),
     dict(slug="insurance", name="Insurance with WFG", sector="Financial services", sort_order=50,
          tagline="Helping families understand their coverage options.",
          summary="Guidance on insurance products and coverage options, through World Financial Group (WFG).",
@@ -105,7 +109,7 @@ PAGES = [
                "leadership, women's advancement, cultural stewardship and positive social impact."),
          quote=QUOTE, quote_by="Teefa Fuseini",
          highlights=("2019 | Co-founded the Northern Excellence Awards\n2020 | Founded QT Eatery\n2023 | Founded QT Foundation\n"
-                     "2024 | Became Magazia (Queen Mother) in Massachusetts, USA\n2025 | Founded Rapsana Designz\n"
+                     "2024 | Became Magazia (Queen Mother) in Massachusetts, USA\n2025 | Founded Rabsana Designz\n"
                      "2025 | Began her career in insurance with World Financial Group (WFG)")),
     dict(slug="magazia", title="Magazia (Queen Mother)", kicker="Traditional leadership",
          summary="Teefa Fuseini holds the traditional title of Magazia (Queen Mother), rooted in the heritage of the Dagomba people of Northern Ghana.",
@@ -133,7 +137,40 @@ class Command(BaseCommand):
         data = (MEDIA / filename).read_bytes()
         getattr(obj, field).save(filename, ContentFile(data), save=False)
 
+    def _fix_spelling(self):
+        """The brand is Rabsana Designz. Correct earlier wording and the old address wherever it was saved."""
+        old, new = "Rapsana", "Rabsana"
+        legacy = Business.objects.filter(slug="rapsana-designz").first()
+        if legacy and not Business.objects.filter(slug="rabsana-designz").exists():
+            legacy.slug = "rabsana-designz"
+            legacy.save(update_fields=["slug"])
+        for b in Business.objects.all():
+            changed = []
+            for f in ("name", "tagline", "summary", "description", "highlights", "logo_alt", "image_alt", "cta_label", "disclaimer"):
+                v = getattr(b, f)
+                if old in v:
+                    setattr(b, f, v.replace(old, new))
+                    changed.append(f)
+            if b.logo and b.logo.name.rsplit("/", 1)[-1].startswith("rapsana-designz-logo"):
+                b.logo.delete(save=False)  # the old picture spells the name wrongly; the loader attaches the corrected one
+                changed.append("logo")
+            if changed:
+                b.save()
+        profile = SiteProfile.get()
+        for f in ("tagline", "intro", "about"):
+            v = getattr(profile, f)
+            if old in v:
+                setattr(profile, f, v.replace(old, new))
+        profile.save()
+        for page in SitePage.objects.all():
+            for f in ("title", "kicker", "summary", "body", "quote", "highlights", "image_alt"):
+                v = getattr(page, f)
+                if old in v:
+                    setattr(page, f, v.replace(old, new))
+            page.save()
+
     def handle(self, *args, force=False, **opts):
+        self._fix_spelling()
         shop = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
 
         profile = SiteProfile.get()

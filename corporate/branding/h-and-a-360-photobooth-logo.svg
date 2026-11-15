@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <rect width="600" height="600" fill="#fff"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e91e63"/><stop offset="1" stop-color="#7b1fa2"/></linearGradient></defs>
+  <g transform="translate(0 -22)"><path d="M300 60A135 135 0 1 1 168 168" fill="none" stroke="url(#g)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M142 150L172 176L198 140Z" fill="#7b1fa2" transform="rotate(8 170 160)"/>
+  <rect x="236" y="168" width="128" height="92" rx="18" fill="#231f20"/>
+  <rect x="268" y="150" width="46" height="26" rx="8" fill="#231f20"/>
+  <circle cx="300" cy="214" r="32" fill="#fff"/>
+  <circle cx="300" cy="214" r="21" fill="url(#g)"/>
+  <circle cx="294" cy="207" r="6" fill="#fff" opacity=".8"/>
+  <circle cx="342" cy="184" r="6" fill="#ffeb3b"/></g>
+  <text x="300" y="436" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="104" letter-spacing="2" fill="#d81b60">H&amp;A360</text>
+  <text x="300" y="486" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="40" letter-spacing="9" fill="#231f20">PHOTOBOOTH</text>
+  <text x="300" y="532" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="30" letter-spacing="14" fill="#7b1fa2">RENTALS</text>
+</svg>

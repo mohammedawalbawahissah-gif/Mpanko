@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <rect width="600" height="600" fill="#fff"/>
+  <path d="M170 170C212 146 258 142 300 172C342 142 388 146 430 170C402 228 350 256 300 256C250 256 198 228 170 170Z" fill="#d1366b"/>
+  <path d="M176 176C240 198 360 198 424 176" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+  <path d="M226 198C254 210 282 214 300 214C318 214 346 210 374 198" fill="none" stroke="#f08aa9" stroke-width="5" stroke-linecap="round" opacity=".0"/>
+  <ellipse cx="262" cy="196" rx="26" ry="8" fill="#fff" opacity=".28" transform="rotate(-8 262 196)"/>
+  <text x="300" y="400" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="150" letter-spacing="4" fill="#231f20">QT</text>
+  <line x1="150" y1="440" x2="450" y2="440" stroke="#e9a820" stroke-width="5" stroke-linecap="round"/>
+  <text x="300" y="492" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="34" letter-spacing="9" fill="#231f20">MAKE-UP</text>
+  <text x="300" y="534" text-anchor="middle" font-family="Lora" font-style="italic" font-weight="500" font-size="32" letter-spacing="8" fill="#b02a5b">artistry</text>
+</svg>

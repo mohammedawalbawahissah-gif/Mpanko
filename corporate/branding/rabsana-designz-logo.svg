@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <rect width="600" height="600" fill="#fff"/>
+  <circle cx="300" cy="190" r="128" fill="none" stroke="#c2183a" stroke-width="9"/>
+  <circle cx="300" cy="190" r="108" fill="none" stroke="#e9a820" stroke-width="3"/>
+  <text x="300" y="248" text-anchor="middle" font-family="Lora" font-weight="700" font-size="170" fill="#c2183a">R</text>
+  <text x="300" y="440" text-anchor="middle" font-family="Lora" font-weight="700" font-size="76" letter-spacing="9" fill="#231f20">RABSANA</text>
+  <text x="300" y="484" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="28" letter-spacing="20" fill="#a86f00">DESIGNZ</text>
+  <g>
+    <path d="M150 530h40l-20 -22z M190 530h40l-20 -22z" fill="#c2183a"/>
+    <path d="M230 530h40l-20 -22z M270 530h40l-20 -22z" fill="#e9a820"/>
+    <path d="M310 530h40l-20 -22z M350 530h40l-20 -22z" fill="#0e7f74"/>
+    <path d="M390 530h40l-20 -22z M430 530h20l-20 -22z" fill="#231f20"/>
+  </g>
+</svg>

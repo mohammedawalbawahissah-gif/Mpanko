@@ -265,6 +265,23 @@ def test_load_corporate_content_is_safe_to_run_twice_and_keeps_edits(settings, t
     call_command("load_corporate_content")
     assert Business.objects.count() == count
     assert Business.objects.filter(slug="abochi-grills").exists()
-    assert Business.objects.get(slug="rapsana-designz").cta_label == "Go to shop to order"
+    assert Business.objects.get(slug="rabsana-designz").cta_label == "Go to shop to order"
     assert "Abochi" in Business.objects.get(slug="qt-eatery").description
     assert Business.objects.get(pk=b.pk).tagline == "Edited by staff"
+
+
+def test_loader_corrects_the_old_rapsana_spelling_everywhere(settings, tmp_path):
+    from django.core.management import call_command
+    from apps.corporate.models import SitePage
+    settings.MEDIA_ROOT = tmp_path
+    biz("Rapsana Designz", slug="rapsana-designz", description="Rapsana Designz was founded in 2025.")
+    SitePage.objects.create(slug="founder", title="Teefa", highlights="2025 | Launched Rapsana Designz", is_published=True)
+    profile = SiteProfile.get()
+    profile.about = "We run Rapsana Designz."
+    profile.save()
+    call_command("load_corporate_content")
+    b = Business.objects.get(slug="rabsana-designz")
+    assert b.name == "Rabsana Designz" and "Rapsana" not in b.description
+    assert not Business.objects.filter(slug="rapsana-designz").exists()
+    assert "Rapsana" not in SitePage.objects.get(slug="founder").highlights
+    assert "Rapsana" not in SiteProfile.get().about

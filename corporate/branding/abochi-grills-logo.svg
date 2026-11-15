@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <rect width="600" height="600" fill="#fff"/>
+  <defs><linearGradient id="f" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#c8200f"/><stop offset="1" stop-color="#f26a1b"/></linearGradient></defs>
+  <path d="M300 48C318 108 392 140 384 214C378 266 342 296 300 296C258 296 222 266 216 214C211 172 240 150 254 112C268 138 282 128 300 48Z" fill="url(#f)"/>
+  <path d="M300 150C312 188 350 206 346 244C343 270 324 284 300 284C276 284 257 270 254 244C252 220 270 208 278 184C288 198 294 190 300 150Z" fill="#f7b11e"/>
+  <path d="M300 214C307 232 326 242 324 260C322 272 312 280 300 280C288 280 278 272 276 260C275 248 285 242 289 230C294 238 297 234 300 214Z" fill="#fff3c4"/>
+  <g stroke="#231f20" stroke-width="11" stroke-linecap="round">
+    <line x1="190" y1="324" x2="410" y2="324"/>
+    <line x1="214" y1="340" x2="214" y2="388"/><line x1="257" y1="340" x2="257" y2="388"/><line x1="300" y1="340" x2="300" y2="388"/><line x1="343" y1="340" x2="343" y2="388"/><line x1="386" y1="340" x2="386" y2="388"/>
+  </g>
+  <text x="300" y="478" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="82" letter-spacing="7" fill="#231f20">ABOCHI</text>
+  <text x="300" y="530" text-anchor="middle" font-family="Poppins" font-weight="700" font-size="38" letter-spacing="22" fill="#d62f1f">GRILLS</text>
+</svg>
