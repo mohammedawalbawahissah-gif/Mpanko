@@ -10,7 +10,7 @@ import { mainPhoto, photoList } from "./core/images";
 import { cardWidth } from "./core/layout";
 import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
 
-export type ShopStack = { List: undefined; Product: { slug: string } };
+export type ShopStack = { List: undefined; Product: { slug: string }; Menu: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
 
 export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List">) {
@@ -70,8 +70,8 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
       </ScrollView>
       {subs.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
-          {[{ id: -1, slug: topOfChosen!.slug, name: t("m.all") }, ...subs].map((c) => (
-            <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: cat === c.slug }}
+          {[{ id: -1, slug: topOfChosen!.slug, name: t("m.all"), is_menu: false }, ...subs].map((c) => (
+            <Pressable key={String(c.id)} onPress={() => (c.is_menu ? navigation.navigate("Menu", { slug: c.slug }) : setCat(c.slug))} accessibilityRole="button" accessibilityState={{ selected: cat === c.slug }}
               style={{ paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.slug ? color.gold : "#fff", borderWidth: 1, borderColor: cat === c.slug ? color.gold : color.line }}>
               <Text style={{ color: color.ink, fontWeight: "700" }}>{c.name}</Text>
             </Pressable>

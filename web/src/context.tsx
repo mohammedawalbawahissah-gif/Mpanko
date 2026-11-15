@@ -254,7 +254,7 @@ interface CartState {
   lines: CartLine[];
   count: number;
   busy: boolean;
-  add: (product: Product, variant: Variant, quantity: number) => Promise<void>;
+  add: (product: Pick<Product, "name" | "slug" | "currency">, variant: Pick<Variant, "id" | "sku" | "name" | "price">, quantity: number) => Promise<void>;
   setQuantity: (line: CartLine, quantity: number) => Promise<void>;
   remove: (line: CartLine) => Promise<void>;
   refresh: () => Promise<void>;
@@ -339,7 +339,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [user, ready]);
 
   const add = useCallback(
-    async (product: Product, variant: Variant, quantity: number) => {
+    async (product: Pick<Product, "name" | "slug" | "currency">, variant: Pick<Variant, "id" | "sku" | "name" | "price">, quantity: number) => {
       setBusy(true);
       try {
         if (user) {

@@ -40,6 +40,8 @@ export interface Category {
   slug: string;
   parent: number | null;
   sort_order?: number;
+  is_menu?: boolean;
+  menu_note?: string;
 }
 
 export interface User {
@@ -175,3 +177,8 @@ export interface AddressRules {
   postal_example: string;
   regions?: string[];
 }
+
+export interface MenuVariant { id: number; sku: string; name: string; price: string }
+export interface MenuItem { slug: string; name: string; description: string; orderable: boolean; currency: string; lead_time_days: number | null; variants: MenuVariant[] }
+export interface MenuSection { name: string; items: MenuItem[] }
+export interface MenuData { category: { name: string; slug: string; parent: string }; note: string; sections: MenuSection[]; orderable_count: number }

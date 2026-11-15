@@ -151,3 +151,4 @@ code.secret { background: #E3F1EF; padding: 0.15rem 0.4rem; border-radius: 3px; 
 .pre { white-space: pre-wrap; max-width: 60ch; }
 .pill.s-handled { background: #D6EFE5; color: #075A40; }
 .pill.s-new { background: #FBEFC4; color: #6A4C00; }
+.input.narrow { width: 6rem; }

@@ -25,6 +25,8 @@ export function monogram(name) {
   return (String(name).trim().match(/[\p{L}\p{N}]/u) || ["?"])[0].toUpperCase();
 }
 
+/** The food business whose menu is sold in the shop. */
+export const MENU_SLUG = "qt-eatery";
 const isCurrent = (path, href) => path === href || (href !== "/" && path.startsWith(href + "/"));
 
 /** The tabs, like a company site's menu: About, Services (a drop-down of every service), Magazia when that page exists, the Shop, Contact. */
@@ -33,6 +35,7 @@ function navItems({ site, businesses, pages = {} }) {
     { label: "About", href: "/about" },
     { label: "Services", href: "/services", menu: businesses },
     ...(pages.magazia ? [{ label: "Magazia", href: "/magazia" }] : []),
+    ...(businesses.some((b) => b.slug === MENU_SLUG) ? [{ label: "Menu", href: "/menu" }] : []),
     ...(site.shopUrl ? [{ label: "Shop", href: site.shopUrl, external: true }] : []),
     { label: "Contact", href: "/contact" },
   ];
@@ -304,6 +307,7 @@ function serviceActions(b) {
   const label = String(b.cta_label || "").trim();
   const ctaUrl = safeUrl(b.cta_url);
   const buttons = [];
+  if (b.slug === MENU_SLUG) buttons.push(`<a class="btn" href="/menu">See the menu</a>`);
   if (label) buttons.push(`<a class="btn" href="${ctaUrl ? esc(ctaUrl) : contact}"${ctaUrl ? ' rel="noopener"' : ""}>${esc(label)}</a>`);
   if (site) buttons.push(`<a class="btn${buttons.length ? " quiet dark" : ""}" href="${esc(site)}" rel="noopener">Visit ${esc(b.name)}</a>`);
   if (!label || ctaUrl) buttons.push(`<a class="btn${buttons.length ? " quiet dark" : ""}" href="${contact}">Ask about ${esc(b.name)}</a>`);
@@ -340,6 +344,44 @@ export function servicePage(ctx, b) {
   ${gallerySection(b.gallery, "Gallery", "gallery-h")}
   ${b.disclaimer ? `<section class="fine" aria-label="Important information"><div class="wrap one"><p>${esc(b.disclaimer)}</p></div></section>` : ""}`;
   return layout({ ...ctx, title: b.name, path: `/services/${b.slug}`, description: b.summary || b.tagline, body });
+}
+
+const dishId = (slug) => `dish-${slug}`;
+const dishPrice = (item) => {
+  const v = item.variants?.[0];
+  if (!item.orderable || !v) return "";
+  const n = Number(v.price);
+  try { return new Intl.NumberFormat("en-US", { style: "currency", currency: item.currency || "USD" }).format(n); } catch { return `${n.toFixed(2)} ${item.currency || ""}`.trim(); }
+};
+
+/** The full QT Eatery menu in the flyer's sections. Each dish that can be ordered links to the same dish on the shop's order page. */
+export function menuPage(ctx, menu) {
+  const shop = safeUrl(ctx.site.shopUrl);
+  const orderPage = shop ? `${shop.replace(/\/$/, "")}/menu/${encodeURIComponent(menu.category?.slug || MENU_SLUG)}` : "";
+  const sections = menu.sections || [];
+  const body = `<section class="page-head">
+    <div class="wrap one">
+      <p class="crumb"><a href="/services/${MENU_SLUG}">QT Eatery</a></p>
+      <h1 class="page-title">QT Eatery menu</h1>
+      ${menu.note ? `<p class="lede big">${esc(menu.note)}</p>` : ""}
+      <p class="actions">${orderPage ? `<a class="btn" href="${esc(orderPage)}" rel="noopener">Open the order page</a>` : `<a class="btn" href="/contact?business=${MENU_SLUG}">Ask about an order</a>`}</p>
+    </div>
+  </section>
+  <section aria-label="Menu">
+    <div class="wrap one">
+      <nav aria-label="Menu sections"><ul class="menu-jump">${sections.map((sec, i) => `<li><a href="#menu-${i}">${esc(sec.name)}</a></li>`).join("")}</ul></nav>
+      ${sections.map((sec, i) => `<div class="menu-section">
+        <h2 id="menu-${i}">${esc(sec.name)}</h2>
+        <ul class="menu-list">${sec.items.map((item) => {
+          const price = dishPrice(item);
+          const link = orderPage && item.orderable ? `<a class="menu-order" href="${esc(`${orderPage}#${dishId(item.slug)}`)}" rel="noopener">Order<span class="sr"> ${esc(item.name)}</span></a>` : "";
+          return `<li><div><strong>${esc(item.name)}</strong>${item.description ? `<span class="menu-desc">${esc(item.description)}</span>` : ""}</div><span class="menu-price">${price ? esc(price) : "Price coming soon"}</span>${link}</li>`;
+        }).join("")}</ul>
+      </div>`).join("")}
+    </div>
+  </section>
+  ${contactCta()}`;
+  return layout({ ...ctx, title: "QT Eatery menu", path: "/menu", description: "The full QT Eatery menu: northern foods, pastries, Ghanaian dishes, appetizers, continental dishes and healthy drinks. Pick a dish and order it in the shop.", body });
 }
 
 export function magaziaPage(ctx, page) {
@@ -467,6 +509,6 @@ export function unavailablePage(ctx) {
 
 export function sitemap(site, businesses, pages = {}) {
   if (!site.url) return "";
-  const urls = ["/", "/about", "/services", ...(pages.magazia ? ["/magazia"] : []), "/contact", ...businesses.map((b) => `/services/${encodeURIComponent(b.slug)}`)];
+  const urls = ["/", "/about", "/services", ...(pages.magazia ? ["/magazia"] : []), ...(businesses.some((b) => b.slug === MENU_SLUG) ? ["/menu"] : []), "/contact", ...businesses.map((b) => `/services/${encodeURIComponent(b.slug)}`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(site.url + u)}</loc></url>`).join("")}</urlset>\n`;
 }

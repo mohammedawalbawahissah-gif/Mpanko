@@ -22,6 +22,7 @@ function fakeApi(state) {
       const b = state.businesses.find((x) => x.slug === slug);
       return b ? json(200, b) : json(404, { detail: "Not found." });
     }
+    if (url.endsWith("/menu/qt-eatery/")) return state.menu ? json(200, state.menu) : json(404, {});
     if (url.endsWith("/corporate/contact/")) {
       state.posts.push(JSON.parse(opts.body));
       return state.contactReply ?? json(201, { ok: true });
@@ -30,10 +31,10 @@ function fakeApi(state) {
   };
 }
 
-async function withServer(fn, { mode = "up", businesses = [FOODS], limiter, contactReply, shop } = {}) {
+async function withServer(fn, { mode = "up", businesses = [FOODS], limiter, contactReply, shop, menu, shopUrl } = {}) {
   const dir = await build(path.join(mkdtempSync(path.join(os.tmpdir(), "corp-")), "dist"));
-  const state = { mode, businesses, calls: [], posts: [], contactReply, shop };
-  const server = makeServer({ root: dir, apiUrl: "http://api.test", siteUrl: "https://www.example.org", fetchImpl: fakeApi(state), limiter });
+  const state = { mode, businesses, calls: [], posts: [], contactReply, shop, menu };
+  const server = makeServer({ root: dir, apiUrl: "http://api.test", siteUrl: "https://www.example.org", fetchImpl: fakeApi(state), limiter, ...(shopUrl ? { shopUrl } : {}) });
   await new Promise((r) => server.listen(0, r));
   const base = `http://127.0.0.1:${server.address().port}`;
   try { await fn(base, state); } finally { server.close(); }
@@ -202,3 +203,37 @@ test("old /businesses addresses redirect permanently to /services", () => withSe
     assert.equal(r.headers.get("location"), to);
   }
 }));
+
+const QT = { ...FOODS, slug: "qt-eatery", name: "QT Eatery" };
+const MENU = {
+  category: { name: "QT Eatery", slug: "qt-eatery", parent: "food" }, note: "All orders are made by request only.", orderable_count: 1,
+  sections: [
+    { name: "Popular Northern Foods", items: [
+      { slug: "tuo-zaafi", name: "Tuo Zaafi", description: "", orderable: true, currency: "USD", lead_time_days: 1, variants: [{ id: 1, sku: "A", name: "Standard", price: "12.50" }] },
+      { name: "Waakye", slug: "waakye", description: "", orderable: false, currency: "USD", lead_time_days: 1, variants: [] },
+    ] },
+    { name: "Pastries", items: [] },
+  ],
+};
+
+test("the menu page lists every section and sends each orderable dish to the shop", async () => {
+  await withServer(async (base) => {
+    const res = await fetch(base + "/menu");
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    assert.ok(html.includes("Popular Northern Foods") && html.includes("Pastries"));
+    assert.ok(html.includes("$12.50"));
+    assert.ok(html.includes('href="https://shop.example.org/menu/qt-eatery#dish-tuo-zaafi"'));
+    assert.ok(html.includes('href="https://shop.example.org/menu/qt-eatery" rel="noopener">Open the order page'));
+    assert.ok(!html.includes("#dish-waakye"), "a dish with no price has no order link");
+    assert.ok(html.includes("Price coming soon"));
+    assert.ok(html.includes('href="/menu"'), "the menu is in the main navigation");
+    assert.ok((await (await fetch(base + "/services/qt-eatery")).text()).includes("See the menu"));
+    assert.ok((await (await fetch(base + "/sitemap.xml")).text()).includes("/menu<"));
+  }, { businesses: [QT], menu: MENU, shopUrl: "https://shop.example.org" });
+});
+
+test("the menu page is missing without a QT Eatery business and unavailable when the API is down", async () => {
+  await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [FOODS], menu: MENU });
+  await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [QT] });
+});

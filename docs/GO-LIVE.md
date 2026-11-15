@@ -225,3 +225,11 @@ Run `python manage.py preflight` after setting these. It warns about anything mi
 - `/health/` says the API is running and shows which version is live (Railway sets `RAILWAY_GIT_COMMIT_SHA`). `/ready/` checks the database and Redis. Point Railway's health check at `/ready/`.
 - Requests slower than one second are logged as warnings with "(slow)".
 - Each push runs a dependency audit. See `docs/SECURITY-AUDIT.md`.
+
+## QT Eatery menu (food ordering)
+
+After deploying, run once on the api service: `python manage.py migrate`, then `python manage.py load_qt_eatery_menu`, then `python manage.py load_corporate_content`. The menu loader creates the QT Eatery category under Food and the 50 dishes from the flyer as drafts with no price (safe to repeat; it never overwrites prices you set).
+
+1. In the admin open Catalog, QT Eatery menu. Type each dish's price and tick Published. A dish with no price stays off sale and shows "Price coming soon".
+2. Food is sold to the United States only. In Shipping, add a United States zone with a "Pickup in Worcester" rate of 0 and a "Local delivery" rate with your fee, so buyers can finish checkout. Buyers add their choice of meat, stew or heat level in the notes at checkout.
+3. Buyers reach the menu in the shop (Food, then QT Eatery, on the web and in the app) and on the corporate website at /menu, where each dish opens the same dish on the shop's order page.

@@ -33,6 +33,8 @@ export function createApi({ apiUrl, fetchImpl = fetch, now = () => Date.now() })
     site: () => (apiUrl ? cached("site", "/api/v1/corporate/site/") : Promise.resolve({ status: "down" })),
     /** { status: "ok", data } | { status: "missing" } | { status: "down" } */
     business: (slug) => (apiUrl ? cached(`b:${slug}`, `/api/v1/corporate/businesses/${encodeURIComponent(slug)}/`) : Promise.resolve({ status: "down" })),
+    /** The shop's menu for a food category: { sections: [{ name, items }] }. */
+    menu: (slug) => (apiUrl ? cached(`m:${slug}`, `/api/v1/menu/${encodeURIComponent(slug)}/`) : Promise.resolve({ status: "down" })),
     /** Send a contact message. Returns { ok: true } or { ok: false, kind: "invalid"|"busy"|"down", errors? }. */
     async contact(payload) {
       if (!apiUrl) return { ok: false, kind: "down" };

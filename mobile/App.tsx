@@ -14,6 +14,7 @@ import { ErrorBoundary } from "./src/crash";
 import { installGlobalErrorReporting, setCurrentScreen } from "./src/report";
 import { FindOrderScreen, GuestCheckoutScreen, GuestOrderScreen } from "./src/screens-guest";
 import { BagScreen, CheckoutScreen, OrderDetailScreen, OrdersScreen, type RootParams } from "./src/screens-buy";
+import { MenuScreen } from "./src/screens-menu";
 import { ProductScreen, ShopList, type RootTabs, type ShopStack } from "./src/screens-shop";
 import { NotificationBell, NotificationsScreen } from "./src/screens-notifications";
 import { refreshUnread } from "./src/inbox";
@@ -33,6 +34,7 @@ function ShopNav() {
     <Shop.Navigator screenOptions={{ ...header, headerRight: () => <NotificationBell /> }}>
       <Shop.Screen name="List" component={ShopList} options={{ title: "Mpanko" }} />
       <Shop.Screen name="Product" component={ProductScreen} options={{ title: "Mpanko" }} />
+      <Shop.Screen name="Menu" component={MenuScreen} options={{ title: "Mpanko" }} />
     </Shop.Navigator>
   );
 }
@@ -99,7 +101,7 @@ const linking: LinkingOptions<RootParams> = {
     screens: {
       Profile: "profile",
       Notifications: "notifications",
-      Tabs: { screens: { Orders: "orders", Bag: "bag", Account: "account", Shop: { screens: { Product: "shop/:slug", List: "shop" } } } },
+      Tabs: { screens: { Orders: "orders", Bag: "bag", Account: "account", Shop: { screens: { Product: "shop/:slug", Menu: "menu/:slug", List: "shop" } } } },
       GuestOrder: "orders/guest/:number",
       FindOrder: "orders/find",
       OrderDetail: "orders/:number",

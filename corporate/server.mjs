@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { createApi } from "./src/api.mjs";
 import { fallbackBusinesses, fallbackProfile, site as envSite } from "./src/content.mjs";
-import { aboutPage, contactPage, homePage, magaziaPage, notFoundPage, servicePage, servicesPage, sitemap, unavailablePage } from "./src/render.mjs";
+import { aboutPage, contactPage, homePage, magaziaPage, menuPage, MENU_SLUG, notFoundPage, servicePage, servicesPage, sitemap, unavailablePage } from "./src/render.mjs";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2",
@@ -214,6 +214,12 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
       if (p === "/about") return send(req, res, 200, aboutPage(ctx));
       if (p === "/services") return send(req, res, 200, servicesPage(ctx));
       if (p === "/magazia") return ctx.pages.magazia ? send(req, res, 200, magaziaPage(ctx, ctx.pages.magazia)) : send(req, res, 404, notFoundPage(ctx));
+      if (p === "/menu") {
+        if (!ctx.businesses.some((b) => b.slug === MENU_SLUG)) return send(req, res, 404, notFoundPage(ctx));
+        const found = await api.menu(MENU_SLUG);
+        if (found.status === "ok") return send(req, res, 200, menuPage(ctx, found.data));
+        return send(req, res, found.status === "missing" ? 404 : 503, found.status === "missing" ? notFoundPage(ctx) : unavailablePage(ctx));
+      }
       // The old address for the list of services keeps working.
       if (p === "/businesses") return redirect(res, "/services", 301);
       if (p === "/contact") {

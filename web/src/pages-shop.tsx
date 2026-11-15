@@ -168,6 +168,11 @@ export function Shop() {
   const tree = departments(cats.data);
   const dept = category ? departmentOf(cats.data, category) : undefined;
   const selected = category ? cats.data?.find((c) => c.slug === category) : undefined;
+  const navigate = useNavigate();
+  // A menu category (QT Eatery) opens as its own order page instead of a product list.
+  useEffect(() => {
+    if (selected?.is_menu) navigate(`/menu/${selected.slug}`, { replace: true });
+  }, [selected, navigate]);
 
   return (
     <div className="wrap page">

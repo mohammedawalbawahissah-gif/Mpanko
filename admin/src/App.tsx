@@ -13,6 +13,7 @@ import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Retu
 import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
 import { Security } from "./pages-security";
+import { MenuPrices } from "./pages-menu";
 import { Businesses, Contacts, Enquiries, Gallery, SitePages, SiteDetails } from "./pages-corporate";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
@@ -28,6 +29,7 @@ const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
   { to: "/shipping-rules", name: "Shipping rules", roles: ["super_admin", "store_admin", "fulfillment"], group: "Fulfil" },
   { to: "/pickup-locations", name: "Pickup locations", roles: ["super_admin", "store_admin", "fulfillment"], group: "Fulfil" },
   { to: "/products", name: "Products", roles: ["super_admin", "store_admin"], group: "Catalog" },
+  { to: "/menu-prices", name: "QT Eatery menu", roles: ["super_admin", "store_admin"], group: "Catalog" },
   { to: "/stock", name: "Stock", roles: ["super_admin", "store_admin", "fulfillment"], group: "Catalog" },
   { to: "/product-types", name: "Product types", roles: ["super_admin", "store_admin"], group: "Catalog" },
   { to: "/reconciliation", name: "Reconciliation", roles: ["super_admin", "store_admin", "finance"], group: "Money" },
@@ -145,6 +147,7 @@ export default function App() {
             <Route path="pages" element={route("/pages", <Pages />)} />
             <Route path="businesses" element={route("/businesses", <Businesses />)} />
             <Route path="site-pages" element={route("/site-pages", <SitePages />)} />
+            <Route path="menu-prices" element={route("/menu-prices", <MenuPrices />)} />
             <Route path="gallery" element={route("/gallery", <Gallery />)} />
             <Route path="contacts" element={route("/contacts", <Contacts />)} />
             <Route path="site-details" element={route("/site-details", <SiteDetails />)} />

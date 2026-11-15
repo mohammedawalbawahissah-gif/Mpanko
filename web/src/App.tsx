@@ -4,6 +4,7 @@ import { Route, Routes, Link } from "react-router-dom";
 import { Layout, RequireAuth } from "./components";
 import { Bag, Home, ProductPage, Shop } from "./pages-shop";
 import { OrderDetail, Orders } from "./pages-checkout";
+import { MenuPage } from "./pages-menu";
 import { CheckoutCompleteRoute, CheckoutRoute, FindOrderPage, GuestOrder } from "./pages-guest";
 import { ReturnForm, SupportList, SupportNew, SupportThread } from "./pages-help";
 import { Account, Forgot, Login, Register, Reset, VerifyEmail } from "./pages-account";
@@ -25,6 +26,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="shop" element={<Shop />} />
         <Route path="shop/:slug" element={<ProductPage />} />
+        <Route path="menu/:slug" element={<MenuPage />} />
         <Route path="bag" element={<Bag />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />

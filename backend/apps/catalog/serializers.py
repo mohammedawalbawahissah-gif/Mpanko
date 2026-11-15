@@ -6,7 +6,7 @@ from .models import Category, Inventory, Product, ProductImage, ProductType, Pro
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ("id", "name", "slug", "parent", "is_active", "sort_order")
+        fields = ("id", "name", "slug", "parent", "is_active", "sort_order", "is_menu", "menu_note")
         read_only_fields = ("slug",)
 
 

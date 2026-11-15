@@ -12,6 +12,8 @@ class Category(models.Model):
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=0, help_text="Lower numbers come first. Categories with the same number are sorted by name.")
+    is_menu = models.BooleanField(default=False, help_text="Open this category as a menu order page (sections of dishes to pick from) instead of a product list.")
+    menu_note = models.CharField(max_length=300, blank=True, help_text="Shown at the top of its menu page, for example how orders are made.")
 
     class Meta:
         verbose_name_plural = "categories"
@@ -81,6 +83,9 @@ class Product(models.Model):
     hs_code = models.CharField(max_length=12, blank=True, help_text="Customs tariff code, printed on invoices for international parcels")
     # Kind of goods; its country restrictions apply to every product of the type.
     product_type = models.ForeignKey(ProductType, null=True, blank=True, on_delete=models.SET_NULL, related_name="products")
+    # Menu pages: the section a dish is listed under on its category's menu (for example "Pastries"), and its place in that section.
+    menu_section = models.CharField(max_length=80, blank=True)
+    menu_order = models.PositiveIntegerField(default=0)
     # Made to order: always orderable, no stock counted; shoppers see the lead time instead.
     made_to_order = models.BooleanField(default=False)
     lead_time_days = models.PositiveIntegerField(null=True, blank=True, help_text="Days from payment until it ships (made-to-order products)")
