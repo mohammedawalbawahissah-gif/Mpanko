@@ -231,5 +231,8 @@ Run `python manage.py preflight` after setting these. It warns about anything mi
 After deploying, run once on the api service: `python manage.py migrate`, then `python manage.py load_qt_eatery_menu`, then `python manage.py load_corporate_content`. The menu loader creates the QT Eatery category under Food and the 50 dishes from the flyer as drafts with no price (safe to repeat; it never overwrites prices you set).
 
 1. In the admin open Catalog, QT Eatery menu. Type each dish's price and tick Published. A dish with no price stays off sale and shows "Price coming soon".
-2. Food is sold to the United States only. In Shipping, add a United States zone with a "Pickup in Worcester" rate of 0 and a "Local delivery" rate with your fee, so buyers can finish checkout. Buyers add their choice of meat, stew or heat level in the notes at checkout.
+2. Food is sold to the United States only, so add US shipping rates: Shipping rules (under Fulfil), then fill "New zone name" with `United States` and pick United States under Countries, then Add zone. In that zone's form add two services:
+   - Service name `Pickup in Worcester`, code `pickup`, base price `0`, per kg `0`, leave the weight and days boxes as they are (or Days from 0, to 0).
+   - Service name `Local delivery`, code `delivery`, base price your delivery fee (for example `5`), per kg `0`, Days from 1, to 1.
+   Buyers then pick one of the two at checkout. Buyers add their choice of meat, stew or heat level in the notes at checkout.
 3. Buyers reach the menu in the shop (Food, then QT Eatery, on the web and in the app) and on the corporate website at /menu, where each dish opens the same dish on the shop's order page.

@@ -103,3 +103,14 @@ def test_a_menu_dish_can_be_bought_in_the_united_states_and_not_elsewhere(custom
     assert ok.data["subtotal"] == "15.00"
     _, no = place_order(customer, variant, address, key="gh-1")
     assert no.status_code == 400
+
+
+@pytest.mark.django_db
+def test_loader_renames_a_misspelled_dish_in_place():
+    call_command("load_qt_eatery_menu")
+    p = Product.objects.get(slug="qt-eatery-sweet-bud")
+    p.name, p.slug = "Swet Bud", "qt-eatery-swet-bud"
+    p.save()
+    call_command("load_qt_eatery_menu")
+    assert Product.objects.filter(category=p.category).count() == 50
+    assert Product.objects.get(pk=p.pk).name == "Sweet Bud"

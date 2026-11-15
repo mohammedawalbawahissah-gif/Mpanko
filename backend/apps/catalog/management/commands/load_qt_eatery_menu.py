@@ -12,6 +12,7 @@ from django.utils.text import slugify
 from apps.catalog.management.commands.seed_categories import create_taxonomy
 from apps.catalog.models import Category, Inventory, Product, ProductStatus, ProductType, ProductVariant
 
+RENAMES = {"Swet Bud": "Sweet Bud"}
 CATEGORY_NAME = "QT Eatery"
 MENU_NOTE = "All orders are made by request only. Food prices depend on the type of order and the quantity."
 
@@ -42,7 +43,7 @@ MENU = [
         ("Egg Pie", "All pies with your choice of fry or bake."),
         ("Boffrot Wet/Dry", ""),
         ("Chips", ""),
-        ("Swet Bud", ""),
+        ("Sweet Bud", ""),
     ]),
     ("Pure Ghanaian", [
         ("Kenkey with Fish", "Grilled or fried."),
@@ -118,6 +119,13 @@ class Command(BaseCommand):
         )
         self.stdout.write(f"  {'added' if made else 'kept '}  product type Prepared food")
 
+        # Corrected spellings: a dish already loaded under its old name is renamed in place (its price and orders stay).
+        for old, new in RENAMES.items():
+            old_p = Product.objects.filter(slug=slugify(f"qt-eatery-{old}")[:200]).first()
+            new_slug = slugify(f"qt-eatery-{new}")[:200]
+            if old_p is not None and not Product.objects.filter(slug=new_slug).exists():
+                old_p.name, old_p.slug = new, new_slug
+                old_p.save(update_fields=["name", "slug"])
         added = 0
         order = 0
         for section, dishes in MENU:
