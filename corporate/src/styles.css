@@ -215,7 +215,7 @@ footer p { margin: 0; }
 /* Service, founder and Magazia pages */
 .photo { margin: 1.25rem 0 0; }
 .photo img { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 16px; border: 1px solid var(--mist); background: #fff; }
-.photo.portrait img { aspect-ratio: 4 / 5; max-height: 30rem; object-fit: cover; }
+.photo.portrait img { aspect-ratio: 4 / 5; max-height: 30rem; object-fit: cover; object-position: 50% 18%; }
 .ticks { list-style: none; margin: 1.25rem 0 0; padding: 0; border-top: 2px solid var(--ink); }
 .ticks li { position: relative; padding: 0.7rem 0 0.7rem 1.6rem; border-bottom: 1px solid var(--mist); }
 .ticks li::before { content: ""; position: absolute; left: 0.1rem; top: 1.2rem; width: 0.6rem; height: 0.6rem; background: var(--gold); transform: rotate(45deg); }

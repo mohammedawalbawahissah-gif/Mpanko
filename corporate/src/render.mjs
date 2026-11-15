@@ -340,7 +340,7 @@ export function magaziaPage(ctx, page) {
     <div class="wrap">
       <div>
         <h2 id="title-h">At a glance</h2>
-        ${photo(page.image, page.image_alt || page.title)}
+        ${photo(page.image, page.image_alt || page.title, "photo portrait")}
         ${ticks(page.highlights)}
       </div>
       <div class="prose">

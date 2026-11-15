@@ -264,7 +264,7 @@ def test_load_corporate_content_is_safe_to_run_twice_and_keeps_edits(settings, t
     b.save()
     call_command("load_corporate_content")
     assert Business.objects.count() == count
-    assert Business.objects.filter(slug="abochi-grills").exists()
+    assert Business.objects.filter(slug="abochi-grill").exists()
     assert Business.objects.get(slug="rabsana-designz").cta_label == "Go to shop to order"
     assert "Abochi" in Business.objects.get(slug="qt-eatery").description
     assert Business.objects.get(pk=b.pk).tagline == "Edited by staff"
@@ -285,3 +285,21 @@ def test_loader_corrects_the_old_rapsana_spelling_everywhere(settings, tmp_path)
     assert not Business.objects.filter(slug="rapsana-designz").exists()
     assert "Rapsana" not in SitePage.objects.get(slug="founder").highlights
     assert "Rapsana" not in SiteProfile.get().about
+
+
+def test_loader_attaches_the_photos_and_renames_abochi_grills(settings, tmp_path):
+    from django.core.management import call_command
+    from apps.corporate.models import SitePage
+    settings.MEDIA_ROOT = tmp_path
+    biz("Abochi Grills", slug="abochi-grills", tagline="Book Teefa to grill your meat.", description="Abochi Grills was established in 2026.")
+    call_command("load_corporate_content")
+    b = Business.objects.get(slug="abochi-grill")
+    assert b.name == "Abochi Grill" and "Grills" not in b.description
+    assert b.tagline == "The Aboki Way. Zongo vibes. Premium grills." and b.location.startswith("Worcester")
+    assert b.logo and b.logo.name.rsplit("/", 1)[-1].startswith("abochi-grill-logo")
+    assert not Business.objects.filter(slug="abochi-grills").exists()
+    assert Business.objects.get(slug="qt-eatery").image and Business.objects.get(slug="qt-make-up-artistry").image
+    assert Business.objects.get(slug="rabsana-designz").image
+    for slug in ("founder", "magazia"):
+        page = SitePage.objects.get(slug=slug)
+        assert page.image and page.image_alt
