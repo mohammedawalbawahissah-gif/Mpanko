@@ -237,3 +237,9 @@ footer p { margin: 0; }
 .heritage .prose p { color: #fff; }
 .logo.lg { width: 6rem; height: 6rem; }
 @media print { .nav-mobile, .top .get { display: none; } }
+
+.gallery { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem; }
+.gallery a { display: block; border-radius: 16px; overflow: hidden; border: 1px solid var(--mist); background: #fff; }
+.gallery img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 18%; }
+.gallery a:hover img { opacity: 0.92; }
+.gallery p { margin: 0.5rem 0 0; font-size: 0.92rem; color: var(--muted); }

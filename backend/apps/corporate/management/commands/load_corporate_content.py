@@ -11,7 +11,7 @@ from pathlib import Path
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
-from apps.corporate.models import Business, SitePage, SiteProfile
+from apps.corporate.models import Business, GalleryImage, SitePage, SiteProfile
 
 MEDIA = Path(__file__).resolve().parents[2] / "seed_media"
 
@@ -48,7 +48,7 @@ BUSINESSES = [
                       "knowledge and a commitment to good service to every order.\n\n" + ABOCHI_NOTE),
          append_marker="Abochi", append_text="\n\n" + ABOCHI_NOTE,
          highlights="Authentic African cuisine\nCatering\nGrilling to order with Abochi Grill\nLed by an Executive Chef\nServSafe and allergen certified",
-         image="qt-eatery-menu.jpg", image_alt="QT Eatery menu showing local Ghanaian dishes: popular northern foods, pure Ghanaian dishes, continental dishes, appetizers, pastries and local drinks",
+         image="qt-eatery-executive-chef.jpg", image_alt="Teefa Fuseini in a white Executive Chef coat, smiling in a professional kitchen",
          logo="qt-eatery-logo.jpg", logo_alt="QT Eatery logo: the letters QT above a waiter's hand holding a tray", cta_label="Order on the Mpanko shop", cta_shop=True),
     dict(slug="abochi-grill", name="Abochi Grill", sector="Food and catering", location="Worcester, Massachusetts, USA", sort_order=15,
          tagline="The Aboki Way. Zongo vibes. Premium grills.",
@@ -128,6 +128,17 @@ PAGES = [
 ]
 
 
+GALLERY = [
+    # (business slug or "" for the About page, file, description, caption, order)
+    ("qt-eatery", "qt-eatery-menu.jpg",
+     "QT Eatery menu: popular northern foods, pure Ghanaian dishes, continental dishes, appetizers, pastries and local drinks",
+     "Our menu. Open it to read the full list.", 10),
+    ("", "celebration-event.jpg",
+     "Teefa Fuseini smiling at a celebration, in a purple and blue gown with a matching head wrap and coral beads",
+     "Celebrating with community", 10),
+]
+
+
 class Command(BaseCommand):
     help = "Load the real corporate website content (businesses, founder, Magazia page, About). Safe to repeat."
 
@@ -147,6 +158,7 @@ class Command(BaseCommand):
     SPELLINGS = [("Rapsana", "Rabsana"), ("Abochi Grills", "Abochi Grill")]
     SLUGS = [("rapsana-designz", "rabsana-designz"), ("abochi-grills", "abochi-grill")]
     OLD_LOGOS = ("rapsana-designz-logo", "abochi-grills-logo")  # pictures I drew with the old spelling
+    OLD_IMAGES = ("qt-eatery-menu",)  # the menu flyer moved to the gallery
 
     def _fix_spelling(self):
         for old_slug, new_slug in self.SLUGS:
@@ -169,6 +181,10 @@ class Command(BaseCommand):
                     changed = True
             if b.logo and b.logo.name.rsplit("/", 1)[-1].startswith(self.OLD_LOGOS):
                 b.logo.delete(save=False)  # replaced by the current picture below
+                changed = True
+            if b.image and b.image.name.rsplit("/", 1)[-1].startswith(self.OLD_IMAGES):
+                b.image.delete(save=False)
+                b.image_alt = ""
                 changed = True
             if changed:
                 b.save()
@@ -243,4 +259,16 @@ class Command(BaseCommand):
                 page.image_alt = row.get("image_alt", "")
             page.save()
             self.stdout.write(f"  {'added' if created else 'kept ' if not force else 'reset'}  page {slug}")
+        for slug, filename, alt, caption, order in GALLERY:
+            business = Business.objects.filter(slug=slug).first() if slug else None
+            if slug and business is None:
+                continue
+            stem = filename.rsplit(".", 1)[0]
+            if GalleryImage.objects.filter(business=business, image__contains=stem).exists():
+                self.stdout.write(f"  kept   gallery {stem}")
+                continue
+            g = GalleryImage(business=business, alt=alt, caption=caption, sort_order=order, is_published=True)
+            self._attach(g, "image", filename, True)
+            g.save()
+            self.stdout.write(f"  added  gallery {stem}")
         self.stdout.write(self.style.SUCCESS("Corporate content loaded. Check it at your corporate website, and edit it in the admin."))

@@ -13,7 +13,7 @@ import { AuditLog, Pages, Coupons, CustomerDetail, Customers, ReturnDetail, Retu
 import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports } from "./pages-finance";
 import { TaxAndDuties } from "./pages-tax";
 import { Security } from "./pages-security";
-import { Businesses, Contacts, Enquiries, SitePages, SiteDetails } from "./pages-corporate";
+import { Businesses, Contacts, Enquiries, Gallery, SitePages, SiteDetails } from "./pages-corporate";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
 const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
@@ -39,6 +39,7 @@ const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
   { to: "/businesses", name: "Businesses", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/site-details", name: "Site details", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/site-pages", name: "Site pages", roles: ["super_admin", "store_admin"], group: "Content" },
+  { to: "/gallery", name: "Gallery", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/contacts", name: "Contacts", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/enquiries", name: "Enquiries", roles: ["super_admin", "store_admin", "support"], group: "Content" },
   { to: "/staff", name: "Staff", roles: ["super_admin", "store_admin"], group: "Settings" },
@@ -144,6 +145,7 @@ export default function App() {
             <Route path="pages" element={route("/pages", <Pages />)} />
             <Route path="businesses" element={route("/businesses", <Businesses />)} />
             <Route path="site-pages" element={route("/site-pages", <SitePages />)} />
+            <Route path="gallery" element={route("/gallery", <Gallery />)} />
             <Route path="contacts" element={route("/contacts", <Contacts />)} />
             <Route path="site-details" element={route("/site-details", <SiteDetails />)} />
             <Route path="enquiries" element={route("/enquiries", <Enquiries />)} />

@@ -9,7 +9,7 @@ const ADMIN = process.env.E2E_ADMIN_URL ?? "http://localhost:5174";
 test.skip(!CORPORATE, "Set E2E_CORPORATE_URL to run the corporate site tests");
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const PAGES = ["/", "/about", "/services", "/contact"];
+const PAGES = ["/", "/about", "/services", "/services/qt-eatery", "/contact"];
 
 async function signInToAdmin(page: Page) {
   await page.goto(`${ADMIN}/login`);

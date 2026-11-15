@@ -128,9 +128,9 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
     const res = await api.site();
     if (res.status === "ok") {
       const pages = Object.fromEntries((res.data.pages || []).map((p) => [p.slug, p]));
-      return { site, profile: contactFrom(res.data.profile, res.data), businesses: res.data.businesses, pages, live: true };
+      return { site, profile: contactFrom(res.data.profile, res.data), businesses: res.data.businesses, pages, gallery: res.data.gallery || [], live: true };
     }
-    return { site, profile: contactFrom(fallbackProfile, { support_email: process.env.SUPPORT_EMAIL_ADDRESS, support_phone: process.env.SUPPORT_PHONE_NUMBER, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER }), businesses: fallbackBusinesses, pages: {}, live: false };
+    return { site, profile: contactFrom(fallbackProfile, { support_email: process.env.SUPPORT_EMAIL_ADDRESS, support_phone: process.env.SUPPORT_PHONE_NUMBER, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER }), businesses: fallbackBusinesses, pages: {}, gallery: [], live: false };
   }
 
   const send = (req, res, status, html, extra = {}) => {

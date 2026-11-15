@@ -12,6 +12,7 @@ backend, one set of staff logins and one place to manage everything. Staff manag
 |---|---|
 | Businesses | Each service on the site (shown under the Services menu): name, sector, summary, full description, key points, logo, photo, extra button (for example Donate), small print, website address, order, featured, published |
 | Site pages | The founder section (About page and home) and the Magazia page: title, text, quotation, timeline, photo, published |
+| Gallery | Small photo galleries: a photo tied to a business shows on that business's page, a photo with no business shows on the About page (under Moments). Each opens full size |
 | Site details | Company name, tagline, introduction, About text, contact email, phone, address, social links |
 | Enquiries | Messages sent through the contact form: read, add an internal note, mark handled |
 

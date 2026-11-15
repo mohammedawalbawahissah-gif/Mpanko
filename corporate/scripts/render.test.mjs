@@ -166,3 +166,15 @@ test("a list of contacts gives one button each: named ones keep their name, unna
   assert.ok(html.includes("(WhatsApp)"), "the kind is spoken to screen readers when a name is shown");
   assert.equal(contactButtons({ contacts: [] }), "");
 });
+
+test("a gallery appears only when there are photos, each opening full size, with descriptions and no markup injection", () => {
+  const g = [{ image: "https://cdn.example/a.jpg", alt: "A <b>menu</b>", caption: "Our menu" }, { image: "javascript:alert(1)", alt: "bad", caption: "" }];
+  const withG = servicePage(ctx(), { ...biz(), gallery: g });
+  assert.match(withG, /<ul class="gallery">/);
+  assert.match(withG, /href="https:\/\/cdn\.example\/a\.jpg" target="_blank" rel="noopener"/);
+  assert.match(withG, /alt="A &lt;b&gt;menu&lt;\/b&gt;"/);
+  assert.equal(/javascript:/.test(withG), false);
+  assert.equal(/class="gallery"/.test(servicePage(ctx(), biz())), false);
+  assert.match(aboutPage({ ...ctx(), gallery: g }), /Moments/);
+  assert.equal(/class="gallery"/.test(aboutPage(ctx())), false);
+});

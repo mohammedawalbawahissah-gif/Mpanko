@@ -303,3 +303,35 @@ def test_loader_attaches_the_photos_and_renames_abochi_grills(settings, tmp_path
     for slug in ("founder", "magazia"):
         page = SitePage.objects.get(slug=slug)
         assert page.image and page.image_alt
+
+
+# ---- gallery -----------------------------------------------------------------------------------------------
+
+def test_gallery_shows_published_photos_on_the_business_and_the_about_page(api, settings, tmp_path):
+    from apps.corporate.models import GalleryImage
+    settings.MEDIA_ROOT = tmp_path
+    b = biz("QT Eatery")
+    GalleryImage.objects.create(business=b, image=png(), alt="Menu", caption="Our menu", sort_order=2)
+    GalleryImage.objects.create(business=b, image=png(), alt="Hidden", is_published=False)
+    GalleryImage.objects.create(business=None, image=png(), alt="Celebration")
+    detail = api.get(f"/api/v1/corporate/businesses/{b.slug}/").json()
+    assert [g["alt"] for g in detail["gallery"]] == ["Menu"]
+    site = api.get("/api/v1/corporate/site/").json()
+    assert [g["alt"] for g in site["gallery"]] == ["Celebration"]
+
+
+def test_staff_manage_the_gallery_and_others_cannot(admin, customer, settings, tmp_path):
+    from apps.corporate.models import GalleryImage
+    settings.MEDIA_ROOT = tmp_path
+    b = biz("QT Eatery")
+    staff = client_for(admin)
+    r = staff.post("/api/v1/corporate/manage/gallery/", {"business": str(b.id), "alt": "Menu", "image": png()}, format="multipart")
+    assert r.status_code == 201, r.content
+    about = staff.post("/api/v1/corporate/manage/gallery/", {"business": "", "alt": "Event", "image": png()}, format="multipart")
+    assert about.status_code == 201 and GalleryImage.objects.get(pk=about.json()["id"]).business is None
+    assert staff.post("/api/v1/corporate/manage/gallery/", {"alt": "No photo"}, format="multipart").status_code == 400
+    gid = r.json()["id"]
+    assert staff.patch(f"/api/v1/corporate/manage/gallery/{gid}/", {"caption": "Our menu"}, format="multipart").status_code == 200
+    assert client_for(customer).get("/api/v1/corporate/manage/gallery/").status_code == 403
+    assert staff.delete(f"/api/v1/corporate/manage/gallery/{gid}/").status_code == 204
+    assert not GalleryImage.objects.filter(pk=gid).exists()

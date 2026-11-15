@@ -179,6 +179,18 @@ function photo(src, alt, cls = "photo") {
   return url ? `<figure class="${cls}"><img src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy"></figure>` : "";
 }
 
+/** A small photo gallery. Each photo opens full size in a new tab, so a menu or flyer can be read. Nothing is drawn when there are no photos. */
+function gallerySection(items, heading, id) {
+  const shown = (items || []).filter((g) => safeUrl(g.image));
+  if (!shown.length) return "";
+  return `<section aria-labelledby="${id}">
+    <div class="wrap one">
+      <h2 id="${id}">${esc(heading)}</h2>
+      <ul class="gallery">${shown.map((g) => `<li><a href="${esc(safeUrl(g.image))}" target="_blank" rel="noopener" aria-label="${esc(`${g.alt}. Opens full size in a new tab.`)}"><img src="${esc(safeUrl(g.image))}" alt="${esc(g.alt)}" loading="lazy"></a>${g.caption ? `<p>${esc(g.caption)}</p>` : ""}</li>`).join("")}</ul>
+    </div>
+  </section>`;
+}
+
 function founderSection(page) {
   if (!page) return "";
   return `<section id="founder" aria-labelledby="founder-h">
@@ -261,6 +273,7 @@ export function aboutPage(ctx) {
     </div>
   </section>` : ""}
   ${founderSection(pages.founder)}
+  ${gallerySection(ctx.gallery, "Moments", "moments-h")}
   ${pages.magazia ? `<section class="heritage" aria-labelledby="mag-h">
     <div class="wrap">
       <div><h2 id="mag-h">${esc(pages.magazia.title)}</h2>${pages.magazia.kicker ? `<p class="meta">${esc(pages.magazia.kicker)}</p>` : ""}</div>
@@ -324,6 +337,7 @@ export function servicePage(ctx, b) {
       </div>
     </div>
   </section>
+  ${gallerySection(b.gallery, "Gallery", "gallery-h")}
   ${b.disclaimer ? `<section class="fine" aria-label="Important information"><div class="wrap one"><p>${esc(b.disclaimer)}</p></div></section>` : ""}`;
   return layout({ ...ctx, title: b.name, path: `/services/${b.slug}`, description: b.summary || b.tagline, body });
 }

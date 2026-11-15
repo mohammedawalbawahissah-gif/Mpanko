@@ -41,7 +41,7 @@ Sign in at your admin address with the account the owner created for you. What y
 
 ## Corporate website
 
-In **Content**: **Businesses** are the services listed in the Services menu. Each can have key points (one per line), a photo, an extra button such as Donate (leave the address blank to send visitors to the contact form), and small print for licensing wording. **Site pages** holds the founder section and the Magazia page. For a timeline write one item per line as `2024 | What happened`. Nothing shows until you tick **Show on the website**.
+In **Content**: **Businesses** are the services listed in the Services menu. Each can have key points (one per line), a photo, an extra button such as Donate (leave the address blank to send visitors to the contact form), and small print for licensing wording. **Site pages** holds the founder section and the Magazia page. For a timeline write one item per line as `2024 | What happened`. **Gallery** holds extra photos: pick a business to show a photo on that business's page, or leave it blank for the About page. Always describe the photo, so people using screen readers can follow. Nothing shows until you tick **Show on the website**.
 
 ## Customers and privacy
 

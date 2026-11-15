@@ -7,6 +7,7 @@ interface Business {
   website_url: string; logo_url: string; logo_alt: string; image_url: string; image_alt: string; cta_label: string; cta_url: string; disclaimer: string;
   is_published: boolean; is_featured: boolean; sort_order: number;
 }
+interface GalleryItem { id: number; business: number | null; business_name: string; image_url: string; alt: string; caption: string; sort_order: number; is_published: boolean; }
 interface SitePage {
   id: number; slug: string; title: string; kicker: string; summary: string; body: string; quote: string; quote_by: string; highlights: string;
   image_url: string; image_alt: string; is_published: boolean;
@@ -233,6 +234,97 @@ function PageForm({ page, used, onDone }: { page: SitePage | null; used: string[
       <p><label><input type="checkbox" checked={f.is_published} onChange={(e) => setF({ ...f, is_published: e.target.checked })} /> Show on the website</label></p>
       <p className="row">
         <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save page"}</button>
+        <button className="btn quiet" type="button" onClick={onDone}>Cancel</button>
+      </p>
+    </form>
+  );
+}
+
+/* --------------------------------------------------------------- gallery */
+
+export function Gallery() {
+  const list = useAsync(() => api<GalleryItem[]>("/corporate/manage/gallery/"), []);
+  const [editing, setEditing] = useState<GalleryItem | "new" | null>(null);
+  if (editing) return <GalleryForm item={editing === "new" ? null : editing} onDone={() => { setEditing(null); list.reload(); }} />;
+  const remove = async (g: GalleryItem) => {
+    if (!window.confirm("Delete this photo from the gallery?")) return;
+    try { await api(`/corporate/manage/gallery/${g.id}/`, { method: "DELETE" }); list.reload(); } catch { /* the list shows the current state */ }
+  };
+  return (
+    <>
+      <h1>Gallery</h1>
+      <p className="muted">Small photo galleries. A photo tied to a business shows on that business's page. A photo with no business shows on the About page.</p>
+      <p><button className="btn" onClick={() => setEditing("new")}>Add a photo</button></p>
+      {list.loading && <Loading />}
+      {list.error && <Alert>{list.error}</Alert>}
+      {list.data && (
+        <div className="scroll">
+          <table className="table">
+            <thead><tr><th>Photo</th><th>Shows on</th><th>Order</th><th>Shown on website</th><th></th></tr></thead>
+            <tbody>
+              {list.data.map((g) => (
+                <tr key={g.id}>
+                  <td><img src={g.image_url} alt="" width={48} /> {g.caption || g.alt}</td>
+                  <td>{g.business_name || "About page"}</td>
+                  <td>{g.sort_order}</td>
+                  <td><Pill value={g.is_published ? "published" : "draft"} /></td>
+                  <td><button className="link-button" onClick={() => setEditing(g)}>Edit</button> <button className="link-button" onClick={() => remove(g)}>Delete</button></td>
+                </tr>
+              ))}
+              {list.data.length === 0 && <tr><td colSpan={5} className="muted">No photos yet. Add one to start a gallery.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function GalleryForm({ item, onDone }: { item: GalleryItem | null; onDone: () => void }) {
+  const businesses = useAsync(() => api<Business[]>("/corporate/manage/businesses/"), []);
+  const [f, setF] = useState({ business: item?.business ? String(item.business) : "", alt: item?.alt ?? "", caption: item?.caption ?? "", sort_order: String(item?.sort_order ?? 100), is_published: item?.is_published ?? true });
+  const [file, setFile] = useState<File | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErrors({}); setError("");
+    const body = new FormData();
+    body.append("business", f.business);
+    body.append("alt", f.alt); body.append("caption", f.caption); body.append("sort_order", f.sort_order); body.append("is_published", String(f.is_published));
+    if (file) body.append("image", file);
+    try {
+      await api(item ? `/corporate/manage/gallery/${item.id}/` : "/corporate/manage/gallery/", { method: item ? "PATCH" : "POST", body });
+      onDone();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) { setErrors(err.fields()); setError("Fix the highlighted fields and save again."); }
+      else setError(errText(err));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <form onSubmit={save} className="form">
+      <h1>{item ? "Edit photo" : "Add a photo"}</h1>
+      {error && <Alert>{error}</Alert>}
+      <Field id="g-biz" label="Shows on" error={errors.business}>
+        <select id="g-biz" className="input" value={f.business} onChange={set("business")}>
+          <option value="">The About page</option>
+          {(businesses.data ?? []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+      </Field>
+      <Field id="g-file" label={item ? "Replace the photo (JPG or PNG, up to 5 MB)" : "Photo (JPG or PNG, up to 5 MB)"} error={errors.image}>
+        <input id="g-file" type="file" accept="image/*" required={!item} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      </Field>
+      {item?.image_url && !file && <p className="small"><img src={item.image_url} alt="" width={64} /> Current photo</p>}
+      <Field id="g-alt" label="Describe the photo (for screen readers)" error={errors.alt}><input id="g-alt" className="input" required value={f.alt} onChange={set("alt")} /></Field>
+      <Field id="g-cap" label="Caption (optional, shown under the photo)" error={errors.caption}><input id="g-cap" className="input" value={f.caption} onChange={set("caption")} /></Field>
+      <Field id="g-order" label="Order (smaller numbers come first)" error={errors.sort_order}><input id="g-order" className="input" inputMode="numeric" value={f.sort_order} onChange={set("sort_order")} /></Field>
+      <p><label><input type="checkbox" checked={f.is_published} onChange={(e) => setF({ ...f, is_published: e.target.checked })} /> Show on the website</label></p>
+      <p className="row">
+        <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save photo"}</button>
         <button className="btn quiet" type="button" onClick={onDone}>Cancel</button>
       </p>
     </form>

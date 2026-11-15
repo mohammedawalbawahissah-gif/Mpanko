@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.catalog.serializers import MAX_IMAGE_BYTES
 
 from .contacts import clean_value
-from .models import Business, ContactMessage, SitePage, SiteProfile, SupportContact
+from .models import Business, ContactMessage, GalleryImage, SitePage, SiteProfile, SupportContact
 
 
 class SiteProfileSerializer(serializers.ModelSerializer):
@@ -46,11 +46,26 @@ class PublicBusinessSerializer(_LogoMixin, serializers.ModelSerializer):
                   "cta_label", "cta_url", "is_featured")
 
 
+class PublicGallerySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GalleryImage
+        fields = ("image", "alt", "caption")
+
+    def get_image(self, obj):
+        return _abs(self, obj.image)
+
+
 class PublicBusinessDetailSerializer(PublicBusinessSerializer):
     highlights = serializers.SerializerMethodField()
+    gallery = serializers.SerializerMethodField()
 
     class Meta(PublicBusinessSerializer.Meta):
-        fields = PublicBusinessSerializer.Meta.fields + ("description", "highlights", "disclaimer")
+        fields = PublicBusinessSerializer.Meta.fields + ("description", "highlights", "disclaimer", "gallery")
+
+    def get_gallery(self, obj):
+        return PublicGallerySerializer(obj.gallery.filter(is_published=True), many=True, context=self.context).data
 
 
 class PublicPageSerializer(_LogoMixin, serializers.ModelSerializer):
@@ -161,6 +176,27 @@ class ManagePageSerializer(_ImageUploadMixin, _LogoMixin, serializers.ModelSeria
     def update(self, instance, validated):
         self._update_clean(instance, validated, ("image",))
         return super().update(instance, validated)
+
+
+class ManageGallerySerializer(_ImageUploadMixin, serializers.ModelSerializer):
+    image = serializers.ImageField(write_only=True, required=False)
+    image_url = serializers.SerializerMethodField()
+    business_name = serializers.CharField(source="business.name", default="", read_only=True)
+
+    class Meta:
+        model = GalleryImage
+        fields = ("id", "business", "business_name", "image", "image_url", "alt", "caption", "sort_order", "is_published")
+
+    def get_image_url(self, obj):
+        return _abs(self, obj.image)
+
+    def validate_image(self, value):
+        return self._check_size(value, "Photos")
+
+    def validate(self, attrs):
+        if not self.instance and "image" not in attrs:
+            raise serializers.ValidationError({"image": "Choose a photo to upload."})
+        return attrs
 
 
 class ContactInputSerializer(serializers.Serializer):

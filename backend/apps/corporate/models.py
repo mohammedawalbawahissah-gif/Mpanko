@@ -112,6 +112,25 @@ class SitePage(models.Model):
         return self.title
 
 
+class GalleryImage(models.Model):
+    """A photo in a small gallery. Tied to one business it shows on that business's page; with no business it shows on the About page."""
+
+    business = models.ForeignKey(Business, null=True, blank=True, on_delete=models.CASCADE, related_name="gallery",
+                                 help_text="Leave blank for the About page gallery.")
+    image = models.ImageField(upload_to="corporate/")
+    alt = models.CharField("description", max_length=160, help_text="Describe the photo for people who cannot see it.")
+    caption = models.CharField(max_length=160, blank=True)
+    sort_order = models.PositiveIntegerField(default=100, help_text="Lower numbers come first.")
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.caption or self.alt
+
+
 class ContactMessage(models.Model):
     """An enquiry sent from the corporate website's contact form."""
 

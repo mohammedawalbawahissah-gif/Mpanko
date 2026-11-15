@@ -14,11 +14,11 @@ from apps.accounts.models import AuditLog, Role, User
 from apps.accounts.permissions import CatalogManager, roles_permission
 
 from .contacts import contact_config
-from .models import Business, ContactMessage, SitePage, SiteProfile, SupportContact
+from .models import Business, ContactMessage, GalleryImage, SitePage, SiteProfile, SupportContact
 from .serializers import (
     SupportContactSerializer,
-    ContactInputSerializer, ContactMessageSerializer, ManageBusinessSerializer, ManagePageSerializer, PublicBusinessDetailSerializer,
-    PublicBusinessSerializer, PublicPageSerializer, SiteProfileSerializer,
+    ContactInputSerializer, ContactMessageSerializer, ManageBusinessSerializer, ManageGallerySerializer, ManagePageSerializer, PublicBusinessDetailSerializer,
+    PublicBusinessSerializer, PublicGallerySerializer, PublicPageSerializer, SiteProfileSerializer,
 )
 
 MessageStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
@@ -39,6 +39,7 @@ class SiteView(APIView):
         return Response({
             "profile": SiteProfileSerializer(SiteProfile.get()).data,
             "businesses": PublicBusinessSerializer(_published(), many=True, context={"request": request}).data,
+            "gallery": PublicGallerySerializer(GalleryImage.objects.filter(business__isnull=True, is_published=True), many=True, context={"request": request}).data,
             "pages": PublicPageSerializer(SitePage.objects.filter(is_published=True), many=True, context={"request": request}).data,
             **contact_config(),
         })
@@ -211,3 +212,29 @@ class MessageManageViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mix
             m.handled_by, m.handled_at = None, None
         m.save(update_fields=["handled_by", "handled_at"])
         AuditLog.record(self.request.user, "corporate.message.update", m, status=m.status)
+
+
+class GalleryManageViewSet(viewsets.ModelViewSet):
+    """The small photo galleries: one per business page and one for the About page."""
+
+    queryset = GalleryImage.objects.select_related("business")
+    serializer_class = ManageGallerySerializer
+    permission_classes = [CatalogManager]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        g = serializer.save()
+        AuditLog.record(self.request.user, "corporate.gallery.create", g, business=g.business_id)
+
+    def perform_update(self, serializer):
+        if "image" in serializer.validated_data and serializer.instance.image:
+            serializer.instance.image.delete(save=False)  # a replaced photo should not linger in storage
+        g = serializer.save()
+        AuditLog.record(self.request.user, "corporate.gallery.update", g, published=g.is_published)
+
+    def perform_destroy(self, instance):
+        AuditLog.record(self.request.user, "corporate.gallery.delete", instance, business=instance.business_id)
+        if instance.image:
+            instance.image.delete(save=False)
+        instance.delete()
