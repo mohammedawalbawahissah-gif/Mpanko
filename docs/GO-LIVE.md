@@ -11,8 +11,9 @@ Work top to bottom. Each step says what you need and how to check it worked. Do 
 | api | `backend/` | `railway.json` | runs migrations, then gunicorn. Health check `/health/` |
 | worker | `backend/` | `railway.worker.json` | sends emails, releases unpaid stock, polls carriers |
 | beat | `backend/` | `railway.beat.json` | the scheduler. **Exactly one copy** or jobs run twice |
-| web | `web/` | – | static build (`npm run build`, serve `dist/`) |
-| admin | `admin/` | – | static build |
+| web | `web/` | – | Root Directory `web`. Railway runs `npm run build`, then `npm start` (a small Node server that serves `dist/`) |
+| admin | `admin/` | – | Root Directory `admin`. Same as web |
+| corporate | `corporate/` | – | Root Directory `corporate`. `npm run build`, then `npm start`. Needs `API_URL` at run time |
 
 In Railway, open each service > Settings > Config-as-code and enter the file path (for example `/backend/railway.worker.json`). Give worker and beat the same variables as api (use Railway "shared variables" or reference variables).
 
@@ -22,7 +23,15 @@ Check: `https://<api-domain>/ready/` returns `{"status":"ready"}` with database 
 
 `SECRET_KEY` (long random), `ALLOWED_HOSTS` (your Railway api domain), `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` (the web and admin Railway domains, with https://), `DATABASE_URL`, `REDIS_URL`, `FRONTEND_URL`, `PAYMENT_RETURN_URL` (`https://<web-domain>/checkout/complete`). Leave `DEBUG` unset.
 
-Web and admin builds need `VITE_API_URL=https://<api-domain>/api/v1`. The web build also needs `SITE_URL=https://<web-domain>`: after building it fetches the catalog and writes a page per product (with search-engine tags) plus `sitemap.xml` and `robots.txt`. Rebuild the web service after adding products so search engines see them (a Railway scheduled redeploy nightly is enough). If the API is unreachable during the build, the app still works but those pages are skipped.
+**web and admin** need two variables. `VITE_API_URL=https://<api-domain>/api/v1` is read at *build* time. `API_ORIGIN=https://<api-domain>` is read when the server *starts*: without it the browser refuses every call to the API (a blank shop, "Can't reach Mpanko"). Set both, then redeploy.
+
+**corporate** needs `API_URL=https://<api-domain>`, `SITE_URL=https://<corporate-domain>` and `SHOP_URL=https://<web-domain>`. Without `API_URL` it shows its built-in wording instead of your businesses.
+
+Add the corporate domain to `CORS_ALLOWED_ORIGINS` only if its pages call the API from the browser; they do not (the server calls the API), so it is not needed.
+
+Order that avoids a chicken-and-egg: create every service, click **Generate Domain** on api, web, admin and corporate first, then fill in the variables using those addresses, then deploy.
+
+Also set `MFA_ENCRYPTION_KEY` (a second long random value, never the same as `SECRET_KEY`) and, when you want browser push, `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` from `python manage.py generate_vapid_keys`. The web build also needs `SITE_URL=https://<web-domain>`: after building it fetches the catalog and writes a page per product (with search-engine tags) plus `sitemap.xml` and `robots.txt`. Rebuild the web service after adding products so search engines see them (a Railway scheduled redeploy nightly is enough). If the API is unreachable during the build, the app still works but those pages are skipped.
 
 See `docs/STAGING.md` to set up a test copy first.
 
