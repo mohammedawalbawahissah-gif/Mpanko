@@ -264,4 +264,7 @@ def test_load_corporate_content_is_safe_to_run_twice_and_keeps_edits(settings, t
     b.save()
     call_command("load_corporate_content")
     assert Business.objects.count() == count
+    assert Business.objects.filter(slug="abochi-grills").exists()
+    assert Business.objects.get(slug="rapsana-designz").cta_label == "Go to shop to order"
+    assert "Abochi" in Business.objects.get(slug="qt-eatery").description
     assert Business.objects.get(pk=b.pk).tagline == "Edited by staff"

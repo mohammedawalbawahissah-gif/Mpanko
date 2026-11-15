@@ -34,6 +34,10 @@ DISCLAIMER = ("Teefa Fuseini is an insurance agent with World Financial Group (W
               "and by carrier, and not every product is available in every state. The information on this page is general. It is not an offer, "
               "a quote or personalised financial advice. Contact Teefa to talk about your own situation.")
 
+
+ABOCHI_NOTE = ("Abochi Grills is also part of the QT family. Teefa is booked to come and grill chicken, livestock and other meat for your "
+               "event or gathering, for a fee. It is its own business, so see Abochi Grills in the Services menu to book.")
+
 BUSINESSES = [
     dict(slug="qt-eatery", name="QT Eatery", sector="Food and catering", sort_order=10,
          tagline="Authentic African cuisine and catering.",
@@ -41,9 +45,17 @@ BUSINESSES = [
          description=("QT Eatery was founded in 2020, during the COVID-19 pandemic, by Teefa Fuseini. It is a culinary and catering business that "
                       "specialises in authentic African cuisine and diverse culinary experiences.\n\n"
                       "Teefa is an Executive Chef with ServSafe and allergen certifications. She brings professional cooking skills, food safety "
-                      "knowledge and a commitment to good service to every order."),
-         highlights="Authentic African cuisine\nCatering\nLed by an Executive Chef\nServSafe and allergen certified",
+                      "knowledge and a commitment to good service to every order.\n\n" + ABOCHI_NOTE),
+         append_marker="Abochi", append_text="\n\n" + ABOCHI_NOTE,
+         highlights="Authentic African cuisine\nCatering\nGrilling to order with Abochi Grills\nLed by an Executive Chef\nServSafe and allergen certified",
          logo="qt-eatery-logo.jpg", logo_alt="QT Eatery logo: the letters QT above a waiter's hand holding a tray", cta_label="Order on the Mpanko shop", cta_shop=True),
+    dict(slug="abochi-grills", name="Abochi Grills", sector="Food and catering", sort_order=15,
+         tagline="Book Teefa to grill your meat.",
+         summary="A booked grilling service for chicken, livestock and any other meat, for a fee.",
+         description=("Abochi Grills was established in 2026. Teefa Fuseini is booked to come and grill your chicken, livestock or any other "
+                      "meat, for a fee.\n\nIt runs as its own business alongside QT Eatery. Send us a message with your date, the kind of meat "
+                      "and how many people you are feeding, and we will confirm the details and the price."),
+         highlights="Chicken, livestock and other meat\nBooked for your event or gathering\nEstablished in 2026", cta_label="Book a grilling"),
     dict(slug="events-planning", name="Events Planning", sector="Events", location="Worcester, Massachusetts, USA", sort_order=20,
          tagline="H&A 360 Photobooth Rentals, for all events.",
          summary="Events planning, with H&A 360 Photobooth Rentals available for all kinds of events.",
@@ -57,7 +69,8 @@ BUSINESSES = [
          summary="A fashion brand that promotes African heritage, identity and creativity through clothing.",
          description=("Rapsana Designz was founded in 2025. It is a fashion brand dedicated to promoting African heritage, identity and creativity "
                       "through clothing.\n\nThe brand reflects Teefa's vision of fashion as a platform for cultural expression."),
-         highlights="African heritage, identity and creativity\nClothing\nFounded in 2025", cta_label="Ask about the collection"),
+         highlights="African heritage, identity and creativity\nClothing\nFounded in 2025",
+         cta_label="Go to shop to order", old_cta_label="Ask about the collection", cta_shop=True),
     dict(slug="qt-make-up-artistry", name="QT Make-Up Artistry", sector="Beauty", sort_order=40,
          tagline="Professional make-up artistry.",
          summary="Professional make-up artistry.",
@@ -136,14 +149,24 @@ class Command(BaseCommand):
             row = dict(row)
             logo, image = row.pop("logo", ""), row.pop("image", "")
             cta_shop = row.pop("cta_shop", False)
+            old_label = row.pop("old_cta_label", "")
+            marker, extra = row.pop("append_marker", ""), row.pop("append_text", "")
             slug = row.pop("slug")
             b, created = Business.objects.get_or_create(slug=slug, defaults={**row, "is_published": True})
             if not created and force:
                 for k, v in row.items():
                     setattr(b, k, v)
                 b.is_published = True
-            if cta_shop and shop and (created or force) and not b.cta_url:
+            if cta_shop and shop and not b.cta_url:
                 b.cta_url = shop
+            if not created and not force:
+                # Small later additions: only touch what staff have not changed.
+                if old_label and b.cta_label == old_label:
+                    b.cta_label = row["cta_label"]
+                if marker and marker not in b.description:
+                    b.description = b.description.rstrip() + extra
+                if row.get("highlights") and marker and marker not in b.highlights:
+                    b.highlights = row["highlights"]
             self._attach(b, "logo", logo, force)
             self._attach(b, "image", image, force)
             b.save()
