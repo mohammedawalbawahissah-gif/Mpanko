@@ -16,7 +16,7 @@ function fakeApi(state) {
     state.calls.push(`${opts.method || "GET"} ${url}`);
     if (state.mode === "down") throw new Error("connection refused");
     const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-    if (url.endsWith("/corporate/site/")) return json(200, { profile: PROFILE, businesses: state.businesses });
+    if (url.endsWith("/corporate/site/")) return json(200, { profile: PROFILE, businesses: state.businesses, ...(state.shop || {}) });
     if (url.includes("/corporate/businesses/")) {
       const slug = decodeURIComponent(url.split("/corporate/businesses/")[1].replace(/\/$/, ""));
       const b = state.businesses.find((x) => x.slug === slug);
@@ -30,9 +30,9 @@ function fakeApi(state) {
   };
 }
 
-async function withServer(fn, { mode = "up", businesses = [FOODS], limiter, contactReply } = {}) {
+async function withServer(fn, { mode = "up", businesses = [FOODS], limiter, contactReply, shop } = {}) {
   const dir = await build(path.join(mkdtempSync(path.join(os.tmpdir(), "corp-")), "dist"));
-  const state = { mode, businesses, calls: [], posts: [], contactReply };
+  const state = { mode, businesses, calls: [], posts: [], contactReply, shop };
   const server = makeServer({ root: dir, apiUrl: "http://api.test", siteUrl: "https://www.example.org", fetchImpl: fakeApi(state), limiter });
   await new Promise((r) => server.listen(0, r));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -179,4 +179,18 @@ test("helpers: visitor address, limiter and validation", () => {
   assert.equal(lim("a"), true);
   assert.deepEqual(validateContact({ name: "A", email: "a@b.co", message: "long enough message" }), {});
   assert.ok(validateContact({ name: "", email: "x", message: "y" }).name);
+});
+
+test("the contact page shows every WhatsApp number and email the shop lists", async () => {
+  const shop = { contacts: [
+    { kind: "whatsapp", label: "Orders", value: "233200000001" },
+    { kind: "whatsapp", label: "Wholesale", value: "233200000002" },
+    { kind: "email", label: "Sales", value: "sales@example.org" },
+  ], whatsapp_number: "233200000001", support_phone: "", support_email: "sales@example.org" };
+  await withServer(async (base) => {
+    const html = await (await fetch(`${base}/contact`)).text();
+    assert.match(html, /href="https:\/\/wa\.me\/233200000001"/);
+    assert.match(html, /href="https:\/\/wa\.me\/233200000002"/);
+    assert.ok(html.includes(">Orders<") && html.includes(">Wholesale<"));
+  }, { shop });
 });

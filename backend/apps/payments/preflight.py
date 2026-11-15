@@ -166,12 +166,15 @@ def check_payments(offline):
     out.append(Result("Launch", "Launch countries are set", PASS if settings.LAUNCH_COUNTRIES else WARN,
                       ", ".join(settings.LAUNCH_COUNTRIES) if settings.LAUNCH_COUNTRIES else "LAUNCH_COUNTRIES is blank, so the shop would try to deliver everywhere.",
                       "Set LAUNCH_COUNTRIES=US,GB,CA,DE,GH."))
-    out.append(Result("Launch", "WhatsApp number is set", PASS if settings.WHATSAPP_SUPPORT_NUMBER else WARN,
-                      "" if settings.WHATSAPP_SUPPORT_NUMBER else "The Chat on WhatsApp button stays hidden.", "Set WHATSAPP_SUPPORT_NUMBER, digits only with country code."))
-    out.append(Result("Launch", "Support phone number is set", PASS if settings.SUPPORT_PHONE_NUMBER else WARN,
-                      settings.SUPPORT_PHONE_NUMBER or "The Call us link stays hidden.", "Set SUPPORT_PHONE_NUMBER with the country code, for example +233240000000."))
-    out.append(Result("Launch", "Support email address is set", PASS if settings.SUPPORT_EMAIL_ADDRESS else WARN,
-                      settings.SUPPORT_EMAIL_ADDRESS or "The Email us link stays hidden.", "Set SUPPORT_EMAIL_ADDRESS, for example help@yourdomain.com."))
+    from apps.corporate.contacts import contact_config
+
+    cc = contact_config()
+    for label, key, hidden, fix in (
+        ("WhatsApp number is set", "whatsapp_number", "The Chat on WhatsApp button stays hidden.", "Set WHATSAPP_SUPPORT_NUMBER, or add one in the admin under Contacts."),
+        ("Support phone number is set", "support_phone", "The Call us link stays hidden.", "Set SUPPORT_PHONE_NUMBER (with the country code), or add one in the admin under Contacts."),
+        ("Support email address is set", "support_email", "The Email us link stays hidden.", "Set SUPPORT_EMAIL_ADDRESS, or add one in the admin under Contacts."),
+    ):
+        out.append(Result("Launch", label, PASS if cc[key] else WARN, cc[key] or hidden, fix))
     out.append(Result("Launch", "Browser push keys are set", PASS if (settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY) else WARN,
                       "" if (settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY) else "Browser notifications stay off.", "Run python manage.py generate_vapid_keys and set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY."))
     from .providers import chargeable_currencies

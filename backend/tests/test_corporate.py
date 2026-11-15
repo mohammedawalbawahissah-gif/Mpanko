@@ -217,3 +217,12 @@ def test_old_handled_enquiries_are_removed_but_new_ones_are_kept(api, settings):
         m.save()
     assert apply_retention()["handled_enquiries"] == 1
     assert set(ContactMessage.objects.values_list("email", flat=True)) == {"p1@example.com", "p2@example.com"}
+
+
+def test_site_profile_can_carry_two_phone_numbers_with_names(api):
+    p = SiteProfile.load() if hasattr(SiteProfile, "load") else SiteProfile.objects.first() or SiteProfile.objects.create()
+    p.phone, p.phone_label, p.phone_2, p.phone_2_label = "+233 24 000 0000", "Sales", "+233 20 111 2222", "Support"
+    p.save()
+    profile = api.get("/api/v1/corporate/site/").json()["profile"]
+    assert (profile["phone"], profile["phone_label"]) == ("+233 24 000 0000", "Sales")
+    assert (profile["phone_2"], profile["phone_2_label"]) == ("+233 20 111 2222", "Support")

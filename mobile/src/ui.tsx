@@ -7,6 +7,7 @@ import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
 import { photoLabel, type ProductPhoto } from "./core/images";
+import { contactItems, type ContactConfig } from "./core/contacts";
 import { layoutFor, READABLE, type Layout } from "./core/layout";
 import { usePrefs } from "./prefs";
 import { color, stripes } from "./theme";
@@ -106,30 +107,25 @@ function ContactChip({ icon, label, name, onPress }: { icon: "mail" | "call" | "
   );
 }
 
-/** Compact Email, Call and WhatsApp buttons with icons. They never show the address or number; each opens the right app. They show once the shop has set its details; while developing, placeholders stand in so the layout can be checked. */
+const KIND_ICON = { email: "mail", phone: "call", whatsapp: "whatsapp" } as const;
+
+/** Compact buttons with icons, one for each contact the shop lists (several phones, WhatsApp numbers and emails are fine). They never show the address or number; each opens the right app.
+ * A contact with a name shows the name; one without shows Email, Call or WhatsApp. They show once the shop has set its details; while developing, placeholders stand in. */
 export function ContactButtons() {
   const { t } = usePrefs();
-  const [number, setNumber] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [config, setConfig] = useState<ContactConfig | null>(null);
   useEffect(() => {
-    api<{ whatsapp_number?: string; support_phone?: string; support_email?: string }>("/config/")
-      .then((c) => {
-        setNumber((c.whatsapp_number ?? "").replace(/\D/g, ""));
-        setPhone((c.support_phone ?? "").trim());
-        setEmail((c.support_email ?? "").trim());
-      })
-      .catch(() => undefined);
+    api<ContactConfig>("/config/").then(setConfig).catch(() => undefined);
   }, []);
-  const mail = email || (__DEV__ ? "help@mpanko.example" : "");
-  const dial = phone || (__DEV__ ? "+233 00 000 0000" : "");
-  const wa = number || (__DEV__ ? "233000000000" : "");
-  if (!mail && !dial && !wa) return null;
+  const items = contactItems(config, __DEV__);
+  if (!items.length) return null;
+  const plain = { email: t("contact.email"), phone: t("contact.call"), whatsapp: t("contact.whatsapp") };
+  const spoken = { email: t("footer.email"), phone: t("footer.call"), whatsapp: t("footer.whatsapp") };
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
-      {!!mail && <ContactChip icon="mail" label={t("contact.email")} name={t("footer.email")} onPress={() => Linking.openURL(`mailto:${mail}`)} />}
-      {!!dial && <ContactChip icon="call" label={t("contact.call")} name={t("footer.call")} onPress={() => Linking.openURL(`tel:${dial.replace(/[^+\d]/g, "")}`)} />}
-      {!!wa && <ContactChip icon="whatsapp" label={t("contact.whatsapp")} name={t("footer.whatsapp")} onPress={() => Linking.openURL(`https://wa.me/${wa}`)} />}
+      {items.map((c, i) => (
+        <ContactChip key={`${c.kind}-${i}`} icon={KIND_ICON[c.kind]} label={c.label || plain[c.kind]} name={c.label ? `${c.label}, ${spoken[c.kind]}` : spoken[c.kind]} onPress={() => Linking.openURL(c.url)} />
+      ))}
     </View>
   );
 }

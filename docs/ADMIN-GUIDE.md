@@ -62,3 +62,7 @@ Keep your password private, use a different one for this site, and sign out on s
 ## Backup codes for two-step sign-in
 
 When a staff member finishes setting up their authenticator app, ten backup codes are shown once. Each works one time in place of the 6-digit code if the phone is lost. Staff can see how many are left and make a new set under **Security** in the admin menu (this needs a current authenticator code and cancels the old set). If someone has lost both phone and codes, a super admin resets their two-step sign-in from the Staff page.
+
+## Contacts
+
+Content > Contacts lists the phone numbers, WhatsApp numbers and email addresses customers can use. Add as many as you like. Each needs a type and a number or address; give each a name such as Sales or Support (required once you have more than one of a type). Customers see a small button for each, with an icon and the name, never the number itself. Untick "Show to customers" to hide one without deleting it.

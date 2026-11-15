@@ -86,6 +86,12 @@ Paystack sends `charge.dispute.create`, `charge.dispute.remind` and `charge.disp
 3. In a signed-in account, verify a phone number (web: Account > Profile, or the mobile Profile screen), then sign out and sign in by code. Turn on text updates and place a test order.
 4. Codes are never written to the notification log. Customers can sign in by code only after verifying the number.
 
+## 5d-2. Contact buttons (phones, WhatsApp numbers, emails)
+
+Customers see small Email, Call and WhatsApp buttons on the shop, the app and the corporate site. You can list as many of each as you need: in the admin open **Content > Contacts**, choose the type, enter the number (with country code) or address, and give it a name such as Sales or Support (the name is required when you have more than one of a type). Order, hide or delete them there; changes show straight away, no redeploy.
+
+`SUPPORT_PHONE_NUMBER`, `WHATSAPP_SUPPORT_NUMBER` and `SUPPORT_EMAIL_ADDRESS` still work. Each one is used only for a type that has no contacts in the admin, so you can launch with the variables and switch to the list later. The corporate site's own Site details (email, two phones) take priority there.
+
 ## 5e. Error tracking
 
 Set `SENTRY_DSN` (and optionally `SENTRY_ENVIRONMENT`) on the api, worker and beat services to send server errors to Sentry; personal data, cookies and request bodies are scrubbed before sending. The web, admin and mobile apps also post crashes to `POST /api/v1/client-errors/` (rate limited), which appear in the api logs under `mpanko.client`. Set `VITE_APP_VERSION` at build time to tag them.

@@ -2,13 +2,14 @@ from rest_framework import serializers
 
 from apps.catalog.serializers import MAX_IMAGE_BYTES
 
-from .models import Business, ContactMessage, SiteProfile
+from .contacts import clean_value
+from .models import Business, ContactMessage, SiteProfile, SupportContact
 
 
 class SiteProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteProfile
-        fields = ("company_name", "tagline", "intro", "about", "contact_email", "phone", "address",
+        fields = ("company_name", "tagline", "intro", "about", "contact_email", "phone", "phone_label", "phone_2", "phone_2_label", "address",
                   "linkedin_url", "instagram_url", "facebook_url", "x_url")
 
 
@@ -105,3 +106,30 @@ class ContactMessageSerializer(serializers.ModelSerializer):
     def get_handled_by_name(self, obj):
         u = obj.handled_by
         return (u.full_name or u.email) if u else ""
+
+
+class SupportContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportContact
+        fields = ("id", "kind", "label", "value", "sort_order", "is_active")
+
+    def validate(self, attrs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        kind = attrs.get("kind", self.instance.kind if self.instance else None)
+        value = attrs.get("value", self.instance.value if self.instance else "")
+        try:
+            attrs["value"] = clean_value(kind, value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"value": e.messages[0]})
+        attrs["label"] = attrs.get("label", self.instance.label if self.instance else "").strip()
+        # With more than one of a kind, each needs its own name or the buttons look identical.
+        others = SupportContact.objects.filter(kind=kind, is_active=True)
+        if self.instance:
+            others = others.exclude(pk=self.instance.pk)
+        active = attrs.get("is_active", self.instance.is_active if self.instance else True)
+        if active and others.exists() and not attrs["label"]:
+            raise serializers.ValidationError({"label": "Give this one a name, such as Sales or Support, so customers can tell them apart."})
+        if active and attrs["label"] and others.filter(label__iexact=attrs["label"]).exists():
+            raise serializers.ValidationError({"label": "Another contact of this kind already has this name."})
+        return attrs

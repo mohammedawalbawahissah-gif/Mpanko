@@ -21,6 +21,9 @@ class SiteProfile(models.Model):
         default="We started with one idea: good things made in Africa should be easy to buy from anywhere. Today we run more than one business, each with its own team and its own customers.\n\nOur head office is in Tamale, Ghana. We work with partners who handle shipping and payment in each country we serve.")
     contact_email = models.EmailField(blank=True)
     phone = models.CharField(max_length=40, blank=True)
+    phone_label = models.CharField(max_length=30, blank=True, help_text="Optional name for the button, such as Sales. Blank shows Call.")
+    phone_2 = models.CharField("second phone", max_length=40, blank=True)
+    phone_2_label = models.CharField(max_length=30, blank=True, help_text="Optional name for the second button, such as Support.")
     address = models.CharField(max_length=240, blank=True)
     linkedin_url = models.URLField(blank=True, validators=[_web_url])
     instagram_url = models.URLField(blank=True, validators=[_web_url])
@@ -103,3 +106,23 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.name} <{self.email}>"
+
+
+class SupportContact(models.Model):
+    """One way for customers to reach the shop: a phone number, a WhatsApp number or an email address. The shop can have several of each."""
+
+    PHONE, WHATSAPP, EMAIL = "phone", "whatsapp", "email"
+    KINDS = [(PHONE, "Phone"), (WHATSAPP, "WhatsApp"), (EMAIL, "Email")]
+
+    kind = models.CharField(max_length=10, choices=KINDS)
+    label = models.CharField(max_length=30, blank=True, help_text="What customers see on the button, such as Sales or Support. Blank shows Call, WhatsApp or Email.")
+    value = models.CharField(max_length=254, help_text="The number with its country code, or the email address.")
+    sort_order = models.PositiveIntegerField(default=100, help_text="Lower numbers come first.")
+    is_active = models.BooleanField(default=True, help_text="Untick to hide it without deleting it.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.label or self.value}"

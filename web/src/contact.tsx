@@ -1,4 +1,4 @@
-import { callLink, emailLink, whatsappLink } from "./phone";
+import { contactLinks } from "./phone";
 import { useShopConfig } from "./guest-config";
 import { useT } from "./i18n";
 
@@ -16,20 +16,25 @@ export function ContactIcon({ name }: { name: keyof typeof PATHS }) {
   );
 }
 
-/** Compact Email, Call and WhatsApp buttons with icons. They never show the address or number; each opens the right app. Hidden until the shop sets its details (placeholders while developing). */
+const KIND_ICON = { email: "mail", phone: "call", whatsapp: "whatsapp" } as const;
+
+/** Compact buttons with icons, one for each contact the shop lists (several phones, WhatsApp numbers and emails are fine). They never show the address or number; each opens the right app.
+ * A contact with a name shows the name; one without shows Email, Call or WhatsApp. The kind is also spoken to screen readers. Hidden until the shop adds its details (placeholders while developing). */
 export function ContactButtons() {
   const { t } = useT();
   const config = useShopConfig();
-  const dev = import.meta.env.DEV;
-  const mail = emailLink(config?.support_email, dev);
-  const call = callLink(config?.support_phone, dev);
-  const whatsapp = whatsappLink(config?.whatsapp_number, dev);
-  if (!mail && !call && !whatsapp) return null;
+  const links = contactLinks(config, import.meta.env.DEV);
+  if (!links.length) return null;
+  const kindName = { email: t("contact.email"), phone: t("contact.call"), whatsapp: t("contact.whatsapp") };
   return (
     <div className="contact-row">
-      {mail && <a className="contact-chip" href={mail.href}><ContactIcon name="mail" />{t("contact.email")}</a>}
-      {call && <a className="contact-chip" href={call.href}><ContactIcon name="call" />{t("contact.call")}</a>}
-      {whatsapp && <a className="contact-chip" href={whatsapp.href} target="_blank" rel="noopener noreferrer"><ContactIcon name="whatsapp" />{t("contact.whatsapp")}</a>}
+      {links.map((l, i) => (
+        <a key={`${l.kind}-${i}`} className="contact-chip" href={l.href} {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+          <ContactIcon name={KIND_ICON[l.kind]} />
+          {l.label || kindName[l.kind]}
+          {l.label && <span className="sr-only"> ({kindName[l.kind]})</span>}
+        </a>
+      ))}
     </div>
   );
 }

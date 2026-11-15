@@ -7,7 +7,7 @@ interface Business {
   website_url: string; logo_url: string; logo_alt: string; is_published: boolean; is_featured: boolean; sort_order: number;
 }
 interface Profile {
-  company_name: string; tagline: string; intro: string; about: string; contact_email: string; phone: string; address: string;
+  company_name: string; tagline: string; intro: string; about: string; contact_email: string; phone: string; phone_label: string; phone_2: string; phone_2_label: string; address: string;
   linkedin_url: string; instagram_url: string; facebook_url: string; x_url: string;
 }
 interface Enquiry {
@@ -116,6 +116,100 @@ function BusinessForm({ business, onDone }: { business: Business | null; onDone:
   );
 }
 
+/* -------------------------------------------------------------- contacts */
+
+type ContactKind = "phone" | "whatsapp" | "email";
+interface Contact { id: number; kind: ContactKind; label: string; value: string; sort_order: number; is_active: boolean }
+const KIND_NAMES: Record<ContactKind, string> = { phone: "Phone", whatsapp: "WhatsApp", email: "Email" };
+const VALUE_HINT: Record<ContactKind, string> = {
+  phone: "Phone number with its country code, for example +233240000000",
+  whatsapp: "WhatsApp number with its country code, for example 233240000000",
+  email: "Email address, for example help@yourdomain.com",
+};
+
+export function Contacts() {
+  const list = useAsync(() => api<Contact[]>("/corporate/manage/contacts/"), []);
+  const [editing, setEditing] = useState<Contact | "new" | null>(null);
+  if (editing) return <ContactForm contact={editing === "new" ? null : editing} onDone={() => { setEditing(null); list.reload(); }} />;
+  return (
+    <>
+      <h1>Contacts</h1>
+      <p className="muted">The phone numbers, WhatsApp numbers and email addresses customers see on the shop, the app and the corporate website. Each shows as a small button with its icon; the number or address itself is not printed. Add as many as you need, and give each one a name such as Sales or Support.</p>
+      <p><button className="btn" onClick={() => setEditing("new")}>Add a contact</button></p>
+      {list.loading && <Loading />}
+      {list.error && <Alert>{list.error}</Alert>}
+      {list.data && (
+        <div className="scroll">
+          <table className="table">
+            <thead><tr><th>Type</th><th>Name on the button</th><th>Number or address</th><th>Shown</th><th className="num">Order</th><th></th></tr></thead>
+            <tbody>
+              {list.data.map((c) => (
+                <tr key={c.id}>
+                  <td>{KIND_NAMES[c.kind]}</td>
+                  <td>{c.label || <span className="muted">{KIND_NAMES[c.kind]}</span>}</td>
+                  <td>{c.value}</td>
+                  <td><Pill value={c.is_active ? "published" : "draft"} /></td>
+                  <td className="num">{c.sort_order}</td>
+                  <td><button className="link-button" onClick={() => setEditing(c)}>Edit</button></td>
+                </tr>
+              ))}
+              {list.data.length === 0 && <tr><td colSpan={6} className="muted">No contacts yet. Until you add some, the shop uses the single phone, WhatsApp and email settings from the server, if they are set.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ContactForm({ contact, onDone }: { contact: Contact | null; onDone: () => void }) {
+  const [f, setF] = useState({ kind: (contact?.kind ?? "phone") as ContactKind, label: contact?.label ?? "", value: contact?.value ?? "", sort_order: String(contact?.sort_order ?? 100), is_active: contact?.is_active ?? true });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErrors({}); setError("");
+    try {
+      await api(contact ? `/corporate/manage/contacts/${contact.id}/` : "/corporate/manage/contacts/", { method: contact ? "PATCH" : "POST", body: { ...f, sort_order: Number(f.sort_order) || 0 } });
+      onDone();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) { setErrors(err.fields()); setError("Fix the highlighted fields and save again."); }
+      else setError(errText(err));
+    } finally { setBusy(false); }
+  };
+  const remove = async () => {
+    if (!contact || !window.confirm(`Delete ${contact.label || KIND_NAMES[contact.kind]} (${contact.value})? Customers will no longer see it.`)) return;
+    try { await api(`/corporate/manage/contacts/${contact.id}/`, { method: "DELETE" }); onDone(); } catch (err) { setError(errText(err)); }
+  };
+  return (
+    <form onSubmit={save} className="form">
+      <h1>{contact ? "Edit contact" : "Add a contact"}</h1>
+      {error && <Alert>{error}</Alert>}
+      <Field id="c-kind" label="Type" error={errors.kind}>
+        <select id="c-kind" className="select" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ContactKind })}>
+          {(Object.keys(KIND_NAMES) as ContactKind[]).map((k) => <option key={k} value={k}>{KIND_NAMES[k]}</option>)}
+        </select>
+      </Field>
+      <Field id="c-value" label={VALUE_HINT[f.kind]} error={errors.value}>
+        <input id="c-value" className="input" required inputMode={f.kind === "email" ? "email" : "tel"} value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} />
+      </Field>
+      <Field id="c-label" label="Name on the button, such as Sales or Support (needed when you have more than one of this type)" error={errors.label}>
+        <input id="c-label" className="input" maxLength={30} value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
+      </Field>
+      <Field id="c-order" label="Order (smaller numbers come first)" error={errors.sort_order}>
+        <input id="c-order" className="input" type="number" value={f.sort_order} onChange={(e) => setF({ ...f, sort_order: e.target.value })} />
+      </Field>
+      <p><label><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Show to customers</label></p>
+      <p className="row">
+        <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save contact"}</button>
+        <button className="btn quiet" type="button" onClick={onDone}>Cancel</button>
+        {contact && <button className="btn danger" type="button" onClick={remove}>Delete</button>}
+      </p>
+    </form>
+  );
+}
+
 /* ---------------------------------------------------------- site details */
 
 export function SiteDetails() {
@@ -156,6 +250,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
       <Field id="p-about" label="About us (leave a blank line between paragraphs)" error={errors.about}><textarea id="p-about" className="input" rows={8} value={f.about} onChange={set("about")} /></Field>
       {text("contact_email", "Contact email", { type: "email", inputMode: "email" })}
       {text("phone", "Phone", { inputMode: "tel" })}
+      {text("phone_label", "Phone button name (optional, such as Sales)")}
+      {text("phone_2", "Second phone", { inputMode: "tel" })}
+      {text("phone_2_label", "Second phone button name (optional, such as Support)")}
       {text("address", "Address")}
       {text("linkedin_url", "LinkedIn address", { inputMode: "url" })}
       {text("instagram_url", "Instagram address", { inputMode: "url" })}

@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import Address
 from apps.accounts.serializers import AddressSerializer
+from apps.corporate.contacts import contact_config
 
 from .models import Order
 from .serializers import OrderSerializer
@@ -156,9 +157,7 @@ class PublicConfigView(APIView):
     def get(self, request):
         return Response({
             "guest_checkout": settings.GUEST_CHECKOUT_ENABLED,
-            "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
-            "support_phone": settings.SUPPORT_PHONE_NUMBER,
-            "support_email": settings.SUPPORT_EMAIL_ADDRESS,
+            **contact_config(),
             "launch_countries": settings.LAUNCH_COUNTRIES,
         })
 

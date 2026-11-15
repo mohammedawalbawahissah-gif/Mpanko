@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callLink, emailLink, formatPhone, whatsappLink } from "./phone";
+import { callLink, contactLinks, emailLink, formatPhone, whatsappLink } from "./phone";
 
 describe("callLink", () => {
   it("dials the configured number, stripping spaces and punctuation", () => {
@@ -25,5 +25,33 @@ describe("emailLink and whatsappLink", () => {
     expect(whatsappLink("", true)?.placeholder).toBe(true);
     expect(emailLink("", false)).toBeNull();
     expect(whatsappLink(undefined, false)).toBeNull();
+  });
+});
+
+
+describe("contactLinks", () => {
+  const rows = [
+    { kind: "phone" as const, label: "Sales", value: "+233 20 000 0001" },
+    { kind: "phone" as const, label: "Support", value: "+233200000002" },
+    { kind: "whatsapp" as const, label: "", value: "233200000003" },
+    { kind: "email" as const, label: "Orders", value: "orders@example.com" },
+  ];
+  it("makes one link per contact, in order, each opening the right app", () => {
+    const links = contactLinks({ contacts: rows }, false);
+    expect(links.map((l) => l.href)).toEqual(["tel:+233200000001", "tel:+233200000002", "https://wa.me/233200000003", "mailto:orders@example.com"]);
+    expect(links.map((l) => l.label)).toEqual(["Sales", "Support", "", "Orders"]);
+    expect(links[2].external).toBe(true);
+  });
+  it("falls back to the single settings when the server sends no list", () => {
+    const links = contactLinks({ support_email: "help@example.com", support_phone: "+233240000000", whatsapp_number: "" }, false);
+    expect(links.map((l) => l.kind)).toEqual(["email", "phone"]);
+  });
+  it("shows nothing in production when nothing is set, and placeholders while developing", () => {
+    expect(contactLinks({ contacts: [] }, false)).toEqual([]);
+    expect(contactLinks(null, true).every((l) => l.placeholder)).toBe(true);
+    expect(contactLinks(null, true)).toHaveLength(3);
+  });
+  it("ignores empty entries", () => {
+    expect(contactLinks({ contacts: [{ kind: "email", label: "", value: "" }] }, false)).toEqual([]);
   });
 });

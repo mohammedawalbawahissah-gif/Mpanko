@@ -64,7 +64,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
   const ld = JSON.stringify({
     "@context": "https://schema.org", "@type": "Organization", name, description: profile.intro || profile.tagline,
     ...(site.url ? { url: site.url } : {}), ...(profile.contact_email ? { email: profile.contact_email } : {}),
-    ...(profile.phone ? { telephone: profile.phone } : {}),
+    ...(profile.phone ? { telephone: profile.phone_2 ? [profile.phone, profile.phone_2] : profile.phone } : {}),
     ...(businesses.length ? { subOrganization: businesses.map((b) => ({ "@type": "Organization", name: b.name, ...(safeUrl(b.website_url) ? { url: safeUrl(b.website_url) } : {}) })) } : {}),
   }).replace(/</g, "\\u003c");
   const social = SOCIAL.filter(([k]) => safeUrl(profile[k])).map(([k, l]) => `<li><a href="${esc(safeUrl(profile[k]))}" rel="noopener">${l}</a></li>`).join("");
@@ -229,12 +229,41 @@ const CONTACT_ICONS = {
   whatsapp: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9 9.5c.3 2 2.5 4.2 4.5 4.5l1.3-1.3-2-1-.8.8c-.8-.4-1.5-1.1-1.9-1.9l.8-.8-1-2z"/>',
 };
 const contactIcon = (k) => `<svg class="contact-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${CONTACT_ICONS[k]}</svg>`;
+const KIND_NAME = { email: "Email", phone: "Call", whatsapp: "WhatsApp" };
+const KIND_ICON = { email: "mail", phone: "call", whatsapp: "whatsapp" };
+const KIND_ORDER = ["email", "phone", "whatsapp"];
+
+/** The contacts to show, as [{ kind, label, value }]: the list the server sent, or built from the older single fields (email, two phones with names, WhatsApp). */
+export function contactList(profile) {
+  if (Array.isArray(profile.contacts)) return profile.contacts.filter((c) => c && String(c.value || "").trim());
+  const rows = [];
+  if (profile.contact_email) rows.push({ kind: "email", label: "", value: profile.contact_email });
+  [[profile.phone, profile.phone_label], [profile.phone_2, profile.phone_2_label]].forEach(([value, label]) => { if (value && String(value).trim()) rows.push({ kind: "phone", label: label || "", value }); });
+  if (profile.whatsapp_number) rows.push({ kind: "whatsapp", label: "", value: profile.whatsapp_number });
+  return rows;
+}
+
+function chipHref(c) {
+  if (c.kind === "email") return `mailto:${esc(String(c.value).trim())}`;
+  if (c.kind === "whatsapp") return `https://wa.me/${esc(String(c.value).replace(/\D/g, ""))}`;
+  return `tel:${esc(String(c.value).replace(/[^+\d]/g, ""))}`;
+}
+
+/** One button per contact, in the order Email, Call, WhatsApp. A contact with a name shows it; one without shows Email, Call or WhatsApp, numbered when there are several unnamed ones of that kind, so they can be told apart.
+ * The kind is also spoken to screen readers. */
 export function contactButtons(profile) {
-  const chips = [
-    profile.contact_email ? `<a class="contact-chip" href="mailto:${esc(profile.contact_email)}">${contactIcon("mail")}Email</a>` : "",
-    profile.phone ? `<a class="contact-chip" href="tel:${esc(profile.phone.replace(/[^+\d]/g, ""))}">${contactIcon("call")}Call</a>` : "",
-    profile.whatsapp_number ? `<a class="contact-chip" href="https://wa.me/${esc(String(profile.whatsapp_number).replace(/\D/g, ""))}" rel="noopener">${contactIcon("whatsapp")}WhatsApp</a>` : "",
-  ].join("");
+  const rows = contactList(profile);
+  const counts = {};
+  rows.forEach((c) => { if (!String(c.label || "").trim()) counts[c.kind] = (counts[c.kind] || 0) + 1; });
+  const seen = {};
+  const chips = [...rows].sort((x, y) => KIND_ORDER.indexOf(x.kind) - KIND_ORDER.indexOf(y.kind)).map((c) => {
+    const label = String(c.label || "").trim();
+    if (!label) seen[c.kind] = (seen[c.kind] || 0) + 1;
+    const name = label || (counts[c.kind] > 1 ? `${KIND_NAME[c.kind]} ${seen[c.kind]}` : KIND_NAME[c.kind]);
+    const hidden = label ? `<span class="sr-only"> (${KIND_NAME[c.kind]})</span>` : "";
+    const ext = c.kind === "whatsapp" ? ' rel="noopener"' : "";
+    return `<a class="contact-chip" href="${chipHref(c)}"${ext}>${contactIcon(KIND_ICON[c.kind])}${esc(name)}${hidden}</a>`;
+  }).join("");
   return chips ? `<div class="contact-row">${chips}</div>` : "";
 }
 

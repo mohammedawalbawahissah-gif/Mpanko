@@ -186,3 +186,4 @@ footer p { margin: 0; }
 .contact-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.7rem; min-height: 32px; border: 1.5px solid currentColor; border-radius: 999px; font-size: 0.85rem; font-weight: 600; line-height: 1; text-decoration: none; color: inherit; }
 .contact-chip:hover, .contact-chip:focus-visible { background: #e9a820; border-color: #e9a820; color: #0a2b29; }
 .contact-icon { flex: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

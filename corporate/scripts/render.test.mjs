@@ -134,3 +134,33 @@ test("contact buttons show Email, Call and WhatsApp with icons, never the addres
   assert.ok(!/help@example|233|24 000/.test(visible), "no address or number in the visible text");
   assert.equal(contactButtons({}), "");
 });
+
+test("two phone numbers get two Call buttons, named so people can tell them apart", async () => {
+  const { contactButtons } = await import("../src/render.mjs");
+  const plain = contactButtons({ phone: "+233 24 000 0000", phone_2: "+233 20 111 2222" });
+  assert.match(plain, /href="tel:\+233240000000"/);
+  assert.match(plain, /href="tel:\+233201112222"/);
+  assert.ok(plain.includes(">Call 1<") && plain.includes(">Call 2<"));
+  const named = contactButtons({ phone: "+233 24 000 0000", phone_label: "Sales", phone_2: "+233 20 111 2222", phone_2_label: "Support <b>" });
+  assert.ok(named.includes(">Sales<") && named.includes(">Support &lt;b&gt;<"));
+  assert.ok(!/233/.test(named.replace(/<[^>]*>/g, "")), "numbers stay out of the visible text");
+  assert.ok(contactButtons({ phone: "+233 24 000 0000" }).includes(">Call<"), "one number keeps the plain Call label");
+  assert.ok(contactButtons({ phone_2: "+233 20 111 2222" }).includes(">Call<"), "a lone second number reads Call");
+});
+
+test("a list of contacts gives one button each: named ones keep their name, unnamed ones are numbered", async () => {
+  const { contactButtons } = await import("../src/render.mjs");
+  const html = contactButtons({ contacts: [
+    { kind: "whatsapp", label: "Orders", value: "233200000001" },
+    { kind: "whatsapp", label: "", value: "233200000002" },
+    { kind: "whatsapp", label: "", value: "233200000003" },
+    { kind: "email", label: "Sales <x>", value: "sales@example.org" },
+    { kind: "phone", label: "", value: "+233 24 000 0000" },
+  ] });
+  assert.equal((html.match(/class="contact-chip"/g) || []).length, 5);
+  assert.ok(html.includes(">Orders<") && html.includes(">WhatsApp 1<") && html.includes(">WhatsApp 2<"));
+  assert.ok(html.includes("Sales &lt;x&gt;"), "names are escaped");
+  assert.ok(html.indexOf("mailto:") < html.indexOf("tel:") && html.indexOf("tel:") < html.indexOf("wa.me"), "Email, then Call, then WhatsApp");
+  assert.ok(html.includes("(WhatsApp)"), "the kind is spoken to screen readers when a name is shown");
+  assert.equal(contactButtons({ contacts: [] }), "");
+});

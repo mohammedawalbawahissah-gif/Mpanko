@@ -108,12 +108,21 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
   // placeholder stands in so the layout can be checked; production shows nothing until a real one is set.
   const dev = process.env.NODE_ENV !== "production";
   const pick = (placeholder, ...candidates) => candidates.find((c) => c && String(c).trim()) || (dev ? placeholder : "");
-  const contactFrom = (profile, shop) => ({
-    ...profile,
-    contact_email: pick("help@mpanko.example", profile.contact_email, shop.support_email),
-    phone: pick("+233 00 000 0000", profile.phone, shop.support_phone),
-    whatsapp_number: pick("233000000000", shop.whatsapp_number),
-  });
+  // Per kind: the profile's own entries, else the shop's list (or its single setting). A kind with nothing shows a placeholder in development only.
+  const contactFrom = (profile, shop) => {
+    const shopRows = Array.isArray(shop.contacts) ? shop.contacts.filter((c) => c && String(c.value || "").trim()) : [];
+    const shopOf = (kind, single) => {
+      const own = shopRows.filter((c) => c.kind === kind);
+      return own.length ? own : single && String(single).trim() ? [{ kind, label: "", value: single }] : [];
+    };
+    const phones = [[profile.phone, profile.phone_label], [profile.phone_2, profile.phone_2_label]].filter(([n]) => n && String(n).trim()).map(([value, label]) => ({ kind: "phone", label: label || "", value }));
+    const emails = profile.contact_email && String(profile.contact_email).trim() ? [{ kind: "email", label: "", value: profile.contact_email }] : shopOf("email", shop.support_email);
+    const calls = phones.length ? phones : shopOf("phone", shop.support_phone);
+    const chats = shopOf("whatsapp", shop.whatsapp_number);
+    const rows = [...emails, ...calls, ...chats];
+    if (!rows.length && dev) rows.push({ kind: "email", label: "", value: "help@mpanko.example" }, { kind: "phone", label: "", value: "+233 00 000 0000" }, { kind: "whatsapp", label: "", value: "233000000000" });
+    return { ...profile, contacts: rows, contact_email: emails[0]?.value || "", phone: calls[0]?.value || "", whatsapp_number: chats[0]?.value || "" };
+  };
 
   async function context() {
     const res = await api.site();

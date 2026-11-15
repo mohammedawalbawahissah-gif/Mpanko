@@ -13,8 +13,10 @@ from rest_framework.views import APIView
 from apps.accounts.models import AuditLog, Role, User
 from apps.accounts.permissions import CatalogManager, roles_permission
 
-from .models import Business, ContactMessage, SiteProfile
+from .contacts import contact_config
+from .models import Business, ContactMessage, SiteProfile, SupportContact
 from .serializers import (
+    SupportContactSerializer,
     ContactInputSerializer, ContactMessageSerializer, ManageBusinessSerializer, PublicBusinessDetailSerializer,
     PublicBusinessSerializer, SiteProfileSerializer,
 )
@@ -37,9 +39,7 @@ class SiteView(APIView):
         return Response({
             "profile": SiteProfileSerializer(SiteProfile.get()).data,
             "businesses": PublicBusinessSerializer(_published(), many=True, context={"request": request}).data,
-            "whatsapp_number": settings.WHATSAPP_SUPPORT_NUMBER,
-            "support_phone": settings.SUPPORT_PHONE_NUMBER,
-            "support_email": settings.SUPPORT_EMAIL_ADDRESS,
+            **contact_config(),
         })
 
 
@@ -142,6 +142,27 @@ class BusinessManageViewSet(viewsets.ModelViewSet):
         AuditLog.record(self.request.user, "corporate.business.delete", instance, name=instance.name)
         if instance.logo:
             instance.logo.delete(save=False)
+        instance.delete()
+
+
+class ContactManageViewSet(viewsets.ModelViewSet):
+    """The shop's phone numbers, WhatsApp numbers and email addresses shown to customers on every app."""
+
+    queryset = SupportContact.objects.all()
+    serializer_class = SupportContactSerializer
+    permission_classes = [CatalogManager]
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        c = serializer.save()
+        AuditLog.record(self.request.user, "corporate.contact.create", c, kind=c.kind, label=c.label)
+
+    def perform_update(self, serializer):
+        c = serializer.save()
+        AuditLog.record(self.request.user, "corporate.contact.update", c, kind=c.kind, label=c.label, active=c.is_active)
+
+    def perform_destroy(self, instance):
+        AuditLog.record(self.request.user, "corporate.contact.delete", instance, kind=instance.kind, label=instance.label)
         instance.delete()
 
 

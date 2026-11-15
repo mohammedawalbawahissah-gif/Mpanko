@@ -21,6 +21,9 @@ export const fallbackProfile = {
     "We started with one idea: good things made in Africa should be easy to buy from anywhere. Today we run more than one business, each with its own team and its own customers.\n\nOur head office is in Tamale, Ghana. We work with partners who handle shipping and payment in each country we serve.",
   contact_email: process.env.CONTACT_EMAIL || "",
   phone: process.env.CONTACT_PHONE || "",
+  phone_label: "",
+  phone_2: process.env.CONTACT_PHONE_2 || "",
+  phone_2_label: "",
   address: process.env.CONTACT_ADDRESS || "",
   linkedin_url: "", instagram_url: "", facebook_url: "", x_url: "",
 };
