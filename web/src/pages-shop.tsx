@@ -119,6 +119,7 @@ export function Shop() {
   const ordering = params.get("sort") ?? "-created_at";
   const [draft, setDraft] = useState(search);
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [items, setItems] = useState<Product[]>([]);
   const [count, setCount] = useState(0);
   const [error, setError] = useState("");
@@ -175,7 +176,7 @@ export function Shop() {
       )}
       <h1>{category ? cats.data?.find((c) => c.slug === category)?.name ?? "Shop" : "All products"}</h1>
       <div className="shop-layout">
-        <aside className="filters" aria-label="Filters">
+        <aside className={`filters${filtersOpen ? " open" : ""}`} aria-label={t("shop.filters")}>
           <form
             role="search"
             onSubmit={(e) => {
@@ -189,6 +190,10 @@ export function Shop() {
               <button className="btn quiet" type="submit">{t("shop.searchButton")}</button>
             </div>
           </form>
+          <button type="button" className="btn quiet filters-toggle" aria-expanded={filtersOpen} aria-controls="filter-panel" onClick={() => setFiltersOpen((o) => !o)}>
+            {t("shop.filters")}{category || ordering !== SORTS[0].value ? " \u2022" : ""}
+          </button>
+          <div id="filter-panel" className="filter-panel">
           <nav aria-label="Categories">
             <h3>Categories</h3>
             <ul className="cat-tree">
@@ -215,13 +220,14 @@ export function Shop() {
               })}
             </ul>
           </nav>
-          <div>
+          <div className="sort-box">
             <label htmlFor="sort"><h3>Sort by</h3></label>
             <select id="sort" className="select" style={{ width: "100%" }} value={ordering} onChange={(e) => update("sort", e.target.value)}>
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
+          </div>
           </div>
         </aside>
 

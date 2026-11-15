@@ -11,7 +11,7 @@ import { checkoutItems, isEmail, loadGuestOrder, saveGuestOrder } from "./core/g
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Address, Order, PaymentMethod, ShippingService, TaxEstimate } from "./types";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, ContactButtons, methodLabel, s, statusText } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Pill, ContactButtons, methodLabel, s, statusText, readable } from "./ui";
 import type { RootParams } from "./screens-buy";
 
 type Nav = NavigationProp<RootParams>;
@@ -52,7 +52,7 @@ export function GuestBag() {
     );
   }
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.pad, readable]}>
       <Text accessibilityRole="header" style={s.h1}>{t("bag.title")}</Text>
       {guestLines.map((l) => (
         <View key={l.variantId} style={[s.card, s.cardPad]}>
@@ -334,7 +334,7 @@ export function GuestOrderScreen({ route }: { route: { params: { number: string;
   };
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.pad, readable]}>
       <Text accessibilityRole="header" style={s.h1}>{t("orders.orderN", { number: order.number })}</Text>
       <Pill value={order.status} />
       {!!msg && <View style={{ marginTop: 12 }}><Notice>{msg}</Notice></View>}

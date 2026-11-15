@@ -7,7 +7,8 @@ import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, usePullRefresh } from "./ui";
+import { cardWidth } from "./core/layout";
+import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
 
 export type ShopStack = { List: undefined; Product: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
@@ -22,6 +23,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
     const id = setTimeout(() => setQuery(q.trim()), 350);
     return () => clearTimeout(id);
   }, [q]);
+  const layout = useLayout();
   const cats = useCachedAsync("categories", () => api<Page<Category> | Category[]>("/categories/"), []);
   const all: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
   const byOrder = (a: Category, b: Category) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name);
@@ -80,6 +82,9 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
       {products.loading && <Busy />}
       {products.error ? <View style={s.pad}><Notice>{products.error}</Notice><Button title={t("m.tryAgain")} onPress={products.reload} /></View> : null}
       <FlatList
+        key={`cols-${layout.columns}`}
+        numColumns={layout.columns}
+        columnWrapperStyle={layout.columns > 1 ? { gap: 10 } : undefined}
         data={products.data?.results ?? []}
         keyExtractor={(p) => p.slug}
         refreshControl={pull.control}
@@ -96,7 +101,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         }
         renderItem={({ item }) => (
           <Pressable
-            style={[s.card, { flexDirection: "row", height: 108, marginBottom: 10 }]}
+            style={[s.card, { flexDirection: "row", height: 108, marginBottom: 10 }, layout.columns > 1 && { width: cardWidth(layout, 10, 12) }]}
             accessibilityRole="button"
             accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`}
             onPress={() => navigation.navigate("Product", { slug: item.slug })}
@@ -126,6 +131,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const layout = useLayout();
   const { width } = useWindowDimensions();
   const productName = p?.name;
   useEffect(() => {
@@ -161,14 +167,19 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
     }
   };
 
+  const galleryWidth = layout.isTablet ? Math.floor(width / 2) : width;
+  const photoHeight = layout.isTablet ? 380 : 260;
+  const gallery = photos.length > 1 ? (
+    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+      {photos.map((ph) => <View key={ph.id} style={{ width: galleryWidth }}><Photo photo={ph} seed={p.slug} name={p.name} height={photoHeight} /></View>)}
+    </ScrollView>
+  ) : <Photo photo={photos[0] ?? null} seed={p.slug} name={p.name} height={photoHeight} />;
+
   return (
     <ScrollView style={s.screen}>
-      {photos.length > 1 ? (
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
-          {photos.map((ph) => <View key={ph.id} style={{ width }}><Photo photo={ph} seed={p.slug} name={p.name} height={260} /></View>)}
-        </ScrollView>
-      ) : <Photo photo={photos[0] ?? null} seed={p.slug} name={p.name} height={260} />}
-      <View style={s.pad}>
+      <View style={layout.isTablet ? { flexDirection: "row", alignItems: "flex-start" } : undefined}>
+      <View style={layout.isTablet ? { width: galleryWidth } : undefined}>{gallery}</View>
+      <View style={[s.pad, layout.isTablet && { flex: 1 }]}>
         {savedAt ? <Notice kind="info">{t("offline.saved")}</Notice> : null}
         <Text accessibilityRole="header" style={s.h1}>{p.name}</Text>
         <Text style={s.muted}>{p.maker ? t("m.madeBy", { maker: p.maker }) : ""}{p.maker && p.origin_country ? " · " : ""}{p.origin_country}</Text>
@@ -195,6 +206,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
         {chosen && !chosen.in_stock && <Text style={[s.muted, { marginTop: 8 }]}>{t("m.thisSoldOut")}</Text>}
         {chosen?.made_to_order && <Text style={[s.muted, { marginTop: 8 }]}>{t("product.madeToOrder")}{chosen.lead_time_days ? `. ${t("product.backorderDays", { days: chosen.lead_time_days })}` : ""}</Text>}
         {chosen?.on_backorder && !chosen.made_to_order && <Text style={[s.muted, { marginTop: 8 }]}>{t("product.backorder")}{chosen.backorder_days ? `. ${t("product.backorderDays", { days: chosen.backorder_days })}` : ""}</Text>}
+      </View>
       </View>
     </ScrollView>
   );

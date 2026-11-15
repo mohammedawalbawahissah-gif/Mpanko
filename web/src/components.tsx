@@ -103,11 +103,9 @@ export function Layout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [menuOpen, setMenuOpen] = useState(false);
   const title = routeTitle(pathname, t);
   useEffect(() => {
     window.scrollTo(0, 0);
-    setMenuOpen(false);
   }, [pathname]);
   // Pages that set their own title (shop, product, policies) do so themselves; every other page gets one here.
   useEffect(() => {
@@ -128,9 +126,8 @@ export function Layout() {
                 <NavLink to="/shop">{t("nav.shop")}</NavLink>
                 {user && <NavLink to="/orders">{t("nav.orders")}</NavLink>}
                 {user && <NavLink to="/support">{t("nav.help")}</NavLink>}
-                <button type="button" className="menu-toggle link-button" aria-expanded={menuOpen} aria-controls="header-selects" onClick={() => setMenuOpen((o) => !o)}>{t("nav.menu")}</button>
               </nav>
-              <div id="header-selects" className={`header-selects${menuOpen ? " open" : ""}`}>
+              <div className="header-selects">
                 {currencies.length > 1 && (
                   <label>
                     <span className="sr-only">{t("nav.currency")}</span>
@@ -149,7 +146,7 @@ export function Layout() {
             {user ? (
               <>
                 <NotificationBell />
-                <Link to="/account" className="icon-link" aria-label={t("nav.account")} title={t("nav.account")}><HeaderIcon name="user" /></Link>
+                <Link to="/account" className="icon-link tool-account" aria-label={t("nav.account")} title={t("nav.account")}><HeaderIcon name="user" /></Link>
                 <button
                   type="button"
                   className="icon-link"
@@ -164,9 +161,9 @@ export function Layout() {
                 </button>
               </>
             ) : (
-              <Link to="/login">{t("nav.signIn")}</Link>
+              <Link to="/login" className="tool-signin">{t("nav.signIn")}</Link>
             )}
-            <Link to="/bag" className="icon-link bag-link" aria-label={t("nav.bagItems", { count })} title={t("nav.bag")}>
+            <Link to="/bag" className="icon-link bag-link tool-bag" aria-label={t("nav.bagItems", { count })} title={t("nav.bag")}>
               <HeaderIcon name="bag" />
               <span className="bag-count" aria-hidden="true">{count}</span>
             </Link>
@@ -176,6 +173,7 @@ export function Layout() {
       <main id="main">
         <Outlet />
       </main>
+      <TabBar />
       <div className="weave-rule" aria-hidden="true" />
       <footer className="site-footer">
         <div className="wrap">
@@ -263,6 +261,9 @@ const HEADER_ICONS = {
   user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
   out: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>,
   bag: <><path d="M5 8h14l-1 12H6L5 8z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
+  shop: <><path d="M4 9l1.5-5h13L20 9" /><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9" /><path d="M5 12v8h14v-8" /></>,
+  orders: <><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" /><path d="M4 7.5l8 4.5 8-4.5" /><path d="M12 12v9" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7" /><path d="M12 17h.01" /></>,
 };
 
 /** The small pictures that stand in for Account, Sign out and Bag in the header. */
@@ -271,6 +272,25 @@ function HeaderIcon({ name }: { name: keyof typeof HEADER_ICONS }) {
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {HEADER_ICONS[name]}
     </svg>
+  );
+}
+
+/** The bar along the bottom of a phone screen: the places people go most, within thumb reach. Hidden on tablets and desktops, where the header has them. */
+function TabBar() {
+  const { user } = useAuth();
+  const { count } = useCart();
+  const { t } = useT();
+  return (
+    <nav className="tab-bar" aria-label="Quick links">
+      <NavLink to="/shop"><HeaderIcon name="shop" /><span>{t("nav.shop")}</span></NavLink>
+      {user && <NavLink to="/orders"><HeaderIcon name="orders" /><span>{t("nav.orders")}</span></NavLink>}
+      {user && <NavLink to="/support"><HeaderIcon name="help" /><span>{t("nav.help")}</span></NavLink>}
+      <NavLink to="/bag" aria-label={t("nav.bagItems", { count })}>
+        <span className="tab-icon"><HeaderIcon name="bag" />{count > 0 && <span className="bag-count" aria-hidden="true">{count}</span>}</span>
+        <span aria-hidden="true">{t("nav.bag")}</span>
+      </NavLink>
+      <NavLink to={user ? "/account" : "/login"}><HeaderIcon name="user" /><span>{user ? t("nav.account") : t("nav.signIn")}</span></NavLink>
+    </nav>
   );
 }
 

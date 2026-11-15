@@ -11,7 +11,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh, readable } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -45,7 +45,7 @@ export function BagScreen() {
   cart.forEach((i) => (byCurrency[i.currency] = (byCurrency[i.currency] ?? 0) + Number(i.unit_price) * i.quantity));
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.pad, readable]}>
       <Text accessibilityRole="header" style={s.h1}>{t("bag.title")}</Text>
       {!!err && <Notice>{err}</Notice>}
       {cart.map((i) => (
@@ -415,7 +415,7 @@ export function OrderDetailScreen({ route }: { route: { params: { number: string
     ]);
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.pad, readable]}>
       <Text accessibilityRole="header" style={s.h1}>{t("orders.orderN", { number: o.number })}</Text>
       <Pill value={o.status} />
       {!!msg && <View style={{ marginTop: 12 }}><Notice>{msg}</Notice></View>}

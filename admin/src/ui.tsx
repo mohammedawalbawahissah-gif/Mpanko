@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { ALL_COUNTRIES, countryName } from "./countries";
 
@@ -112,4 +112,47 @@ export function CountryMultiSelect({ id, value, onChange, allowAll }: { id: stri
       </select>
     </div>
   );
+}
+
+/** On a phone each table row becomes a card, and every value needs its column name beside it. This copies each header's text onto the cells under it,
+ * and restores the table roles that a card layout would otherwise take away. It watches the page, so tables that load later are covered too. */
+export function useStackedTables(root: RefObject<HTMLElement>, active: boolean) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el || !active) return;
+    const phone = window.matchMedia("(max-width: 640px)");
+    const label = (table: HTMLTableElement) => {
+      const heads = Array.from(table.querySelectorAll("thead th"));
+      const names: string[] = [];
+      heads.forEach((th) => {
+        const span = Math.max(1, Number((th as HTMLTableCellElement).colSpan) || 1);
+        for (let i = 0; i < span; i++) names.push((th.textContent ?? "").trim());
+      });
+      table.querySelectorAll("tbody tr").forEach((tr) => {
+        let col = 0;
+        Array.from(tr.children).forEach((cell) => {
+          const c = cell as HTMLTableCellElement;
+          if (c.dataset.label !== (names[col] ?? "")) c.dataset.label = names[col] ?? "";
+          col += Math.max(1, c.colSpan || 1);
+        });
+      });
+      const roles: [string, string][] = [["table", "table"], ["thead,tbody,tfoot", "rowgroup"], ["tr", "row"], ["th", "columnheader"], ["td", "cell"]];
+      if (phone.matches) {
+        table.setAttribute("role", "table");
+        roles.slice(1).forEach(([sel, role]) => table.querySelectorAll(sel).forEach((n) => { if (n.getAttribute("role") !== role) n.setAttribute("role", role); }));
+      } else {
+        table.removeAttribute("role");
+        roles.slice(1).forEach(([sel]) => table.querySelectorAll(sel).forEach((n) => n.removeAttribute("role")));
+      }
+    };
+    const run = () => el.querySelectorAll<HTMLTableElement>("table.table").forEach(label);
+    run();
+    const watcher = new MutationObserver(run);
+    watcher.observe(el, { childList: true, subtree: true });
+    phone.addEventListener("change", run);
+    return () => {
+      watcher.disconnect();
+      phone.removeEventListener("change", run);
+    };
+  }, [root, active]);
 }

@@ -7,6 +7,8 @@ const ADMIN = process.env.E2E_ADMIN_URL ?? "http://localhost:5174";
 export default defineConfig({
   testDir: "./tests",
   timeout: 60_000,
+  // One test at a time: the tests share one API and one request limit, and slow computers fail when several run at once.
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {

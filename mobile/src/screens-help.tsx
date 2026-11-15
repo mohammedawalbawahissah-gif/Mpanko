@@ -6,7 +6,7 @@ import { api, ApiError, type Page } from "./api";
 import { usePrefs } from "./prefs";
 import { color } from "./theme";
 import type { RootParams } from "./screens-buy";
-import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, ContactButtons, Select, s, useAsync, usePullRefresh } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Notice, Pill, ContactButtons, Select, s, useAsync, usePullRefresh, readable } from "./ui";
 
 type Nav = NavigationProp<RootParams>;
 
@@ -126,7 +126,7 @@ export function SupportListScreen() {
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
   const pull = usePullRefresh(reload);
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={pull.control}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.pad, readable]} refreshControl={pull.control}>
       <Button title={t("m.askUs")} onPress={() => nav.navigate("SupportNew", {})} />
       <View style={{ height: 8 }} />
       <ContactButtons />

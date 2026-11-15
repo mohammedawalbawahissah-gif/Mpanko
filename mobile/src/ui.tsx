@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type RefreshControlProps, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type RefreshControlProps, type TextInputProps } from "react-native";
 import { api } from "./api";
 import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
 import { photoLabel, type ProductPhoto } from "./core/images";
+import { layoutFor, READABLE, type Layout } from "./core/layout";
 import { usePrefs } from "./prefs";
 import { color, stripes } from "./theme";
 
@@ -266,11 +267,20 @@ export function Button({ title, onPress, disabled, kind = "primary", label }: { 
  * field being typed in; on Android the system already resizes the window. Dragging closes the keyboard,
  * and a button tapped while the keyboard is open works on the first tap.
  */
+/** The current screen's layout: phone, tablet upright or tablet sideways. It updates when the device is turned. */
+export function useLayout(): Layout {
+  const { width } = useWindowDimensions();
+  return layoutFor(width);
+}
+
+/** Keeps reading screens in a comfortable column, centred, on a wide screen. */
+export const readable = { width: "100%", maxWidth: READABLE, alignSelf: "center" } as const;
+
 export function FormScreen({ children, refreshControl }: { children: ReactNode; refreshControl?: ReactElement<RefreshControlProps> }) {
   return (
     <ScrollView
       style={s.screen}
-      contentContainerStyle={[s.pad, { paddingBottom: 40 }]}
+      contentContainerStyle={[s.pad, readable, { paddingBottom: 40 }]}
       refreshControl={refreshControl}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}

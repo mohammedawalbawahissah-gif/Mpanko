@@ -121,3 +121,16 @@ test("contact page shows a WhatsApp link only when a number is set", () => {
   assert.match(withNumber, /https:\/\/wa\.me\/233241234567/);
   assert.doesNotMatch(contactPage({ site, profile: { ...fallbackProfile }, businesses: [] }), /wa\.me/);
 });
+
+test("contact buttons show Email, Call and WhatsApp with icons, never the address or numbers", async () => {
+  const { contactButtons } = await import("../src/render.mjs");
+  const html = contactButtons({ contact_email: "help@example.com", phone: "+233 24 000 0000", whatsapp_number: "233240000000" });
+  assert.match(html, /href="mailto:help@example\.com"/);
+  assert.match(html, /href="tel:\+233240000000"/);
+  assert.match(html, /href="https:\/\/wa\.me\/233240000000"/);
+  for (const word of [">Email<", ">Call<", ">WhatsApp<"]) assert.ok(html.includes(word), word);
+  assert.equal((html.match(/<svg/g) || []).length, 3);
+  const visible = html.replace(/<[^>]*>/g, "");
+  assert.ok(!/help@example|233|24 000/.test(visible), "no address or number in the visible text");
+  assert.equal(contactButtons({}), "");
+});

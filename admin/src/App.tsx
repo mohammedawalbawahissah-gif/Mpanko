@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { api } from "./api";
 import { AuthProvider, ROLE_LABEL, useAuth } from "./auth";
 import { Login } from "./login";
-import { Loading } from "./ui";
+import { Loading, useStackedTables } from "./ui";
 import { Dashboard, OrderDetail, Orders, ShipmentDetail, Shipments } from "./pages-ops";
 import { Products, Stock } from "./pages-catalog";
 import { Emails } from "./pages-emails";
@@ -59,9 +59,17 @@ function useBadges(role: string | undefined) {
 function Shell() {
   const { user, ready, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  useStackedTables(mainRef, ready && !!user);
   const { pathname } = useLocation();
   const badges = useBadges(user?.role);
   useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   if (!ready) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
   const items = NAV.filter((n) => n.roles.includes(user.role));
@@ -90,7 +98,7 @@ function Shell() {
           </div>
         </div>
       </nav>
-      <main className="main"><Outlet /></main>
+      <main className="main" ref={mainRef}><Outlet /></main>
     </div>
   );
 }
