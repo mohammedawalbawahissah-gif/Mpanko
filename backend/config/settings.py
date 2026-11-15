@@ -245,11 +245,12 @@ VOLUMETRIC_DIVISOR = int(os.environ.get("VOLUMETRIC_DIVISOR", "5000"))
 
 # --- Email --------------------------------------------------------------------
 # Resend: set RESEND_API_KEY and verify your sending domain in the Resend dashboard. Nothing else is needed.
+# It sends over Resend's HTTPS API, because Railway blocks SMTP below the Pro plan.
 # Any other SMTP service: set EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD instead.
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 if RESEND_API_KEY:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD = "smtp.resend.com", "resend", RESEND_API_KEY
+    EMAIL_BACKEND = "apps.notifications.resend_backend.ResendEmailBackend"
+    EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD = "api.resend.com", "", ""
 else:
     EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
