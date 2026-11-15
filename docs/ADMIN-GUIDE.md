@@ -39,6 +39,10 @@ Sign in at your admin address with the account the owner created for you. What y
 - **Emails:** edit the wording of the emails customers receive. Keep the `{{ ... }}` placeholders as they are.
 - **Policy pages:** privacy, terms, returns and cookies. Update these when your rules change, and tell customers about important changes.
 
+## Corporate website
+
+In **Content**: **Businesses** are the services listed in the Services menu. Each can have key points (one per line), a photo, an extra button such as Donate (leave the address blank to send visitors to the contact form), and small print for licensing wording. **Site pages** holds the founder section and the Magazia page. For a timeline write one item per line as `2024 | What happened`. Nothing shows until you tick **Show on the website**.
+
 ## Customers and privacy
 
 - Look up a customer and their orders on **Customers**. Only open a record when you need it for a task. Staff changes are written to the **Activity log**.

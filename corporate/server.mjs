@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { createApi } from "./src/api.mjs";
 import { fallbackBusinesses, fallbackProfile, site as envSite } from "./src/content.mjs";
-import { aboutPage, businessPage, businessesPage, contactPage, homePage, notFoundPage, sitemap, unavailablePage } from "./src/render.mjs";
+import { aboutPage, contactPage, homePage, magaziaPage, notFoundPage, servicePage, servicesPage, sitemap, unavailablePage } from "./src/render.mjs";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2",
@@ -126,8 +126,11 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
 
   async function context() {
     const res = await api.site();
-    if (res.status === "ok") return { site, profile: contactFrom(res.data.profile, res.data), businesses: res.data.businesses, live: true };
-    return { site, profile: contactFrom(fallbackProfile, { support_email: process.env.SUPPORT_EMAIL_ADDRESS, support_phone: process.env.SUPPORT_PHONE_NUMBER, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER }), businesses: fallbackBusinesses, live: false };
+    if (res.status === "ok") {
+      const pages = Object.fromEntries((res.data.pages || []).map((p) => [p.slug, p]));
+      return { site, profile: contactFrom(res.data.profile, res.data), businesses: res.data.businesses, pages, live: true };
+    }
+    return { site, profile: contactFrom(fallbackProfile, { support_email: process.env.SUPPORT_EMAIL_ADDRESS, support_phone: process.env.SUPPORT_PHONE_NUMBER, whatsapp_number: process.env.WHATSAPP_SUPPORT_NUMBER }), businesses: fallbackBusinesses, pages: {}, live: false };
   }
 
   const send = (req, res, status, html, extra = {}) => {
@@ -138,7 +141,7 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
     if (req.method === "HEAD") return res.end();
     if (gzip) { const z = createGzip(); z.pipe(res); z.end(html); } else res.end(html);
   };
-  const redirect = (res, to) => { res.writeHead(303, { Location: to, ...headers }); res.end(); };
+  const redirect = (res, to, status = 303) => { res.writeHead(status, { Location: to, ...headers }); res.end(); };
 
   async function contactPost(req, res, ctx) {
     const origin = req.headers.origin;
@@ -186,7 +189,7 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
       }
       if (p === "/sitemap.xml") {
         const ctx = await context();
-        const xml = sitemap(site, ctx.businesses);
+        const xml = sitemap(site, ctx.businesses, ctx.pages);
         if (!xml) { res.writeHead(404, { "Content-Type": "text/plain", ...headers }); return res.end("Not found"); }
         res.writeHead(200, { "Content-Type": TYPES[".xml"], "Cache-Control": "no-cache", ...headers });
         return res.end(xml);
@@ -209,20 +212,25 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
       const ctx = await context();
       if (p === "/") return send(req, res, 200, homePage(ctx));
       if (p === "/about") return send(req, res, 200, aboutPage(ctx));
-      if (p === "/businesses") return send(req, res, 200, businessesPage(ctx));
+      if (p === "/services") return send(req, res, 200, servicesPage(ctx));
+      if (p === "/magazia") return ctx.pages.magazia ? send(req, res, 200, magaziaPage(ctx, ctx.pages.magazia)) : send(req, res, 404, notFoundPage(ctx));
+      // The old address for the list of services keeps working.
+      if (p === "/businesses") return redirect(res, "/services", 301);
       if (p === "/contact") {
         const want = url.searchParams.get("business") || "";
         const values = ctx.businesses.some((b) => b.slug === want) ? { business: want } : {};
         return send(req, res, 200, contactPage(ctx, url.searchParams.get("sent") === "1" ? { state: "sent" } : { values }));
       }
-      const m = p.match(/^\/businesses\/([^/]+)$/);
+      const old = p.match(/^\/businesses\/([^/]+)$/);
+      if (old) return redirect(res, `/services/${old[1]}`, 301);
+      const m = p.match(/^\/services\/([^/]+)$/);
       if (m) {
         const slug = decodeURIComponent(m[1]);
         const found = await api.business(slug);
-        if (found.status === "ok") return send(req, res, 200, businessPage(ctx, found.data));
+        if (found.status === "ok") return send(req, res, 200, servicePage(ctx, found.data));
         if (found.status === "missing") return send(req, res, 404, notFoundPage(ctx));
         const fb = !ctx.live ? fallbackBusinesses.find((b) => b.slug === slug) : null;
-        if (fb) return send(req, res, 200, businessPage(ctx, fb));
+        if (fb) return send(req, res, 200, servicePage(ctx, fb));
         return send(req, res, ctx.live ? 503 : 404, ctx.live ? unavailablePage(ctx) : notFoundPage(ctx));
       }
       return send(req, res, 404, notFoundPage(ctx));

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.catalog.serializers import MAX_IMAGE_BYTES
 
 from .contacts import clean_value
-from .models import Business, ContactMessage, SiteProfile, SupportContact
+from .models import Business, ContactMessage, SitePage, SiteProfile, SupportContact
 
 
 class SiteProfileSerializer(serializers.ModelSerializer):
@@ -13,50 +13,110 @@ class SiteProfileSerializer(serializers.ModelSerializer):
                   "linkedin_url", "instagram_url", "facebook_url", "x_url")
 
 
+def _abs(serializer, field):
+    if not field:
+        return ""
+    url = field.url
+    request = serializer.context.get("request")
+    return request.build_absolute_uri(url) if request and url.startswith("/") else url
+
+
+def _lines(text):
+    return [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+
+
 class _LogoMixin:
     def get_logo(self, obj):
-        if not obj.logo:
-            return ""
-        url = obj.logo.url
-        request = self.context.get("request")
-        return request.build_absolute_uri(url) if request and url.startswith("/") else url
+        return _abs(self, obj.logo)
+
+    def get_image(self, obj):
+        return _abs(self, obj.image)
+
+    def get_highlights(self, obj):
+        return _lines(obj.highlights)
 
 
 class PublicBusinessSerializer(_LogoMixin, serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Business
-        fields = ("slug", "name", "sector", "tagline", "summary", "location", "website_url", "logo", "logo_alt", "is_featured")
+        fields = ("slug", "name", "sector", "tagline", "summary", "location", "website_url", "logo", "logo_alt", "image", "image_alt",
+                  "cta_label", "cta_url", "is_featured")
 
 
 class PublicBusinessDetailSerializer(PublicBusinessSerializer):
+    highlights = serializers.SerializerMethodField()
+
     class Meta(PublicBusinessSerializer.Meta):
-        fields = PublicBusinessSerializer.Meta.fields + ("description",)
+        fields = PublicBusinessSerializer.Meta.fields + ("description", "highlights", "disclaimer")
 
 
-class ManageBusinessSerializer(_LogoMixin, serializers.ModelSerializer):
+class PublicPageSerializer(_LogoMixin, serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    highlights = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SitePage
+        fields = ("slug", "title", "kicker", "summary", "body", "quote", "quote_by", "highlights", "image", "image_alt")
+
+
+class _ImageUploadMixin:
+    """Logo and photo uploads for the staff forms: write-only file fields, a read-only address, and remove flags."""
+
+    def _check_size(self, value, what):
+        if value is not None and value.size > MAX_IMAGE_BYTES:
+            raise serializers.ValidationError(f"{what} must be 5 MB or smaller.")
+        return value
+
+    def _apply_removals(self, attrs, fields):
+        for f in fields:
+            if attrs.pop(f"remove_{f}", False):
+                attrs[f] = None
+
+    def _create_clean(self, validated, fields):
+        for f in fields:
+            if validated.get(f) is None:
+                validated.pop(f, None)
+
+    def _update_clean(self, instance, validated, fields):
+        for f in fields:
+            if f in validated and validated[f] is None:
+                getattr(instance, f).delete(save=False)
+                setattr(instance, f, "")
+                validated.pop(f)
+
+
+class ManageBusinessSerializer(_ImageUploadMixin, _LogoMixin, serializers.ModelSerializer):
     logo = serializers.ImageField(required=False, allow_null=True, write_only=True)
     logo_url = serializers.SerializerMethodField()
     remove_logo = serializers.BooleanField(required=False, write_only=True, default=False)
+    image = serializers.ImageField(required=False, allow_null=True, write_only=True)
+    image_url = serializers.SerializerMethodField()
+    remove_image = serializers.BooleanField(required=False, write_only=True, default=False)
 
     class Meta:
         model = Business
-        fields = ("id", "name", "slug", "sector", "tagline", "summary", "description", "location", "website_url",
-                  "logo", "logo_url", "remove_logo", "logo_alt", "is_published", "is_featured", "sort_order", "updated_at")
+        fields = ("id", "name", "slug", "sector", "tagline", "summary", "description", "highlights", "location", "website_url",
+                  "logo", "logo_url", "remove_logo", "logo_alt", "image", "image_url", "remove_image", "image_alt",
+                  "cta_label", "cta_url", "disclaimer", "is_published", "is_featured", "sort_order", "updated_at")
         read_only_fields = ("slug", "updated_at")
 
     def get_logo_url(self, obj):
         return self.get_logo(obj)
 
+    def get_image_url(self, obj):
+        return self.get_image(obj)
+
     def validate_logo(self, value):
-        if value is not None and value.size > MAX_IMAGE_BYTES:
-            raise serializers.ValidationError("Logos must be 5 MB or smaller.")
-        return value
+        return self._check_size(value, "Logos")
+
+    def validate_image(self, value):
+        return self._check_size(value, "Photos")
 
     def validate(self, attrs):
-        if attrs.pop("remove_logo", False):
-            attrs["logo"] = None
+        self._apply_removals(attrs, ("logo", "image"))
         # A page with no name or summary is not ready to show.
         publishing = attrs.get("is_published", self.instance.is_published if self.instance else False)
         summary = attrs.get("summary", self.instance.summary if self.instance else "")
@@ -65,15 +125,41 @@ class ManageBusinessSerializer(_LogoMixin, serializers.ModelSerializer):
         return attrs
 
     def create(self, validated):
-        if validated.get("logo") is None:
-            validated.pop("logo", None)
+        self._create_clean(validated, ("logo", "image"))
         return super().create(validated)
 
     def update(self, instance, validated):
-        if "logo" in validated and validated["logo"] is None:
-            instance.logo.delete(save=False)
-            instance.logo = ""
-            validated.pop("logo")
+        self._update_clean(instance, validated, ("logo", "image"))
+        return super().update(instance, validated)
+
+
+class ManagePageSerializer(_ImageUploadMixin, _LogoMixin, serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_null=True, write_only=True)
+    image_url = serializers.SerializerMethodField()
+    remove_image = serializers.BooleanField(required=False, write_only=True, default=False)
+
+    class Meta:
+        model = SitePage
+        fields = ("id", "slug", "title", "kicker", "summary", "body", "quote", "quote_by", "highlights", "image", "image_url", "remove_image",
+                  "image_alt", "is_published", "updated_at")
+        read_only_fields = ("updated_at",)
+
+    def get_image_url(self, obj):
+        return self.get_image(obj)
+
+    def validate_image(self, value):
+        return self._check_size(value, "Photos")
+
+    def validate(self, attrs):
+        self._apply_removals(attrs, ("image",))
+        return attrs
+
+    def create(self, validated):
+        self._create_clean(validated, ("image",))
+        return super().create(validated)
+
+    def update(self, instance, validated):
+        self._update_clean(instance, validated, ("image",))
         return super().update(instance, validated)
 
 

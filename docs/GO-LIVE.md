@@ -27,6 +27,8 @@ Check: `https://<api-domain>/ready/` returns `{"status":"ready"}` with database 
 
 **corporate** needs `API_URL=https://<api-domain>`, `SITE_URL=https://<corporate-domain>` and `SHOP_URL=https://<web-domain>`. Without `API_URL` it shows its built-in wording instead of your businesses.
 
+After the first deploy of the new corporate site run once on the api service: `python manage.py migrate` then `python manage.py load_corporate_content` (loads the six services, the founder and Magazia pages and their images; safe to repeat).
+
 Add the corporate domain to `CORS_ALLOWED_ORIGINS` only if its pages call the API from the browser; they do not (the server calls the API), so it is not needed.
 
 Order that avoids a chicken-and-egg: create every service, click **Generate Domain** on api, web, admin and corporate first, then fill in the variables using those addresses, then deploy.

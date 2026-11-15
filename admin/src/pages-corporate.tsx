@@ -3,8 +3,13 @@ import { api, ApiError, type Page } from "./api";
 import { Alert, Field, Loading, Pill, errText, useAsync, when } from "./ui";
 
 interface Business {
-  id: number; name: string; slug: string; sector: string; tagline: string; summary: string; description: string; location: string;
-  website_url: string; logo_url: string; logo_alt: string; is_published: boolean; is_featured: boolean; sort_order: number;
+  id: number; name: string; slug: string; sector: string; tagline: string; summary: string; description: string; highlights: string; location: string;
+  website_url: string; logo_url: string; logo_alt: string; image_url: string; image_alt: string; cta_label: string; cta_url: string; disclaimer: string;
+  is_published: boolean; is_featured: boolean; sort_order: number;
+}
+interface SitePage {
+  id: number; slug: string; title: string; kicker: string; summary: string; body: string; quote: string; quote_by: string; highlights: string;
+  image_url: string; image_alt: string; is_published: boolean;
 }
 interface Profile {
   company_name: string; tagline: string; intro: string; about: string; contact_email: string; phone: string; phone_label: string; phone_2: string; phone_2_label: string; address: string;
@@ -24,7 +29,7 @@ export function Businesses() {
   return (
     <>
       <h1>Businesses</h1>
-      <p className="muted">These appear on the corporate website. Only published businesses are shown to visitors.</p>
+      <p className="muted">Each one is a service on the corporate website, in the Services menu. Only published ones are shown to visitors.</p>
       <p><button className="btn" onClick={() => setEditing("new")}>Add a business</button></p>
       {list.loading && <Loading />}
       {list.error && <Alert>{list.error}</Alert>}
@@ -54,12 +59,15 @@ export function Businesses() {
 function BusinessForm({ business, onDone }: { business: Business | null; onDone: () => void }) {
   const [f, setF] = useState({
     name: business?.name ?? "", sector: business?.sector ?? "", tagline: business?.tagline ?? "", summary: business?.summary ?? "",
-    description: business?.description ?? "", location: business?.location ?? "", website_url: business?.website_url ?? "",
-    logo_alt: business?.logo_alt ?? "", sort_order: String(business?.sort_order ?? 0),
+    description: business?.description ?? "", highlights: business?.highlights ?? "", location: business?.location ?? "", website_url: business?.website_url ?? "",
+    logo_alt: business?.logo_alt ?? "", image_alt: business?.image_alt ?? "", cta_label: business?.cta_label ?? "", cta_url: business?.cta_url ?? "",
+    disclaimer: business?.disclaimer ?? "", sort_order: String(business?.sort_order ?? 0),
     is_published: business?.is_published ?? false, is_featured: business?.is_featured ?? false,
   });
   const [logo, setLogo] = useState<File | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
+  const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,6 +80,8 @@ function BusinessForm({ business, onDone }: { business: Business | null; onDone:
     for (const [k, v] of Object.entries(f)) body.append(k, typeof v === "boolean" ? String(v) : v);
     if (logo) body.append("logo", logo);
     if (removeLogo && !logo) body.append("remove_logo", "true");
+    if (image) body.append("image", image);
+    if (removeImage && !image) body.append("remove_image", "true");
     try {
       await api(business ? `/corporate/manage/businesses/${business.id}/` : "/corporate/manage/businesses/", { method: business ? "PATCH" : "POST", body });
       onDone();
@@ -95,6 +105,7 @@ function BusinessForm({ business, onDone }: { business: Business | null; onDone:
       <Field id="b-tagline" label="One-line description" error={errors.tagline}><input id="b-tagline" className="input" value={f.tagline} onChange={set("tagline")} /></Field>
       <Field id="b-summary" label="Short summary (shown in the list)" error={errors.summary}><textarea id="b-summary" className="input" rows={3} value={f.summary} onChange={set("summary")} /></Field>
       <Field id="b-desc" label="Full description (shown on its own page; leave a blank line between paragraphs)" error={errors.description}><textarea id="b-desc" className="input" rows={8} value={f.description} onChange={set("description")} /></Field>
+      <Field id="b-high" label="Key points (one per line, shown as a list on its page)" error={errors.highlights}><textarea id="b-high" className="input" rows={4} value={f.highlights} onChange={set("highlights")} /></Field>
       <Field id="b-url" label="Website address (starts with https://)" error={errors.website_url}><input id="b-url" className="input" inputMode="url" value={f.website_url} onChange={set("website_url")} /></Field>
       <Field id="b-logo" label="Logo (JPG or PNG, up to 5 MB)" error={errors.logo}>
         <input id="b-logo" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
@@ -103,6 +114,16 @@ function BusinessForm({ business, onDone }: { business: Business | null; onDone:
         <p className="small"><img src={business.logo_url} alt="" width={48} height={48} /> <label><input type="checkbox" checked={removeLogo} onChange={(e) => setRemoveLogo(e.target.checked)} /> Remove the current logo</label></p>
       )}
       <Field id="b-alt" label="Describe the logo (for screen readers)" error={errors.logo_alt}><input id="b-alt" className="input" value={f.logo_alt} onChange={set("logo_alt")} /></Field>
+      <Field id="b-image" label="Photo for its page (JPG or PNG, up to 5 MB)" error={errors.image}>
+        <input id="b-image" type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+      </Field>
+      {business?.image_url && !image && (
+        <p className="small"><img src={business.image_url} alt="" width={64} /> <label><input type="checkbox" checked={removeImage} onChange={(e) => setRemoveImage(e.target.checked)} /> Remove the current photo</label></p>
+      )}
+      <Field id="b-imgalt" label="Describe the photo (for screen readers)" error={errors.image_alt}><input id="b-imgalt" className="input" value={f.image_alt} onChange={set("image_alt")} /></Field>
+      <Field id="b-cta" label="Extra button name (for example Donate or Book now; blank hides it)" error={errors.cta_label}><input id="b-cta" className="input" value={f.cta_label} onChange={set("cta_label")} /></Field>
+      <Field id="b-ctaurl" label="Extra button address (blank sends visitors to the contact form about this business)" error={errors.cta_url}><input id="b-ctaurl" className="input" inputMode="url" value={f.cta_url} onChange={set("cta_url")} /></Field>
+      <Field id="b-disc" label="Small print at the bottom of its page (for example licensing wording)" error={errors.disclaimer}><textarea id="b-disc" className="input" rows={4} value={f.disclaimer} onChange={set("disclaimer")} /></Field>
       <Field id="b-order" label="Order in the list (smaller numbers come first)" error={errors.sort_order}><input id="b-order" className="input" type="number" value={f.sort_order} onChange={set("sort_order")} /></Field>
       <p><label><input type="checkbox" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} /> Feature on the home page</label></p>
       <p><label><input type="checkbox" checked={f.is_published} onChange={(e) => setF({ ...f, is_published: e.target.checked })} /> Show on the website</label></p>
@@ -111,6 +132,108 @@ function BusinessForm({ business, onDone }: { business: Business | null; onDone:
         <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save business"}</button>
         <button className="btn quiet" type="button" onClick={onDone}>Cancel</button>
         {business && <button className="btn danger" type="button" onClick={remove}>Delete</button>}
+      </p>
+    </form>
+  );
+}
+
+/* ----------------------------------------------------------------- pages */
+
+const PAGE_NOTES: Record<string, string> = {
+  founder: "Shown on the About page and as a short card on the home page.",
+  magazia: "Has its own page and its own tab, Magazia.",
+};
+
+export function SitePages() {
+  const list = useAsync(() => api<SitePage[]>("/corporate/manage/pages/"), []);
+  const [editing, setEditing] = useState<SitePage | "new" | null>(null);
+  if (editing) return <PageForm page={editing === "new" ? null : editing} used={(list.data ?? []).map((p) => p.slug)} onDone={() => { setEditing(null); list.reload(); }} />;
+  return (
+    <>
+      <h1>Site pages</h1>
+      <p className="muted">The words and photo for the founder section and the Magazia page. Only published pages are shown to visitors.</p>
+      <p><button className="btn" onClick={() => setEditing("new")}>Add a page</button></p>
+      {list.loading && <Loading />}
+      {list.error && <Alert>{list.error}</Alert>}
+      {list.data && (
+        <div className="scroll">
+          <table className="table">
+            <thead><tr><th>Page</th><th>Where it shows</th><th>Shown on website</th><th></th></tr></thead>
+            <tbody>
+              {list.data.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.title}<br /><span className="muted small">{p.slug}</span></td>
+                  <td>{PAGE_NOTES[p.slug] ?? "Not linked from the site yet"}</td>
+                  <td><Pill value={p.is_published ? "published" : "draft"} /></td>
+                  <td><button className="link-button" onClick={() => setEditing(p)}>Edit</button></td>
+                </tr>
+              ))}
+              {list.data.length === 0 && <tr><td colSpan={4} className="muted">No pages yet. Add the founder and Magazia pages.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function PageForm({ page, used, onDone }: { page: SitePage | null; used: string[]; onDone: () => void }) {
+  const free = ["founder", "magazia"].filter((s) => !used.includes(s));
+  const [f, setF] = useState({
+    slug: page?.slug ?? free[0] ?? "founder", title: page?.title ?? "", kicker: page?.kicker ?? "", summary: page?.summary ?? "", body: page?.body ?? "",
+    quote: page?.quote ?? "", quote_by: page?.quote_by ?? "", highlights: page?.highlights ?? "", image_alt: page?.image_alt ?? "", is_published: page?.is_published ?? false,
+  });
+  const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErrors({}); setError("");
+    const body = new FormData();
+    for (const [k, v] of Object.entries(f)) { if (page && k === "slug") continue; body.append(k, typeof v === "boolean" ? String(v) : v); }
+    if (image) body.append("image", image);
+    if (removeImage && !image) body.append("remove_image", "true");
+    try {
+      await api(page ? `/corporate/manage/pages/${page.id}/` : "/corporate/manage/pages/", { method: page ? "PATCH" : "POST", body });
+      onDone();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) { setErrors(err.fields()); setError("Fix the highlighted fields and save again."); }
+      else setError(errText(err));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <form onSubmit={save} className="form">
+      <h1>{page ? `Edit ${page.title}` : "Add a page"}</h1>
+      {error && <Alert>{error}</Alert>}
+      {!page && (
+        <Field id="pg-slug" label="Which page is this?" error={errors.slug}>
+          <select id="pg-slug" className="input" value={f.slug} onChange={set("slug")}>
+            <option value="founder">Founder (About page)</option>
+            <option value="magazia">Magazia (its own page)</option>
+          </select>
+        </Field>
+      )}
+      <Field id="pg-title" label="Title" error={errors.title}><input id="pg-title" className="input" required value={f.title} onChange={set("title")} /></Field>
+      <Field id="pg-kicker" label="Short line under the title (for example Founder and CEO)" error={errors.kicker}><input id="pg-kicker" className="input" value={f.kicker} onChange={set("kicker")} /></Field>
+      <Field id="pg-summary" label="Summary (one or two sentences)" error={errors.summary}><textarea id="pg-summary" className="input" rows={3} value={f.summary} onChange={set("summary")} /></Field>
+      <Field id="pg-body" label="Full text (leave a blank line between paragraphs)" error={errors.body}><textarea id="pg-body" className="input" rows={10} value={f.body} onChange={set("body")} /></Field>
+      <Field id="pg-quote" label="Quotation (optional)" error={errors.quote}><textarea id="pg-quote" className="input" rows={5} value={f.quote} onChange={set("quote")} /></Field>
+      <Field id="pg-by" label="Quotation is by" error={errors.quote_by}><input id="pg-by" className="input" value={f.quote_by} onChange={set("quote_by")} /></Field>
+      <Field id="pg-high" label="List (one per line). For a timeline write the year, a bar, then the text, for example: 2024 | Became Magazia" error={errors.highlights}><textarea id="pg-high" className="input" rows={7} value={f.highlights} onChange={set("highlights")} /></Field>
+      <Field id="pg-image" label="Photo (JPG or PNG, up to 5 MB)" error={errors.image}><input id="pg-image" type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} /></Field>
+      {page?.image_url && !image && (
+        <p className="small"><img src={page.image_url} alt="" width={64} /> <label><input type="checkbox" checked={removeImage} onChange={(e) => setRemoveImage(e.target.checked)} /> Remove the current photo</label></p>
+      )}
+      <Field id="pg-alt" label="Describe the photo (for screen readers)" error={errors.image_alt}><input id="pg-alt" className="input" value={f.image_alt} onChange={set("image_alt")} /></Field>
+      <p><label><input type="checkbox" checked={f.is_published} onChange={(e) => setF({ ...f, is_published: e.target.checked })} /> Show on the website</label></p>
+      <p className="row">
+        <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save page"}</button>
+        <button className="btn quiet" type="button" onClick={onDone}>Cancel</button>
       </p>
     </form>
   );

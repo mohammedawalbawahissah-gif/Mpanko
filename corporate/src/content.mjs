@@ -16,9 +16,9 @@ export const site = {
 export const fallbackProfile = {
   company_name: "Mpanko",
   tagline: "Rooted in Africa. Made for the World.",
-  intro: "We run businesses that bring well-made African products and services to customers in more than one country.",
+  intro: "Mpanko is the home of the businesses, services and community work of Teefa Fuseini: food, fashion, events, beauty, insurance and a foundation, all rooted in African heritage.",
   about:
-    "We started with one idea: good things made in Africa should be easy to buy from anywhere. Today we run more than one business, each with its own team and its own customers.\n\nOur head office is in Tamale, Ghana. We work with partners who handle shipping and payment in each country we serve.",
+    "Mpanko is the umbrella that brings together everything Teefa Fuseini builds. It is a group of businesses, a shop for African-made goods and a set of community commitments, all under one name and one set of values.\n\nMpanko is rooted in Northern Ghana and led from Massachusetts, USA, and it stands for a simple promise: lead with integrity, preserve heritage and empower the communities we belong to.",
   contact_email: process.env.CONTACT_EMAIL || "",
   phone: process.env.CONTACT_PHONE || "",
   phone_label: "",

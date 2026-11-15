@@ -60,6 +60,12 @@ class Business(models.Model):
     website_url = models.URLField(blank=True, validators=[_web_url], help_text="Where the visitor goes to use the business, for example the shop.")
     logo = models.ImageField(upload_to="corporate/", blank=True)
     logo_alt = models.CharField(max_length=160, blank=True)
+    image = models.ImageField(upload_to="corporate/", blank=True, help_text="A large photo for the top of its own page.")
+    image_alt = models.CharField(max_length=160, blank=True)
+    highlights = models.TextField(blank=True, help_text="Short points shown as a list on its own page, one per line.")
+    cta_label = models.CharField("button name", max_length=40, blank=True, help_text="For example Donate or Book now. Blank hides the extra button.")
+    cta_url = models.URLField("button address", blank=True, validators=[_web_url], help_text="Where the button goes. Blank sends visitors to the contact form about this business.")
+    disclaimer = models.TextField(blank=True, help_text="Small print shown at the bottom of its own page, such as licensing wording.")
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False, help_text="Featured businesses are listed first on the home page.")
     sort_order = models.PositiveIntegerField(default=100, help_text="Lower numbers come first.")
@@ -81,6 +87,29 @@ class Business(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SitePage(models.Model):
+    """A page of words and a photo that is not a business, such as the founder's biography or a cultural title. Looked up by its slug."""
+
+    slug = models.SlugField(max_length=60, unique=True, help_text="founder shows on the About page; magazia has its own page.")
+    title = models.CharField(max_length=120)
+    kicker = models.CharField(max_length=120, blank=True, help_text="A short line above or below the title, such as Founder and CEO.")
+    summary = models.CharField(max_length=300, blank=True)
+    body = models.TextField(blank=True, help_text="Leave a blank line between paragraphs.")
+    quote = models.TextField(blank=True)
+    quote_by = models.CharField(max_length=120, blank=True)
+    highlights = models.TextField(blank=True, help_text="One per line. For a timeline write the year, then a bar, then the text, for example: 2024 | Became Magazia.")
+    image = models.ImageField(upload_to="corporate/", blank=True)
+    image_alt = models.CharField(max_length=160, blank=True)
+    is_published = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slug"]
+
+    def __str__(self):
+        return self.title
 
 
 class ContactMessage(models.Model):

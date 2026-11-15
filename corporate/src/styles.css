@@ -32,15 +32,44 @@ a { color: inherit; text-underline-offset: 0.2em; }
 .skip { position: absolute; left: var(--pad); top: -4rem; background: var(--limewash); color: var(--ink); padding: 0.6rem 1rem; z-index: 10; }
 .skip:focus { top: 0.75rem; }
 
-/* Header */
-.top { background: var(--ink-deep); color: var(--limewash); padding: 0 var(--pad); }
+/* Header: logo, the tabs, and a Get in touch button. Services opens a drop-down of every service; it works without JavaScript. */
+.top { position: relative; background: var(--ink-deep); color: var(--limewash); padding: 0 var(--pad); }
 .top::after { content: ""; display: block; height: 5px; margin-inline: calc(var(--pad) * -1); background: var(--kente); }
-.top-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 2rem; padding: 1rem 0; max-width: 80rem; margin: 0 auto; }
-.brand { display: inline-block; line-height: 0; text-decoration: none; }
+.top-inner { display: flex; align-items: center; gap: 0.75rem 1rem; padding: 1rem 0; max-width: 80rem; margin: 0 auto; }
+.brand { display: inline-block; line-height: 0; text-decoration: none; margin-right: auto; }
 .brand img { display: block; height: 4.25rem; width: auto; }
-.top nav ul { display: flex; flex-wrap: wrap; gap: 0.25rem 0.35rem; list-style: none; margin: 0; padding: 0; }
-.top nav a { text-decoration: none; padding: 0.7rem 1rem; border-radius: 999px; display: inline-block; min-height: 44px; box-sizing: border-box; font-weight: 600; }
-.top nav a:hover { background: rgb(255 255 255 / 0.12); }
+.nav-desktop > ul { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+.nav-desktop a, .dd > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0.7rem 1rem; border-radius: 999px; font-weight: 600; text-decoration: none; cursor: pointer; box-sizing: border-box; }
+.nav-desktop a:hover, .dd > summary:hover, .dd[open] > summary { background: rgb(255 255 255 / 0.12); }
+.dd > summary { list-style: none; }
+.dd > summary::-webkit-details-marker { display: none; }
+.dd > summary::after { content: ""; width: 0.45rem; height: 0.45rem; margin: -0.2rem 0 0 0.55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.dd[open] > summary::after { margin-top: 0.2rem; transform: rotate(-135deg); }
+.dd > summary.is-current, .nav-desktop a[aria-current="page"] { background: var(--gold); color: var(--ink-deep); }
+.has-menu { position: relative; }
+.dd-panel { position: absolute; z-index: 20; top: calc(100% + 0.5rem); left: 0; min-width: 18rem; margin: 0; padding: 0.5rem; list-style: none; display: grid; gap: 0.1rem; background: #fff; color: var(--ink); border-radius: 16px; box-shadow: 0 18px 40px rgb(0 0 0 / 0.3); }
+.dd-panel a { display: flex; border-radius: 10px; padding: 0.65rem 0.9rem; font-weight: 500; color: var(--ink); }
+.dd-panel a:hover { background: var(--limewash); }
+.dd-panel a[aria-current="page"] { background: var(--limewash); font-weight: 700; }
+.dd-panel .all { font-weight: 700; color: var(--teal); border-bottom: 1px solid var(--mist); border-radius: 10px 10px 0 0; margin-bottom: 0.25rem; }
+.top .dd-panel :focus-visible { outline-color: var(--ink); }
+.get { margin-left: 0.5rem; padding: 0.8rem 1.3rem; }
+.nav-mobile { display: none; }
+.nav-mobile > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0.6rem 1.1rem; border: 2px solid currentColor; border-radius: 999px; font-weight: 650; cursor: pointer; list-style: none; }
+.nav-mobile > summary::-webkit-details-marker { display: none; }
+.nav-mobile[open] > summary { background: var(--gold); border-color: var(--gold); color: var(--ink-deep); }
+.nav-mobile nav { position: absolute; z-index: 20; left: 0; right: 0; top: 100%; background: #0f3a37; padding: 0.75rem var(--pad) 1.25rem; box-shadow: 0 18px 40px rgb(0 0 0 / 0.3); max-height: calc(100vh - 6rem); overflow-y: auto; }
+.nav-mobile ul { list-style: none; margin: 0; padding: 0; max-width: 40rem; }
+.nav-mobile li > a { display: block; padding: 0.8rem 0.25rem; font-weight: 650; text-decoration: none; border-bottom: 1px solid rgb(255 255 255 / 0.15); }
+.nav-mobile li ul { margin: 0 0 0.5rem 0.9rem; }
+.nav-mobile li li > a { font-weight: 500; border-bottom: 0; padding: 0.55rem 0.25rem; color: #d8ece9; }
+.nav-mobile a[aria-current="page"] { color: var(--gold); }
+@media (max-width: 62rem) {
+  .nav-desktop, .top .get { display: none; }
+  .nav-mobile { display: block; }
+  .brand img { height: 3.4rem; }
+  .top-inner { padding: 0.6rem 0 0.5rem; }
+}
 
 /* Buttons */
 .btn { display: inline-block; font: 650 1rem/1 var(--body); padding: 0.95rem 1.6rem; background: var(--gold); color: var(--ink); text-decoration: none; border: 2px solid var(--gold); border-radius: 999px; }
@@ -114,7 +143,6 @@ footer p { margin: 0; }
 .crumb { margin: 0 0 1.25rem; }
 .meta { margin: 0.1rem 0 0.35rem; color: var(--muted); font-size: 0.95rem; }
 .textlink { font-weight: 600; }
-.top nav a[aria-current="page"] { background: var(--gold); color: var(--ink-deep); }
 .prose .actions { margin-top: 1.75rem; }
 .btn.quiet.dark { color: var(--ink); }
 .btn.quiet.dark:hover { background: rgb(20 23 42 / 0.07); }
@@ -168,11 +196,7 @@ footer p { margin: 0; }
 @media (max-width: 40rem) {
   .hero { grid-template-columns: minmax(0, 1fr) 2.25rem; }
   .actions .btn { flex: 1 1 100%; text-align: center; }
-  .top-inner { padding: 0.6rem 0 0.4rem; gap: 0.25rem 1rem; }
   .brand img { height: 3.1rem; }
-  .top nav { flex: 1 1 100%; margin-inline: -0.5rem; }
-  .top nav ul { justify-content: space-between; }
-  .top nav a { padding: 0.7rem 0.75rem; }
 }
 /* Tablet: keep the line length comfortable and the cards two across. */
 @media (min-width: 40.01rem) and (max-width: 63.99rem) {
@@ -187,3 +211,29 @@ footer p { margin: 0; }
 .contact-chip:hover, .contact-chip:focus-visible { background: #e9a820; border-color: #e9a820; color: #0a2b29; }
 .contact-icon { flex: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Service, founder and Magazia pages */
+.photo { margin: 1.25rem 0 0; }
+.photo img { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 16px; border: 1px solid var(--mist); background: #fff; }
+.photo.portrait img { aspect-ratio: 4 / 5; max-height: 30rem; object-fit: cover; }
+.ticks { list-style: none; margin: 1.25rem 0 0; padding: 0; border-top: 2px solid var(--ink); }
+.ticks li { position: relative; padding: 0.7rem 0 0.7rem 1.6rem; border-bottom: 1px solid var(--mist); }
+.ticks li::before { content: ""; position: absolute; left: 0.1rem; top: 1.2rem; width: 0.6rem; height: 0.6rem; background: var(--gold); transform: rotate(45deg); }
+.mini { font: 650 1.25rem/1.2 var(--display); margin: 2.25rem 0 0.6rem; }
+.timeline { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); max-width: var(--measure); }
+.timeline li { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--mist); }
+.timeline .yr { font: 700 1.2rem/1.4 var(--display); color: var(--teal); }
+.pull { margin: 2rem 0; padding-left: 1.5rem; border-left: 6px solid var(--gold); max-width: var(--measure); }
+.pull blockquote { margin: 0; font: 600 clamp(1.2rem, 2.3vw, 1.5rem)/1.45 var(--display); letter-spacing: -0.01em; }
+.pull blockquote p { margin: 0; }
+.pull figcaption { margin-top: 0.75rem; color: var(--muted); font-weight: 600; }
+.lede.dark { color: var(--ink); max-width: var(--measure); font-size: 1.25rem; font-weight: 500; margin: 0 0 1.25rem; }
+.fine { padding-block: 0 2.5rem; }
+.fine p { margin: 0; max-width: 60rem; border-top: 1px solid var(--mist); padding-top: 1rem; color: var(--muted); font-size: 0.92rem; }
+.heritage { background: var(--teal); color: #fff; }
+.heritage .meta { color: #fff; }
+.heritage .textlink { color: #fff; }
+.heritage :focus-visible { outline-color: var(--gold); }
+.heritage .prose p { color: #fff; }
+.logo.lg { width: 6rem; height: 6rem; }
+@media print { .nav-mobile, .top .get { display: none; } }

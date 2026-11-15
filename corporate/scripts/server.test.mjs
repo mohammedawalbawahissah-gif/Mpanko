@@ -46,13 +46,13 @@ test("pages show what the API returns", () => withServer(async (base) => {
   assert.match(home, /Many businesses, one name\./);
   assert.match(home, /Wolbi Foods/);
   assert.match((await (await fetch(base + "/about")).text()), /About two\./);
-  const b = await fetch(base + "/businesses/wolbi-foods");
+  const b = await fetch(base + "/services/wolbi-foods");
   assert.equal(b.status, 200);
   assert.match(await b.text(), /Visit Wolbi Foods/);
 }));
 
 test("an unknown or unpublished business is a real 404; an unknown address too", () => withServer(async (base) => {
-  assert.equal((await fetch(base + "/businesses/nope")).status, 404);
+  assert.equal((await fetch(base + "/services/nope")).status, 404);
   assert.equal((await fetch(base + "/no/such/page")).status, 404);
   assert.match(await (await fetch(base + "/no/such/page")).text(), /We can't find that page/);
 }));
@@ -63,8 +63,8 @@ test("when the API is down the site still shows the built-in wording", () => wit
   const html = await r.text();
   assert.match(html, /Rooted in Africa/);
   assert.match(html, /Mpanko shop/);
-  assert.equal((await fetch(base + "/businesses/mpanko-shop")).status, 200);
-  assert.equal((await fetch(base + "/businesses/wolbi-foods")).status, 404);
+  assert.equal((await fetch(base + "/services/mpanko-shop")).status, 200);
+  assert.equal((await fetch(base + "/services/wolbi-foods")).status, 404);
 }, { mode: "down" }));
 
 test("with no API address the site runs on its own wording", async () => {
@@ -160,7 +160,7 @@ test("static files, strict headers, sitemap, robots, health, methods and path tr
   assert.match(csp, /frame-ancestors 'none'/);
   assert.equal(home.headers.get("x-content-type-options"), "nosniff");
   const sm = await (await fetch(base + "/sitemap.xml")).text();
-  assert.ok(sm.includes("https://www.example.org/businesses/wolbi-foods<"));
+  assert.ok(sm.includes("https://www.example.org/services/wolbi-foods<"));
   assert.match(await (await fetch(base + "/robots.txt")).text(), /Sitemap: https:\/\/www\.example\.org\/sitemap\.xml/);
   assert.equal(await (await fetch(base + "/healthz")).text(), "ok");
   assert.equal((await fetch(base + "/", { method: "DELETE" })).status, 405);
@@ -194,3 +194,11 @@ test("the contact page shows every WhatsApp number and email the shop lists", as
     assert.ok(html.includes(">Orders<") && html.includes(">Wholesale<"));
   }, { shop });
 });
+
+test("old /businesses addresses redirect permanently to /services", () => withServer(async (base) => {
+  for (const [from, to] of [["/businesses", "/services"], ["/businesses/wolbi-foods", "/services/wolbi-foods"]]) {
+    const r = await fetch(base + from, { redirect: "manual" });
+    assert.equal(r.status, 301, from);
+    assert.equal(r.headers.get("location"), to);
+  }
+}));

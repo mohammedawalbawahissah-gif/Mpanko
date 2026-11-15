@@ -226,3 +226,42 @@ def test_site_profile_can_carry_two_phone_numbers_with_names(api):
     profile = api.get("/api/v1/corporate/site/").json()["profile"]
     assert (profile["phone"], profile["phone_label"]) == ("+233 24 000 0000", "Sales")
     assert (profile["phone_2"], profile["phone_2_label"]) == ("+233 20 111 2222", "Support")
+
+
+# ---- services, site pages and the content loader -------------------------------------------------------------
+
+def test_site_returns_published_pages_and_service_extras(api):
+    from apps.corporate.models import SitePage
+    biz("QT Foundation", highlights="Scholarships\nFood drives", cta_label="Donate", disclaimer="Small print.")
+    SitePage.objects.create(slug="founder", title="Teefa Fuseini", is_published=True, highlights="2020 | Started")
+    SitePage.objects.create(slug="magazia", title="Magazia", is_published=False)
+    data = api.get("/api/v1/corporate/site/").json()
+    assert [p["slug"] for p in data["pages"]] == ["founder"]
+    detail = api.get(f"/api/v1/corporate/businesses/{data['businesses'][0]['slug']}/").json()
+    assert detail["cta_label"] == "Donate" and detail["disclaimer"] == "Small print."
+    assert detail["highlights"] == ["Scholarships", "Food drives"]
+
+
+def test_staff_can_edit_site_pages_and_customers_cannot(admin, customer):
+    from apps.corporate.models import SitePage
+    admin, customer = client_for(admin), client_for(customer)
+    r = admin.post("/api/v1/corporate/manage/pages/", {"slug": "magazia", "title": "Magazia", "is_published": "true"}, format="multipart")
+    assert r.status_code == 201, r.content
+    page = SitePage.objects.get(slug="magazia")
+    assert admin.patch(f"/api/v1/corporate/manage/pages/{page.id}/", {"summary": "New."}, format="multipart").status_code == 200
+    assert customer.get("/api/v1/corporate/manage/pages/").status_code in (401, 403)
+
+
+def test_load_corporate_content_is_safe_to_run_twice_and_keeps_edits(settings, tmp_path):
+    from django.core.management import call_command
+    from apps.corporate.models import SitePage
+    settings.MEDIA_ROOT = tmp_path
+    call_command("load_corporate_content")
+    count = Business.objects.count()
+    assert count >= 5 and SitePage.objects.filter(slug__in=["founder", "magazia"]).count() == 2
+    b = Business.objects.first()
+    b.tagline = "Edited by staff"
+    b.save()
+    call_command("load_corporate_content")
+    assert Business.objects.count() == count
+    assert Business.objects.get(pk=b.pk).tagline == "Edited by staff"

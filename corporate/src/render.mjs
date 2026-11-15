@@ -25,11 +25,49 @@ export function monogram(name) {
   return (String(name).trim().match(/[\p{L}\p{N}]/u) || ["?"])[0].toUpperCase();
 }
 
-const NAV = [
-  { label: "About", href: "/about" },
-  { label: "Businesses", href: "/businesses" },
-  { label: "Contact", href: "/contact" },
-];
+const isCurrent = (path, href) => path === href || (href !== "/" && path.startsWith(href + "/"));
+
+/** The tabs, like a company site's menu: About, Services (a drop-down of every service), Magazia when that page exists, the Shop, Contact. */
+function navItems({ site, businesses, pages = {} }) {
+  return [
+    { label: "About", href: "/about" },
+    { label: "Services", href: "/services", menu: businesses },
+    ...(pages.magazia ? [{ label: "Magazia", href: "/magazia" }] : []),
+    ...(site.shopUrl ? [{ label: "Shop", href: site.shopUrl, external: true }] : []),
+    { label: "Contact", href: "/contact" },
+  ];
+}
+
+const serviceHref = (b) => `/services/${encodeURIComponent(b.slug)}`;
+
+function desktopNav(items, path) {
+  return `<nav class="nav-desktop" aria-label="Main">
+      <ul>
+${items.map((n) => {
+    if (n.menu) {
+      return `        <li class="has-menu"><details class="dd"><summary${isCurrent(path, n.href) ? ' class="is-current"' : ""}>${n.label}</summary>
+          <ul class="dd-panel">
+            <li><a class="all" href="${n.href}">All services</a></li>
+${n.menu.map((b) => `            <li><a href="${serviceHref(b)}"${path === serviceHref(b) ? ' aria-current="page"' : ""}>${esc(b.name)}</a></li>`).join("\n")}
+          </ul></details></li>`;
+    }
+    return `        <li><a href="${esc(n.href)}"${n.external ? ' rel="noopener"' : ""}${isCurrent(path, n.href) ? ' aria-current="page"' : ""}>${n.label}</a></li>`;
+  }).join("\n")}
+      </ul>
+    </nav>`;
+}
+
+function mobileNav(items, path) {
+  return `<details class="nav-mobile"><summary>Menu</summary>
+    <nav aria-label="Menu">
+      <ul>
+${items.map((n) => `        <li><a href="${esc(n.href)}"${n.external ? ' rel="noopener"' : ""}${isCurrent(path, n.href) ? ' aria-current="page"' : ""}>${n.label}</a>${n.menu && n.menu.length ? `
+          <ul>
+${n.menu.map((b) => `            <li><a href="${serviceHref(b)}">${esc(b.name)}</a></li>`).join("\n")}
+          </ul>` : ""}</li>`).join("\n")}
+      </ul>
+    </nav></details>`;
+}
 
 const SOCIAL = [["linkedin_url", "LinkedIn"], ["instagram_url", "Instagram"], ["facebook_url", "Facebook"], ["x_url", "X"]];
 
@@ -44,7 +82,7 @@ function businessRows(businesses) {
 ${businesses.map((b) => `    <li>
       ${logoOf(b)}
       <div>
-        <h3><a class="stretch" href="/businesses/${esc(encodeURIComponent(b.slug))}">${esc(b.name)}</a></h3>
+        <h3><a class="stretch" href="${serviceHref(b)}">${esc(b.name)}</a></h3>
         ${b.sector || b.location ? `<p class="meta">${esc([b.sector, b.location].filter(Boolean).join(", "))}</p>` : ""}
         <p>${esc(b.summary)}</p>
       </div>
@@ -52,9 +90,9 @@ ${businesses.map((b) => `    <li>
   </ul>`;
 }
 
-const noBusinesses = `<p class="empty">We are adding the details of our businesses. Please check back soon, or <a href="/contact">contact us</a>.</p>`;
+const noBusinesses = `<p class="empty">We are adding the details of our services. Please check back soon, or <a href="/contact">contact us</a>.</p>`;
 
-export function layout({ site, profile, businesses, title, description, path, body, noindex = false, status = 200 }) {
+export function layout({ site, profile, businesses, pages = {}, title, description, path, body, noindex = false, status = 200 }) {
   const name = profile.company_name;
   const canonical = site.url && !noindex ? `<link rel="canonical" href="${esc(site.url + (path === "/" ? "/" : path))}">` : "";
   const fullTitle = path === "/" ? `${name}: ${profile.tagline}` : `${title} | ${name}`;
@@ -71,6 +109,7 @@ export function layout({ site, profile, businesses, title, description, path, bo
   const policy = site.shopUrl
     ? [["Terms of sale", "/terms"], ["Privacy", "/privacy"], ["Returns", "/returns-policy"]].map(([l, p]) => `<li><a href="${esc(site.shopUrl + p)}">${l}</a></li>`).join("")
     : "";
+  const items = navItems({ site, businesses, pages });
   const contactBits = [contactButtons(profile), profile.address ? `<p>${esc(profile.address)}</p>` : ""].filter(Boolean);
   return `<!doctype html>
 <html lang="en">
@@ -93,11 +132,9 @@ ${og}
 <header class="top">
   <div class="top-inner">
     <a class="brand" href="/"><img src="/logo-light.svg" alt="${esc(name)}" width="92" height="68"></a>
-    <nav aria-label="Main">
-      <ul>
-${[...NAV, ...(site.shopUrl ? [{ label: "Shop", href: site.shopUrl, external: true }] : [])].map((n) => `        <li><a href="${n.href}"${path === n.href || (n.href !== "/" && path.startsWith(n.href + "/")) ? ' aria-current="page"' : ""}>${n.label}</a></li>`).join("\n")}
-      </ul>
-    </nav>
+    ${desktopNav(items, path)}
+    <a class="btn get" href="/contact">Get in touch</a>
+    ${mobileNav(items, path)}
   </div>
 </header>
 <main id="main">
@@ -127,33 +164,81 @@ const contactCta = (heading = "Talk to us") => `<section class="cta" aria-labell
     </div>
   </section>`;
 
+const kv = (text) => (Array.isArray(text) ? text.map(String) : String(text ?? "").split("\n")).map((l) => l.trim()).filter(Boolean);
+
+/** "2024 | Became Magazia" lines as a timeline. A line with no bar is shown without a year. */
+function timeline(text) {
+  const rows = kv(text).map((l) => { const i = l.indexOf("|"); return i > 0 ? { year: l.slice(0, i).trim(), text: l.slice(i + 1).trim() } : { year: "", text: l }; });
+  return rows.length ? `<ol class="timeline">${rows.map((r) => `<li>${r.year ? `<span class="yr">${esc(r.year)}</span>` : ""}<span>${esc(r.text)}</span></li>`).join("")}</ol>` : "";
+}
+
+const ticks = (text) => { const rows = kv(text); return rows.length ? `<ul class="ticks">${rows.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""; };
+
+function photo(src, alt, cls = "photo") {
+  const url = safeUrl(src);
+  return url ? `<figure class="${cls}"><img src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy"></figure>` : "";
+}
+
+function founderSection(page) {
+  if (!page) return "";
+  return `<section id="founder" aria-labelledby="founder-h">
+    <div class="wrap">
+      <div>
+        <h2 id="founder-h">${esc(page.title)}</h2>
+        ${page.kicker ? `<p class="meta">${esc(page.kicker)}</p>` : ""}
+        ${photo(page.image, page.image_alt || page.title, "photo portrait")}
+      </div>
+      <div class="prose">
+        ${page.summary ? `<p class="lede big dark">${esc(page.summary)}</p>` : ""}
+        ${prose(page.body)}
+        ${page.quote ? `<figure class="pull"><blockquote><p>\u201c${esc(page.quote)}\u201d</p></blockquote><figcaption>${esc(page.quote_by || page.title)}</figcaption></figure>` : ""}
+        ${page.highlights ? `<h3 class="mini">Milestones</h3>${timeline(page.highlights)}` : ""}
+      </div>
+    </div>
+  </section>`;
+}
+
 export function homePage(ctx) {
-  const { profile, businesses } = ctx;
+  const { profile, businesses, pages = {} } = ctx;
   const first = paragraphs(profile.about)[0];
+  const founder = pages.founder;
+  const magazia = pages.magazia;
   const body = `<div class="hero">
     <div class="hero-copy">
       <h1>${esc(profile.tagline || profile.company_name)}</h1>
       ${profile.intro ? `<p>${esc(profile.intro)}</p>` : ""}
       <div class="actions">
-        <a class="btn" href="/businesses">Our businesses</a>
-        <a class="btn quiet" href="/contact">Talk to us</a>
+        <a class="btn" href="/services">Our services</a>
+        <a class="btn quiet" href="/contact">Get in touch</a>
       </div>
     </div>
     <div class="weave" aria-hidden="true"><div class="weave-cross"></div></div>
   </div>
-  <section id="businesses" aria-labelledby="biz-h">
+  <section id="services" aria-labelledby="biz-h">
     <div class="wrap">
       <div>
-        <h2 id="biz-h">Our businesses</h2>
-        <p class="lede">${businesses.length > 1 ? "Each one runs on its own, under one name." : "Where you can buy from us or work with us."}</p>
+        <h2 id="biz-h">Our services</h2>
+        <p class="lede">${businesses.length > 1 ? "Food, fashion, events, beauty, insurance and a foundation, under one name." : "Where you can buy from us or work with us."}</p>
       </div>
       ${businesses.length ? businessRows(businesses) : noBusinesses}
     </div>
   </section>
   ${first ? `<section class="band" aria-labelledby="about-h">
     <div class="wrap">
-      <h2 id="about-h">About us</h2>
-      <div class="prose"><p>${esc(first)}</p><p><a class="textlink" href="/about">More about us</a></p></div>
+      <h2 id="about-h">About Mpanko</h2>
+      <div class="prose"><p>${esc(first)}</p><p><a class="textlink" href="/about">Read our story</a></p></div>
+    </div>
+  </section>` : ""}
+  ${founder ? `<section aria-labelledby="meet-h">
+    <div class="wrap">
+      <div><h2 id="meet-h">${esc(founder.title)}</h2>${founder.kicker ? `<p class="meta">${esc(founder.kicker)}</p>` : ""}</div>
+      <div class="prose"><p>${esc(founder.summary || paragraphs(founder.body)[0] || "")}</p><p><a class="textlink" href="/about#founder">Read Teefa's story</a></p></div>
+    </div>
+  </section>` : ""}
+  ${magazia ? `<section class="heritage" aria-labelledby="mag-h">
+    <div class="wrap">
+      <div><h2 id="mag-h">${esc(magazia.title)}</h2>${magazia.kicker ? `<p class="meta">${esc(magazia.kicker)}</p>` : ""}</div>
+      <div class="prose"><p>${esc(magazia.summary || paragraphs(magazia.body)[0] || "")}</p><p><a class="textlink" href="/magazia">About the title</a></p></div>
     </div>
   </section>` : ""}
   ${contactCta()}`;
@@ -161,42 +246,61 @@ export function homePage(ctx) {
 }
 
 export function aboutPage(ctx) {
-  const { profile, businesses } = ctx;
-  const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">About us</h1></div></section>
+  const { profile, businesses, pages = {} } = ctx;
+  const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">About ${esc(profile.company_name)}</h1></div></section>
   <section aria-labelledby="who-h">
     <div class="wrap">
-      <h2 id="who-h">Who we are</h2>
+      <h2 id="who-h">Our story</h2>
       <div class="prose">${profile.about ? prose(profile.about) : "<p>We are adding this page. Please check back soon.</p>"}</div>
     </div>
   </section>
   ${businesses.length ? `<section class="band" aria-labelledby="what-h">
     <div class="wrap">
-      <div><h2 id="what-h">What we run</h2><p class="lede"><a class="textlink" href="/businesses">See all businesses</a></p></div>
-      <ul class="steps plain">${businesses.map((b) => `<li><h3><a href="/businesses/${esc(encodeURIComponent(b.slug))}">${esc(b.name)}</a></h3><p>${esc(b.tagline || b.summary)}</p></li>`).join("")}</ul>
+      <div><h2 id="what-h">What we run</h2><p class="lede"><a class="textlink" href="/services">See all services</a></p></div>
+      <ul class="steps plain">${businesses.map((b) => `<li><h3><a href="${serviceHref(b)}">${esc(b.name)}</a></h3><p>${esc(b.tagline || b.summary)}</p></li>`).join("")}</ul>
+    </div>
+  </section>` : ""}
+  ${founderSection(pages.founder)}
+  ${pages.magazia ? `<section class="heritage" aria-labelledby="mag-h">
+    <div class="wrap">
+      <div><h2 id="mag-h">${esc(pages.magazia.title)}</h2>${pages.magazia.kicker ? `<p class="meta">${esc(pages.magazia.kicker)}</p>` : ""}</div>
+      <div class="prose"><p>${esc(pages.magazia.summary || "")}</p><p><a class="textlink" href="/magazia">About the title</a></p></div>
     </div>
   </section>` : ""}
   ${contactCta()}`;
-  return layout({ ...ctx, title: "About us", path: "/about", description: paragraphs(profile.about)[0] || undefined, body });
+  return layout({ ...ctx, title: "About", path: "/about", description: paragraphs(profile.about)[0] || undefined, body });
 }
 
-export function businessesPage(ctx) {
+export function servicesPage(ctx) {
   const { businesses } = ctx;
-  const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">Our businesses</h1></div></section>
+  const body = `<section class="page-head"><div class="wrap"><h1 class="page-title">Services</h1></div></section>
   <section aria-labelledby="list-h">
     <div class="wrap">
-      <div><h2 id="list-h" class="sr">All businesses</h2><p class="lede">Choose a business to see what it does and how to reach it.</p></div>
+      <div><h2 id="list-h" class="sr">All services</h2><p class="lede">Choose a service to see what it offers and how to reach it.</p></div>
       ${businesses.length ? businessRows(businesses) : noBusinesses}
     </div>
   </section>
   ${contactCta()}`;
-  return layout({ ...ctx, title: "Our businesses", path: "/businesses", description: "The businesses we run.", body });
+  return layout({ ...ctx, title: "Services", path: "/services", description: "Everything we offer, from food and fashion to events, beauty, insurance and our foundation.", body });
 }
 
-export function businessPage(ctx, b) {
-  const url = safeUrl(b.website_url);
+/** The extra button on a service page: its own named button (Donate, Book now), going to its address or, with none, to the contact form about it. */
+function serviceActions(b) {
+  const contact = `/contact?business=${esc(encodeURIComponent(b.slug))}`;
+  const site = safeUrl(b.website_url);
+  const label = String(b.cta_label || "").trim();
+  const ctaUrl = safeUrl(b.cta_url);
+  const buttons = [];
+  if (label) buttons.push(`<a class="btn" href="${ctaUrl ? esc(ctaUrl) : contact}"${ctaUrl ? ' rel="noopener"' : ""}>${esc(label)}</a>`);
+  if (site) buttons.push(`<a class="btn${buttons.length ? " quiet dark" : ""}" href="${esc(site)}" rel="noopener">Visit ${esc(b.name)}</a>`);
+  if (!label || ctaUrl) buttons.push(`<a class="btn${buttons.length ? " quiet dark" : ""}" href="${contact}">Ask about ${esc(b.name)}</a>`);
+  return `<p class="actions">${buttons.join("\n          ")}</p>`;
+}
+
+export function servicePage(ctx, b) {
   const body = `<section class="page-head">
     <div class="wrap one">
-      <p class="crumb"><a href="/businesses">Our businesses</a></p>
+      <p class="crumb"><a href="/services">Services</a></p>
       <div class="biz-head">
         ${logoOf(b, "lg")}
         <div>
@@ -209,17 +313,44 @@ export function businessPage(ctx, b) {
   </section>
   <section aria-labelledby="what-h">
     <div class="wrap">
-      <h2 id="what-h">What it does</h2>
+      <div>
+        <h2 id="what-h">What it is</h2>
+        ${photo(b.image, b.image_alt || b.name)}
+        ${ticks(b.highlights)}
+      </div>
       <div class="prose">
         ${prose(b.description || b.summary)}
-        <p class="actions">
-          ${url ? `<a class="btn" href="${esc(url)}" rel="noopener">Visit ${esc(b.name)}</a>` : ""}
-          <a class="btn ${url ? "quiet dark" : ""}" href="/contact?business=${esc(encodeURIComponent(b.slug))}">Ask about ${esc(b.name)}</a>
-        </p>
+        ${serviceActions(b)}
+      </div>
+    </div>
+  </section>
+  ${b.disclaimer ? `<section class="fine" aria-label="Important information"><div class="wrap one"><p>${esc(b.disclaimer)}</p></div></section>` : ""}`;
+  return layout({ ...ctx, title: b.name, path: `/services/${b.slug}`, description: b.summary || b.tagline, body });
+}
+
+export function magaziaPage(ctx, page) {
+  const body = `<section class="page-head">
+    <div class="wrap one">
+      ${page.kicker ? `<p class="crumb">${esc(page.kicker)}</p>` : ""}
+      <h1 class="page-title">${esc(page.title)}</h1>
+      ${page.summary ? `<p class="lede big">${esc(page.summary)}</p>` : ""}
+    </div>
+  </section>
+  <section aria-labelledby="title-h">
+    <div class="wrap">
+      <div>
+        <h2 id="title-h">At a glance</h2>
+        ${photo(page.image, page.image_alt || page.title)}
+        ${ticks(page.highlights)}
+      </div>
+      <div class="prose">
+        ${prose(page.body)}
+        ${page.quote ? `<figure class="pull"><blockquote><p>\u201c${esc(page.quote)}\u201d</p></blockquote><figcaption>${esc(page.quote_by || "")}</figcaption></figure>` : ""}
+        <p class="actions"><a class="btn" href="/about#founder">Read Teefa's story</a><a class="btn quiet dark" href="/contact">Get in touch</a></p>
       </div>
     </div>
   </section>`;
-  return layout({ ...ctx, title: b.name, path: `/businesses/${b.slug}`, description: b.summary || b.tagline, body });
+  return layout({ ...ctx, title: page.title, path: "/magazia", description: page.summary || undefined, body });
 }
 
 /** Compact Email, Call and WhatsApp buttons with icons. They never show the address or number; each opens the right app. */
@@ -320,8 +451,8 @@ export function unavailablePage(ctx) {
   return layout({ ...ctx, title: "Temporarily unavailable", path: "/unavailable", body, noindex: true });
 }
 
-export function sitemap(site, businesses) {
+export function sitemap(site, businesses, pages = {}) {
   if (!site.url) return "";
-  const urls = ["/", "/about", "/businesses", "/contact", ...businesses.map((b) => `/businesses/${encodeURIComponent(b.slug)}`)];
+  const urls = ["/", "/about", "/services", ...(pages.magazia ? ["/magazia"] : []), "/contact", ...businesses.map((b) => `/services/${encodeURIComponent(b.slug)}`)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(site.url + u)}</loc></url>`).join("")}</urlset>\n`;
 }

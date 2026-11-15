@@ -9,7 +9,7 @@ const ADMIN = process.env.E2E_ADMIN_URL ?? "http://localhost:5174";
 test.skip(!CORPORATE, "Set E2E_CORPORATE_URL to run the corporate site tests");
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const PAGES = ["/", "/about", "/businesses", "/businesses/demo-shop", "/contact"];
+const PAGES = ["/", "/about", "/services", "/contact"];
 
 async function signInToAdmin(page: Page) {
   await page.goto(`${ADMIN}/login`);
@@ -54,13 +54,16 @@ test("the page works with the keyboard: skip link first", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("a business from the API has its own page with a way to enquire about it", async ({ page }) => {
-  await page.goto(`${CORPORATE}/businesses`);
-  await page.getByRole("link", { name: /Demo shop/ }).first().click();
-  await expect(page).toHaveURL(/\/businesses\/demo-shop$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Demo shop");
-  await page.getByRole("link", { name: "Ask about Demo shop" }).click();
-  await expect(page.getByLabel("What is it about?")).toHaveValue("demo-shop");
+test("a service has its own page with a way to enquire about it", async ({ page }) => {
+  await page.goto(`${CORPORATE}/services`);
+  const first = page.locator("main a[href^='/services/']").first();
+  const href = await first.getAttribute("href");
+  await first.click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const slug = href!.split("/").pop()!;
+  await page.getByRole("link", { name: /^Ask about / }).click();
+  await expect(page.getByLabel("What is it about?")).toHaveValue(slug);
 });
 
 test("the contact form explains mistakes and keeps what was typed", async ({ page }) => {
@@ -109,7 +112,7 @@ test("a business added in the admin appears on the website once published", asyn
   await expect(staff.getByRole("row", { name: new RegExp(name) })).toContainText("Draft");
 
   // Drafts are never shown to visitors.
-  expect((await page.goto(`${CORPORATE}/businesses/${slug}`))?.status()).toBe(404);
+  expect((await page.goto(`${CORPORATE}/services/${slug}`))?.status()).toBe(404);
 
   await staff.getByRole("row", { name: new RegExp(name) }).getByRole("button", { name: "Edit" }).click();
   await staff.getByLabel("Show on the website").check();
@@ -117,6 +120,6 @@ test("a business added in the admin appears on the website once published", asyn
   await expect(staff.getByRole("row", { name: new RegExp(name) })).toContainText("Published");
 
   // The site remembers an answer for up to a minute, so look for the business on its own page, which was not asked about before.
-  await expect.poll(async () => (await page.goto(`${CORPORATE}/businesses/${slug}`))?.status(), { timeout: 90_000, intervals: [2_000] }).toBe(200);
+  await expect.poll(async () => (await page.goto(`${CORPORATE}/services/${slug}`))?.status(), { timeout: 90_000, intervals: [2_000] }).toBe(200);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
 });

@@ -10,9 +10,12 @@ backend, one set of staff logins and one place to manage everything. Staff manag
 
 | Admin page | What it controls |
 |---|---|
-| Businesses | Each business on the site: name, sector, summary, full description, logo, website address, order, featured, published |
+| Businesses | Each service on the site (shown under the Services menu): name, sector, summary, full description, key points, logo, photo, extra button (for example Donate), small print, website address, order, featured, published |
+| Site pages | The founder section (About page and home) and the Magazia page: title, text, quotation, timeline, photo, published |
 | Site details | Company name, tagline, introduction, About text, contact email, phone, address, social links |
 | Enquiries | Messages sent through the contact form: read, add an internal note, mark handled |
+
+`/businesses` addresses redirect to `/services`. To fill a fresh database with the real content run `python manage.py load_corporate_content` (it never overwrites what staff edited; `--force` does).
 
 Changes show on the site within a minute (the site remembers each answer from the API for 60 seconds).
 

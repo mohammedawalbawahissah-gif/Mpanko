@@ -14,11 +14,11 @@ from apps.accounts.models import AuditLog, Role, User
 from apps.accounts.permissions import CatalogManager, roles_permission
 
 from .contacts import contact_config
-from .models import Business, ContactMessage, SiteProfile, SupportContact
+from .models import Business, ContactMessage, SitePage, SiteProfile, SupportContact
 from .serializers import (
     SupportContactSerializer,
-    ContactInputSerializer, ContactMessageSerializer, ManageBusinessSerializer, PublicBusinessDetailSerializer,
-    PublicBusinessSerializer, SiteProfileSerializer,
+    ContactInputSerializer, ContactMessageSerializer, ManageBusinessSerializer, ManagePageSerializer, PublicBusinessDetailSerializer,
+    PublicBusinessSerializer, PublicPageSerializer, SiteProfileSerializer,
 )
 
 MessageStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
@@ -39,6 +39,7 @@ class SiteView(APIView):
         return Response({
             "profile": SiteProfileSerializer(SiteProfile.get()).data,
             "businesses": PublicBusinessSerializer(_published(), many=True, context={"request": request}).data,
+            "pages": PublicPageSerializer(SitePage.objects.filter(is_published=True), many=True, context={"request": request}).data,
             **contact_config(),
         })
 
@@ -140,8 +141,33 @@ class BusinessManageViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         AuditLog.record(self.request.user, "corporate.business.delete", instance, name=instance.name)
-        if instance.logo:
-            instance.logo.delete(save=False)
+        for f in (instance.logo, instance.image):
+            if f:
+                f.delete(save=False)
+        instance.delete()
+
+
+class PageManageViewSet(viewsets.ModelViewSet):
+    """The words and photos for the founder section and the cultural title page."""
+
+    queryset = SitePage.objects.all()
+    serializer_class = ManagePageSerializer
+    permission_classes = [CatalogManager]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        p = serializer.save()
+        AuditLog.record(self.request.user, "corporate.page.create", p, slug=p.slug)
+
+    def perform_update(self, serializer):
+        p = serializer.save()
+        AuditLog.record(self.request.user, "corporate.page.update", p, slug=p.slug, published=p.is_published)
+
+    def perform_destroy(self, instance):
+        AuditLog.record(self.request.user, "corporate.page.delete", instance, slug=instance.slug)
+        if instance.image:
+            instance.image.delete(save=False)
         instance.delete()
 
 

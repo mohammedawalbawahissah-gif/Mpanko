@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import BusinessManageViewSet, ContactManageViewSet, ContactView, MessageManageViewSet, ProfileManageView, PublicBusinessView, SiteView
+from .views import BusinessManageViewSet, ContactManageViewSet, ContactView, MessageManageViewSet, PageManageViewSet, ProfileManageView, PublicBusinessView, SiteView
 
 router = DefaultRouter()
 router.register("corporate/manage/businesses", BusinessManageViewSet, basename="corporate-business")
+router.register("corporate/manage/pages", PageManageViewSet, basename="corporate-page")
 router.register("corporate/manage/contacts", ContactManageViewSet, basename="corporate-contact-manage")
 router.register("corporate/manage/messages", MessageManageViewSet, basename="corporate-message")
 

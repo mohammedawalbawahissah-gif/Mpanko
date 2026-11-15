@@ -1,14 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aboutPage, businessPage, businessesPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
+import { aboutPage, servicePage, servicesPage, magaziaPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
 import { fallbackBusinesses, fallbackProfile } from "../src/content.mjs";
 
 const site = { url: "https://www.example.org", shopUrl: "https://shop.example.org" };
 const biz = (o = {}) => ({ slug: "wolbi-foods", name: "Wolbi Foods", sector: "Food", location: "Tamale", tagline: "Good food.", summary: "Pantry goods.", description: "One.\n\nTwo.", website_url: "https://foods.example.org", logo: "", logo_alt: "", is_featured: false, ...o });
 const ctx = (businesses = [biz()], profile = fallbackProfile) => ({ site, profile, businesses });
 const pages = (c) => ({
-  home: homePage(c), about: aboutPage(c), businesses: businessesPage(c), business: businessPage(c, c.businesses[0] ?? biz()), contact: contactPage(c), notFound: notFoundPage(c),
+  home: homePage(c), about: aboutPage(c), services: servicesPage(c), service: servicePage(c, c.businesses[0] ?? biz()), magazia: magaziaPage(c, MAG), contact: contactPage(c), notFound: notFoundPage(c),
 });
+const MAG = { slug: "magazia", title: "Magazia", kicker: "A title of honour", summary: "Summary.", body: "One.\n\nTwo.", quote: "", quote_by: "", highlights: "", image: "", image_alt: "" };
 const ids = (html) => new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
 
 test("every page has one h1, a language, a unique title and a description", () => {
@@ -63,24 +64,24 @@ test("only http and https links are ever output", () => {
 });
 
 test("a business with a link gets a Visit button, one without does not", () => {
-  assert.match(businessPage(ctx(), biz()), /Visit Wolbi Foods/);
-  assert.equal(/Visit Wolbi Foods/.test(businessPage(ctx(), biz({ website_url: "" }))), false);
-  assert.match(businessPage(ctx(), biz()), /href="\/contact\?business=wolbi-foods"/);
+  assert.match(servicePage(ctx(), biz()), /Visit Wolbi Foods/);
+  assert.equal(/Visit Wolbi Foods/.test(servicePage(ctx(), biz({ website_url: "" }))), false);
+  assert.match(servicePage(ctx(), biz()), /href="\/contact\?business=wolbi-foods"/);
 });
 
 test("logos have alt text, and a business without one shows its initial", () => {
-  const withLogo = businessesPage(ctx([biz({ logo: "https://cdn.example/x.png", logo_alt: "Foods logo" })]));
+  const withLogo = servicesPage(ctx([biz({ logo: "https://cdn.example/x.png", logo_alt: "Foods logo" })]));
   assert.match(withLogo, /<img[^>]+alt="Foods logo"/);
-  assert.match(businessesPage(ctx([biz({ logo: "https://cdn.example/x.png" })])), /alt="Wolbi Foods logo"/);
-  const plain = businessesPage(ctx());
+  assert.match(servicesPage(ctx([biz({ logo: "https://cdn.example/x.png" })])), /alt="Wolbi Foods logo"/);
+  const plain = servicesPage(ctx());
   assert.equal(/<img class="logo/.test(plain), false);
   assert.match(plain, /class="logo md mono" aria-hidden="true">W</);
   assert.equal(monogram("  élan"), "É");
 });
 
 test("an empty list says so instead of showing a blank gap", () => {
-  assert.match(homePage(ctx([])), /We are adding the details of our businesses/);
-  assert.match(businessesPage(ctx([])), /We are adding the details of our businesses/);
+  assert.match(homePage(ctx([])), /We are adding the details of our services/);
+  assert.match(servicesPage(ctx([])), /We are adding the details of our services/);
   assert.equal(/<select/.test(contactPage(ctx([]))), false);
 });
 
@@ -97,8 +98,9 @@ test("the contact form keeps what was typed and explains each mistake", () => {
 });
 
 test("the sitemap lists every page, and is empty until the domain is known", () => {
-  const xml = sitemap(site, [biz()]);
-  for (const p of ["/", "/about", "/businesses", "/contact", "/businesses/wolbi-foods"]) assert.ok(xml.includes(`https://www.example.org${p}<`), p);
+  const xml = sitemap(site, [biz()], { magazia: MAG });
+  assert.ok(xml.includes("https://www.example.org/magazia<"));
+  for (const p of ["/", "/about", "/services", "/contact", "/services/wolbi-foods"]) assert.ok(xml.includes(`https://www.example.org${p}<`), p);
   assert.equal(sitemap({ url: "" }, [biz()]), "");
 });
 
