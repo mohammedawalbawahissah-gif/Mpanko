@@ -155,3 +155,18 @@ describe("offline catalog cache", () => {
     expect(isOffline(null)).toBe(false);
   });
 });
+
+describe("typefaces", () => {
+  it("picks a font file from a style's weight", async () => {
+    const { fontFile, weightOf } = await import("./type");
+    expect(weightOf(undefined)).toBe(400);
+    expect(weightOf("bold")).toBe(700);
+    expect(fontFile(undefined, false)).toBe("PublicSans_400Regular");
+    expect(fontFile("600", false)).toBe("PublicSans_600SemiBold");
+    expect(fontFile("800", false)).toBe("PublicSans_800ExtraBold");
+    expect(fontFile(900, false)).toBe("PublicSans_800ExtraBold");
+    expect(fontFile(undefined, true)).toBe("BricolageGrotesque_700Bold");
+    expect(fontFile("600", true)).toBe("BricolageGrotesque_600SemiBold");
+    expect(fontFile("800", true)).toBe("BricolageGrotesque_800ExtraBold");
+  });
+});

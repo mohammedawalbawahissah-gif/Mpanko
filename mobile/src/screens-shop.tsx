@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
+import { Text } from "./text";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError, type Page } from "./api";
 import { useAuth } from "./auth";
 import { usePrefs } from "./prefs";
-import { color } from "./theme";
+import { color, font, type } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { cardWidth } from "./core/layout";
 import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
 
+const GRID_GAP = 10;
 export type ShopStack = { List: undefined; Product: { slug: string }; Menu: { slug: string } };
 export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
 
@@ -24,6 +25,9 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
     return () => clearTimeout(id);
   }, [q]);
   const layout = useLayout();
+  // Tall cards with the photo on top, like the shop on the web: two across on a phone, more on a tablet.
+  const gridCols = layout.columns + 1;
+  const tileWidth = Math.floor((layout.width - 24 - GRID_GAP * (gridCols - 1)) / gridCols);
   const cats = useCachedAsync("categories", () => api<Page<Category> | Category[]>("/categories/"), []);
   const all: Category[] = Array.isArray(cats.data) ? cats.data : cats.data?.results ?? [];
   const byOrder = (a: Category, b: Category) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name);
@@ -60,7 +64,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
           {t("shop.pricesIn", { currency })}
         </Text>
       )}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
         {[{ id: 0, slug: null as string | null, name: t("m.all") }, ...tops].map((c) => (
           <Pressable key={String(c.id)} onPress={() => setCat(c.slug)} accessibilityRole="button" accessibilityState={{ selected: topOfChosen ? topOfChosen.slug === c.slug : c.slug === null }}
             style={{ paddingHorizontal: 14, paddingVertical: 8, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: (topOfChosen ? topOfChosen.slug === c.slug : c.slug === null) ? color.ink : "#fff", borderWidth: 1, borderColor: color.line }}>
@@ -69,7 +73,7 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         ))}
       </ScrollView>
       {subs.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
           {[{ id: -1, slug: topOfChosen!.slug, name: t("m.all"), is_menu: false }, ...subs].map((c) => (
             <Pressable key={String(c.id)} onPress={() => (c.is_menu ? navigation.navigate("Menu", { slug: c.slug }) : setCat(c.slug))} accessibilityRole="button" accessibilityState={{ selected: cat === c.slug }}
               style={{ paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: cat === c.slug ? color.gold : "#fff", borderWidth: 1, borderColor: cat === c.slug ? color.gold : color.line }}>
@@ -82,9 +86,9 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
       {products.loading && <Busy />}
       {products.error ? <View style={s.pad}><Notice>{products.error}</Notice><Button title={t("m.tryAgain")} onPress={products.reload} /></View> : null}
       <FlatList
-        key={`cols-${layout.columns}`}
-        numColumns={layout.columns}
-        columnWrapperStyle={layout.columns > 1 ? { gap: 10 } : undefined}
+        key={`cols-${gridCols}`}
+        numColumns={gridCols}
+        columnWrapperStyle={{ gap: GRID_GAP }}
         data={products.data?.results ?? []}
         keyExtractor={(p) => p.slug}
         refreshControl={pull.control}
@@ -92,8 +96,8 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         ListEmptyComponent={products.loading ? undefined : <Text style={[s.muted, { padding: 16 }]}>{t("m.nothingMatches")}</Text>}
         ListFooterComponent={
           products.data && products.data.results.length > 0 ? (
-            <View style={{ backgroundColor: color.ink, borderRadius: 16, padding: 16, marginTop: 4, marginBottom: 24 }}>
-              <Text accessibilityRole="header" style={{ color: "#fff", fontWeight: "800", fontSize: 18, marginBottom: 4 }}>{t("shop.askTitle")}</Text>
+            <View style={{ backgroundColor: color.ink, borderRadius: 20, padding: 18, marginTop: 4, marginBottom: 24 }}>
+              <Text accessibilityRole="header" style={{ fontFamily: font.display, color: "#fff", fontWeight: "700", fontSize: 20, marginBottom: 4 }}>{t("shop.askTitle")}</Text>
               <Text style={{ color: "#C5DAD6", marginBottom: 12 }}>{t("shop.askBody")}</Text>
               <Button title={t("m.askUs")} kind="gold" onPress={() => navigation.getParent()?.getParent()?.navigate("SupportNew" as never)} />
             </View>
@@ -101,20 +105,18 @@ export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List
         }
         renderItem={({ item }) => (
           <Pressable
-            style={[s.card, { flexDirection: "row", height: 108, marginBottom: 10 }, layout.columns > 1 && { width: cardWidth(layout, 10, 12) }]}
+            style={[s.card, { width: tileWidth, marginBottom: GRID_GAP }]}
             accessibilityRole="button"
             accessibilityLabel={`${item.name}, ${money(item.base_price, item.currency)}`}
             onPress={() => navigation.navigate("Product", { slug: item.slug })}
           >
-            <Photo photo={mainPhoto(item.images)} seed={item.slug} name={item.name} width={112} height={106} />
-            <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10 }}>
-              <Text style={{ fontWeight: "700", color: color.ink, fontSize: 15 }} numberOfLines={2}>{item.name}</Text>
-              <Text style={[s.muted, { fontSize: 13 }]} numberOfLines={1}>{item.maker || item.origin_country}</Text>
-              <View style={{ flex: 1 }} />
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <Text style={{ fontWeight: "800", color: color.ink }}>{money(item.base_price, item.currency)}</Text>
-                {!!item.category_name && <Text numberOfLines={1} style={[s.pill, { flexShrink: 1, color: "#0B6A61" }]}>{item.category_name}</Text>}
-              </View>
+            <Photo photo={mainPhoto(item.images)} seed={item.slug} name={item.name} height={Math.round(tileWidth * 0.75)} />
+            <View style={{ flex: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 }}>
+              {!!item.category_name && <Text numberOfLines={1} style={{ fontSize: type.xs, fontWeight: "700", color: "#0B6A61", marginBottom: 2 }}>{item.category_name}</Text>}
+              <Text style={{ fontWeight: "600", color: color.ink, fontSize: 15, lineHeight: 20 }} numberOfLines={2}>{item.name}</Text>
+              <Text style={[s.muted, { fontSize: type.xs, marginTop: 2 }]} numberOfLines={1}>{item.maker || item.origin_country}</Text>
+              <View style={{ flex: 1, minHeight: 8 }} />
+              <Text style={[s.price, { fontSize: type.lg }]}>{money(item.base_price, item.currency)}</Text>
             </View>
           </Pressable>
         )}
@@ -183,8 +185,8 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
         {savedAt ? <Notice kind="info">{t("offline.saved")}</Notice> : null}
         <Text accessibilityRole="header" style={s.h1}>{p.name}</Text>
         <Text style={s.muted}>{p.maker ? t("m.madeBy", { maker: p.maker }) : ""}{p.maker && p.origin_country ? " · " : ""}{p.origin_country}</Text>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: color.ink, marginVertical: 12 }}>{money(chosen?.price ?? p.base_price, p.currency)}</Text>
-        <Text style={{ color: color.ink, lineHeight: 22 }}>{p.description}</Text>
+        <Text style={[s.price, { fontSize: 26, marginVertical: 12 }]}>{money(chosen?.price ?? p.base_price, p.currency)}</Text>
+        <Text style={s.body}>{p.description}</Text>
         {variants.length > 1 && (
           <>
             <Text accessibilityRole="header" style={s.h2}>{t("m.chooseOne")}</Text>

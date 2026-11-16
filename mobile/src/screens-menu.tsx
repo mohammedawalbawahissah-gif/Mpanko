@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "./text";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError } from "./api";
 import { useAuth } from "./auth";
@@ -70,7 +71,7 @@ export function MenuScreen({ route, navigation }: NativeStackScreenProps<ShopSta
                 <View key={item.slug} style={[s.card, { padding: 12, marginTop: 8 }]}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
                     <Text style={{ flex: 1, fontWeight: "700", color: color.ink }}>{item.name}</Text>
-                    <Text style={{ fontWeight: "800", color: color.ink }}>{item.orderable && variant ? money(variant.price, item.currency) : t("menu.soon")}</Text>
+                    {item.orderable && variant ? <Text style={[s.price, { fontSize: 17 }]}>{money(variant.price, item.currency)}</Text> : <Text style={[s.muted, { fontSize: 13 }]}>{t("menu.soon")}</Text>}
                   </View>
                   {!!item.description && <Text style={[s.muted, { marginTop: 2 }]}>{item.description}</Text>}
                   {item.orderable && item.variants.length > 1 && item.variants.map((v) => (

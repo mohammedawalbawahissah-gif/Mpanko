@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, Linking, Share, Switch, Text, View } from "react-native";
+import { Alert, Linking, Share, Switch, View } from "react-native";
+import { Text } from "./text";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { api, ApiError, BASE } from "./api";
 import type { RootParams } from "./screens-buy";

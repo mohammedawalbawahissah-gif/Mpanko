@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/public-sans";
 import "./styles.css";
 import App from "./App";
 import { AuthProvider, CartProvider, CurrencyProvider } from "./context";

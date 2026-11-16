@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Switch, View } from "react-native";
+import { Text } from "./text";
 import { api, ApiError, type Page } from "./api";
 import { useAuth } from "./auth";
 import { fieldHints, type AddressRules } from "./core/addressRules";

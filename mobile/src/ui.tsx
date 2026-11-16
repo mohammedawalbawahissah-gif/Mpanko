@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type RefreshControlProps, type TextInputProps } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions, type RefreshControlProps, type TextInputProps } from "react-native";
+import { Text } from "./text";
 import { api } from "./api";
 import { ALL_COUNTRIES } from "./core/countries";
 import { fetchWithCache } from "./core/cache";
@@ -10,7 +11,7 @@ import { photoLabel, type ProductPhoto } from "./core/images";
 import { contactItems, type ContactConfig } from "./core/contacts";
 import { layoutFor, READABLE, type Layout } from "./core/layout";
 import { usePrefs } from "./prefs";
-import { color, stripes } from "./theme";
+import { color, font, radius, stripes, type } from "./theme";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
@@ -427,21 +428,23 @@ export function statusLabel(v: string): string {
 export const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.cotton },
   pad: { padding: 16 },
-  h1: { fontSize: 26, fontWeight: "800", color: color.ink, marginBottom: 12 },
-  h2: { fontSize: 18, fontWeight: "700", color: color.ink, marginTop: 20, marginBottom: 8 },
+  h1: { fontFamily: font.display, fontSize: type.xxl, lineHeight: 32, fontWeight: "800", letterSpacing: -0.6, color: color.ink, marginBottom: 12 },
+  h2: { fontFamily: font.display, fontSize: 20, lineHeight: 25, fontWeight: "700", letterSpacing: -0.3, color: color.ink, marginTop: 22, marginBottom: 8 },
+  body: { fontSize: type.md, lineHeight: 24, color: color.ink },
+  price: { fontFamily: font.display, fontWeight: "700", letterSpacing: -0.3, color: color.ink, fontVariant: ["tabular-nums"] },
   muted: { color: color.muted },
-  btn: { backgroundColor: color.ink, borderRadius: 999, paddingVertical: 13, paddingHorizontal: 16, alignItems: "center", minHeight: 48, justifyContent: "center" },
+  btn: { backgroundColor: color.ink, borderRadius: 999, paddingVertical: 13, paddingHorizontal: 20, alignItems: "center", minHeight: 50, justifyContent: "center" },
   btnQuiet: { backgroundColor: "transparent", borderWidth: 2, borderColor: color.ink },
   btnDanger: { backgroundColor: color.bad },
-  btnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  label: { fontWeight: "600", color: color.ink, marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: "#9AA0BA", borderRadius: 10, backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: color.ink, minHeight: 46 },
-  fieldError: { color: color.bad, marginTop: 4, fontSize: 13 },
-  notice: { backgroundColor: "#fff", borderLeftWidth: 4, padding: 12, marginBottom: 12, borderRadius: 10 },
-  card: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderRadius: 14, marginBottom: 12, overflow: "hidden" },
-  cardPad: { padding: 12 },
+  btnText: { color: "#fff", fontWeight: "700", fontSize: type.md },
+  label: { fontWeight: "600", fontSize: type.sm, color: color.ink, marginBottom: 5 },
+  input: { borderWidth: 1, borderColor: color.field, borderRadius: radius.md, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 11, fontSize: type.md, fontFamily: "PublicSans_400Regular", color: color.ink, minHeight: 48 },
+  fieldError: { color: color.bad, marginTop: 4, fontSize: 13, fontWeight: "600" },
+  notice: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderLeftWidth: 4, padding: 12, marginBottom: 12, borderRadius: radius.md },
+  card: { backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, borderRadius: radius.lg, marginBottom: 12, overflow: "hidden" },
+  cardPad: { padding: 14 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  pill: { alignSelf: "flex-start", backgroundColor: "#E3F1EF", color: color.ink, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
-  choice: { backgroundColor: "#fff", borderWidth: 2, borderColor: color.line, borderRadius: 12, padding: 12, marginBottom: 8 },
-  choiceOn: { borderColor: color.ink },
+  pill: { alignSelf: "flex-start", backgroundColor: color.wash, color: color.ink, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, fontSize: type.xs, fontWeight: "700", overflow: "hidden" },
+  choice: { backgroundColor: "#fff", borderWidth: 2, borderColor: color.line, borderRadius: radius.md, padding: 13, marginBottom: 8 },
+  choiceOn: { borderColor: color.ink, backgroundColor: color.sand },
 });

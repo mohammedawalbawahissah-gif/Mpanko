@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { Text } from "./text";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback } from "react";
 import { api, ApiError, type Page } from "./api";

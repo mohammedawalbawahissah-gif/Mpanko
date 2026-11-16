@@ -5,7 +5,11 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { useFonts } from "expo-font";
+import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque";
+import { PublicSans_400Regular, PublicSans_500Medium, PublicSans_600SemiBold, PublicSans_700Bold, PublicSans_800ExtraBold } from "@expo-google-fonts/public-sans";
+import { Text, fontsLoaded, setFontsLoaded } from "./src/text";
 import { AuthProvider, useAuth } from "./src/auth";
 import { AccountScreen } from "./src/screens-account";
 import { ProfileScreen } from "./src/screens-profile";
@@ -27,11 +31,16 @@ const Tabs = createBottomTabNavigator<RootTabs>();
 const Shop = createNativeStackNavigator<ShopStack>();
 const Root = createNativeStackNavigator<RootParams>();
 
-const header = { headerStyle: { backgroundColor: color.ink }, headerTintColor: "#fff", headerTitleStyle: { fontWeight: "800" as const } };
+/** The ink bar at the top of every screen, with its title in the heading face once the fonts are in. */
+const header = () => ({
+  headerStyle: { backgroundColor: color.ink },
+  headerTintColor: "#fff",
+  headerTitleStyle: fontsLoaded() ? { fontFamily: "BricolageGrotesque_700Bold", fontSize: 19 } : { fontWeight: "800" as const },
+});
 
 function ShopNav() {
   return (
-    <Shop.Navigator screenOptions={{ ...header, headerRight: () => <NotificationBell /> }}>
+    <Shop.Navigator screenOptions={{ ...header(), headerRight: () => <NotificationBell /> }}>
       <Shop.Screen name="List" component={ShopList} options={{ title: "Mpanko" }} />
       <Shop.Screen name="Product" component={ProductScreen} options={{ title: "Mpanko" }} />
       <Shop.Screen name="Menu" component={MenuScreen} options={{ title: "Mpanko" }} />
@@ -84,7 +93,7 @@ function TabsNav() {
   const { t } = usePrefs();
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
-    <Tabs.Navigator screenOptions={({ route }) => ({ ...header, tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerRight: () => <NotificationBell />, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
+    <Tabs.Navigator screenOptions={({ route }) => ({ ...header(), tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerRight: () => <NotificationBell />, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />
@@ -133,7 +142,7 @@ installGlobalErrorReporting();
 function RootNav() {
   const { t } = usePrefs();
   return (
-    <Root.Navigator screenOptions={header}>
+    <Root.Navigator screenOptions={header()}>
       <Root.Screen name="Tabs" component={TabsNav} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: t("checkout.title") }} />
       <Root.Screen name="GuestCheckout" component={GuestCheckoutScreen} options={{ title: t("checkout.title") }} />
@@ -153,6 +162,13 @@ function RootNav() {
 export default function App() {
   useOpenFromNotification();
   const navRef = useNavigationContainerRef<RootParams>();
+  // The app's two typefaces. If they cannot be loaded the app still opens, in the phone's own font.
+  const [fontsIn, fontsFailed] = useFonts({
+    BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold,
+    PublicSans_400Regular, PublicSans_500Medium, PublicSans_600SemiBold, PublicSans_700Bold, PublicSans_800ExtraBold,
+  });
+  setFontsLoaded(fontsIn);
+  if (!fontsIn && !fontsFailed) return <View style={{ flex: 1, backgroundColor: color.ink }} />;
   return (
     <ErrorBoundary>
     <SafeAreaProvider>

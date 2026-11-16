@@ -119,7 +119,7 @@ export function Layout() {
         <div className="wrap">
           <div className="header-left">
             <Link to="/" className="logo" aria-label="Mpanko home">
-              <img src="/logo.svg" alt="" width={59} height={56} />
+              <img src="/logo-light.svg" alt="" width={59} height={56} />
             </Link>
             <div className="header-links">
               <nav className="nav" aria-label="Main">

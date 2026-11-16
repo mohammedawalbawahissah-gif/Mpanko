@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
+import { Text } from "./text";
 import { useFocusEffect, useNavigation, type NavigationProp, type ParamListBase } from "@react-navigation/native";
 import { api, type Page } from "./api";
 import { routeForPath } from "./core/inbox";

@@ -1,6 +1,7 @@
 /** Guest checkout: buy without an account (FR-AUTH-05, FR-CHK-05). Only offered when the shop turns it on. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, View } from "react-native";
+import { Text } from "./text";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
+import { Text } from "./text";
 import { useNavigation, useFocusEffect, type NavigationProp } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback } from "react";
