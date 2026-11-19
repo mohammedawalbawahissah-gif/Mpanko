@@ -7,8 +7,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from apps.accounts.models import AuditLog, Role
-from apps.accounts.permissions import FinanceStaff, has_role
+from apps.accounts.models import AuditLog
+from apps.accounts.permissions import FinanceStaff
 
 from . import services
 from .models import DutyRule, TaxRule
@@ -63,7 +63,7 @@ def estimate(request):
         goods = Decimal(request.query_params.get("goods", "0"))
         shipping = Decimal(request.query_params.get("shipping", "0"))
     except InvalidOperation:
-        raise ValidationError({"detail": "goods and shipping must be numbers."})
+        raise ValidationError({"detail": "goods and shipping must be numbers."}) from None
     if goods < 0 or shipping < 0:
         raise ValidationError({"detail": "goods and shipping cannot be negative."})
     duties = services.estimate_duties(goods, country, currency)

@@ -124,7 +124,7 @@ class PaystackProvider(PaymentProvider):
             resp = requests.post(f"{self.base_url}/transaction/initialize", json=body, headers=self._headers(), timeout=20)
             data = resp.json()
         except (requests.RequestException, ValueError) as exc:
-            raise ProviderError(f"Paystack unreachable: {exc}")
+            raise ProviderError(f"Paystack unreachable: {exc}") from exc
         if not resp.ok or not data.get("status"):
             raise ProviderError(data.get("message", "Paystack rejected the request."))
         d = data["data"]
@@ -135,7 +135,7 @@ class PaystackProvider(PaymentProvider):
             resp = requests.get(f"{self.base_url}/transaction/verify/{attempt.reference}", headers=self._headers(), timeout=20)
             data = resp.json()
         except (requests.RequestException, ValueError) as exc:
-            raise ProviderError(f"Paystack unreachable: {exc}")
+            raise ProviderError(f"Paystack unreachable: {exc}") from exc
         if not resp.ok or not data.get("status"):
             return Verification("pending")
         d = data["data"]
@@ -170,7 +170,7 @@ class PaystackProvider(PaymentProvider):
             resp = requests.post(f"{self.base_url}/refund", json=body, headers=self._headers(), timeout=20)
             data = resp.json()
         except (requests.RequestException, ValueError) as exc:
-            raise ProviderError(f"Paystack unreachable: {exc}")
+            raise ProviderError(f"Paystack unreachable: {exc}") from exc
         if not resp.ok or not data.get("status"):
             raise ProviderError(data.get("message", "Refund rejected."))
         return str(data.get("data", {}).get("id", ""))
@@ -186,7 +186,7 @@ class PaystackProvider(PaymentProvider):
                 )
                 data = resp.json()
             except (requests.RequestException, ValueError) as exc:
-                raise ProviderError(f"Paystack unreachable: {exc}")
+                raise ProviderError(f"Paystack unreachable: {exc}") from exc
             if not resp.ok or not data.get("status"):
                 raise ProviderError(data.get("message", "Could not list Paystack transactions."))
             for t in data.get("data", []):

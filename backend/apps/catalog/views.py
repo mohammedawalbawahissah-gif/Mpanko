@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django_filters import rest_framework as filters
 from rest_framework import mixins, status, viewsets
@@ -10,7 +11,7 @@ from apps.accounts.models import AuditLog
 from apps.accounts.permissions import CatalogManager, ReadOnlyOrCatalogManager
 
 from .models import (
-    Category, Inventory, OutOfStock, Product, ProductImage, ProductStatus, ProductType, ProductVariant, adjust_stock,
+    Category, Inventory, OutOfStock, Product, ProductStatus, ProductType, ProductVariant, adjust_stock,
 )
 MAX_IMAGES = 10
 
@@ -190,7 +191,7 @@ class InventoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                 actor=request.user, note=s.validated_data.get("note", ""),
             )
         except OutOfStock:
-            raise ValidationError({"delta": "Adjustment would make stock negative."})
+            raise ValidationError({"delta": "Adjustment would make stock negative."}) from None
         AuditLog.record(request.user, "stock.adjust", variant, delta=s.validated_data["delta"], new_quantity=inv.quantity)
         return Response({"sku": variant.sku, "quantity": inv.quantity})
 
@@ -203,7 +204,7 @@ class InventoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         try:
             level = int(request.data.get("low_stock_threshold"))
         except (TypeError, ValueError):
-            raise ValidationError({"low_stock_threshold": "Enter a whole number, 0 or more."})
+            raise ValidationError({"low_stock_threshold": "Enter a whole number, 0 or more."}) from None
         if level < 0:
             raise ValidationError({"low_stock_threshold": "Enter a whole number, 0 or more."})
         inv.low_stock_threshold = level
@@ -227,7 +228,7 @@ class InventoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             try:
                 days = int(days)
             except (TypeError, ValueError):
-                raise ValidationError({"backorder_days": "Enter a whole number of days, 1 to 365."})
+                raise ValidationError({"backorder_days": "Enter a whole number of days, 1 to 365."}) from None
             if not 1 <= days <= 365:
                 raise ValidationError({"backorder_days": "Enter a whole number of days, 1 to 365."})
         inv.allow_backorder = allow
@@ -238,5 +239,5 @@ class InventoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     @action(detail=True, methods=["get"], url_path="movements")
     def movements(self, request, pk=None):
-        qs = ProductVariant.objects.get(pk=pk).movements.select_related("actor")[:200]
+        qs = get_object_or_404(ProductVariant, pk=pk).movements.select_related("actor")[:200]
         return Response(StockMovementSerializer(qs, many=True).data)

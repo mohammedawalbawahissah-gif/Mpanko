@@ -8,3 +8,11 @@ db.sqlite3
 .env
 e2e/test-results/
 e2e/playwright-report/
+.env.*
+!.env.example
+*.pem
+*.key
+backend/staticfiles/
+backend/media/
+.coverage
+.ruff_cache/

@@ -114,8 +114,8 @@ def receive(req, actor, restock=True):
     return req
 
 
-@transaction.atomic
 def refund(req, actor):
+    """The provider is called outside any database transaction (see issue_refund), then the return is marked refunded."""
     from apps.payments.services import issue_refund
 
     _require(req, S.RECEIVED)

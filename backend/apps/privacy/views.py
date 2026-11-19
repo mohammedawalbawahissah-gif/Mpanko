@@ -4,7 +4,8 @@ from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, serializers
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
@@ -32,7 +33,9 @@ class DeleteSerializer(serializers.Serializer):
 
 @extend_schema(request=DeleteSerializer, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
+@throttle_classes([ScopedRateThrottle])
 def delete_me(request):
+
     s = DeleteSerializer(data=request.data)
     s.is_valid(raise_exception=True)
     if not request.user.check_password(s.validated_data["password"]):
@@ -40,8 +43,12 @@ def delete_me(request):
     try:
         delete_account(request.user)
     except DeletionBlocked as exc:
-        raise ValidationError({"detail": str(exc)})
+        raise ValidationError({"detail": str(exc)}) from exc
     return Response({"detail": "Your account has been deleted."})
+
+
+# Asking for the password here is a guess oracle if a token is stolen, so it has its own tight limit.
+delete_me.cls.throttle_scope = "account_delete"
 
 
 class ConsentSerializer(serializers.ModelSerializer):

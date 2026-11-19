@@ -33,9 +33,12 @@ def quote(request):
         raise ValidationError({"country": "Provide a 2-letter ISO country code."})
     # products=slug or slug:quantity, comma separated. Quantity matters because rates can depend on total weight.
     wanted = {}
-    for part in (x for x in request.query_params.get("products", "").split(",") if x):
+    parts = [x for x in request.query_params.get("products", "").split(",") if x]
+    if len(parts) > 50:
+        raise ValidationError({"products": "At most 50 products per quote."})
+    for part in parts:
         slug, _, qty = part.partition(":")
-        wanted[slug] = wanted.get(slug, 0) + (int(qty) if qty.isdigit() and int(qty) > 0 else 1)
+        wanted[slug[:120]] = min(wanted.get(slug[:120], 0) + (int(qty[:6]) if qty.isdigit() and int(qty[:6]) > 0 else 1), 999)
     slugs = list(wanted)
     products = list(Product.objects.filter(slug__in=slugs))
     from .parcel import from_lines
@@ -48,7 +51,7 @@ def quote(request):
     reason = providers.blocked_reason(country)
     if reason:
         return Response({"country": country, "services": [], "restricted_products": [], "blocked_reason": reason})
-    destination = {"city": request.query_params.get("city", ""), "postal_code": request.query_params.get("postal_code", "")}
+    destination = {"city": request.query_params.get("city", "")[:100], "postal_code": request.query_params.get("postal_code", "")[:20]}
     return Response({"country": country, "services": [r.as_dict() for r in providers.get_rates(country, weight, destination=destination, dims=parcel.dims_cm, dangerous=parcel.dangerous)], "restricted_products": [], "dangerous_goods": parcel.dangerous})
 
 
@@ -119,7 +122,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             try:
                 pk, qty = int(row["order_item"]), int(row["quantity"])
             except (KeyError, TypeError, ValueError):
-                raise ValidationError({"items": "Each entry needs order_item and quantity."})
+                raise ValidationError({"items": "Each entry needs order_item and quantity."}) from None
             if pk not in left:
                 raise ValidationError({"items": f"Item {pk} is not on this order."})
             if qty < 1 or pk in parts:
@@ -233,7 +236,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         try:
             booking = live.book(shipment, order.shipping_address, parcel.chargeable_grams, bare, parcel.dims_cm)
         except CarrierError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         shipment.label_file.save(f"{order.number}-{booking.tracking_number}.{booking.label_format}", ContentFile(booking.label_bytes), save=False)
         shipment.tracking_number = booking.tracking_number
         shipment.label_reference = booking.reference or booking.tracking_number
@@ -252,7 +255,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         try:
             added = sync_shipment(shipment)
         except TrackingError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         shipment.refresh_from_db()
         return Response({"new_events": added, "status": shipment.status})
 

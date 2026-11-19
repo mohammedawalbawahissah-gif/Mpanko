@@ -8,7 +8,6 @@ this adapter re-asks MTN's status API before acting on one.
 """
 import json
 import uuid
-from decimal import Decimal
 
 from django.conf import settings
 

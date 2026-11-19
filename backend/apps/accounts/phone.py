@@ -116,5 +116,5 @@ def confirm_verify_code(user, raw_phone, code):
             user.phone, user.phone_verified = phone, True
             user.save(update_fields=["phone", "phone_verified"])
     except IntegrityError:
-        raise PhoneError("This number is already linked to another account.")
+        raise PhoneError("This number is already linked to another account.") from None
     return user

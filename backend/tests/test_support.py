@@ -8,7 +8,6 @@ from django.utils import timezone
 from apps.catalog.models import Inventory
 from apps.orders.models import Order, OrderStatus
 from apps.orders.services import transition
-from apps.support.models import ReturnRequest
 
 from .conftest import client_for, make_product
 from .test_batch1 import pay

@@ -157,7 +157,7 @@ class DHLTracking:
             )
             data = resp.json()
         except (requests.RequestException, ValueError) as exc:
-            raise TrackingError(f"DHL unreachable: {exc}")
+            raise TrackingError(f"DHL unreachable: {exc}") from exc
         if resp.status_code == 404 or not data.get("shipments"):
             return []
         if not resp.ok:
@@ -175,7 +175,7 @@ class DHLTracking:
                 continue
             place = (ev.get("location") or {}).get("address", {}).get("addressLocality", "")
             desc = ev.get("description") or ev.get("status") or ""
-            ident = hashlib.sha1(f"{shipment.tracking_number}|{ev.get('timestamp')}|{desc}".encode()).hexdigest()[:40]
+            ident = hashlib.sha1(f"{shipment.tracking_number}|{ev.get('timestamp')}|{desc}".encode(), usedforsecurity=False).hexdigest()[:40]
             out.append({"status": status, "description": desc[:255], "location": place[:150], "external_id": ident, "occurred_at": when})
         return out
 
@@ -198,7 +198,7 @@ class _LiveTracking:
         try:
             return carrier.tracking(shipment)
         except CarrierError as exc:
-            raise TrackingError(str(exc))
+            raise TrackingError(str(exc)) from exc
 
 
 TRACKING.update({"fedex": _LiveTracking("fedex"), "ups": _LiveTracking("ups")})

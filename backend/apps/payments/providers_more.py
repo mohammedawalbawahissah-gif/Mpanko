@@ -10,7 +10,6 @@ waits, and finance staff press "Payment received" in the admin once the money ha
 """
 import base64
 import json
-from decimal import Decimal
 
 from django.conf import settings
 

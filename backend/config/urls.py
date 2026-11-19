@@ -24,26 +24,24 @@ def ready(_request):
         with connection.cursor() as cur:
             cur.execute("SELECT 1")
         checks["database"] = "ok"
-    except Exception as exc:  # noqa: BLE001
-        checks["database"] = f"failed: {exc.__class__.__name__}"
+    except Exception:  # noqa: BLE001
+        checks["database"] = "failed"
     if settings.REDIS_URL:
         try:
             from django.core.cache import cache
 
             cache.set("ready-check", "1", 5)
-            checks["redis"] = "ok" if cache.get("ready-check") == "1" else "failed: no read-back"
-        except Exception as exc:  # noqa: BLE001
-            checks["redis"] = f"failed: {exc.__class__.__name__}"
+            checks["redis"] = "ok" if cache.get("ready-check") == "1" else "failed"
+        except Exception:  # noqa: BLE001
+            checks["redis"] = "failed"
     ok = all(v == "ok" for v in checks.values())
     return JsonResponse({"status": "ready" if ok else "degraded", "checks": checks}, status=200 if ok else 503)
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path("health/", health),
     path("ready/", ready),
-    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
     path("api/v1/client-errors/", client_error, name="client-error"),
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/v1/", include("apps.catalog.urls")),
@@ -60,3 +58,11 @@ urlpatterns = [
     path("api/v1/", include("apps.tax.urls")),
     path("api/v1/", include("apps.corporate.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+# The API reference is for developers: open in development, and in production only when API_DOCS_PUBLIC is switched on.
+if settings.DEBUG or settings.API_DOCS_PUBLIC:
+    urlpatterns += [
+        path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
+    ]

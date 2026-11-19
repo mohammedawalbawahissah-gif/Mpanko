@@ -1,6 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 
-export const BASE: string = process.env.EXPO_PUBLIC_API_URL ?? "http://10.0.2.2:8000/api/v1";
+import { resolveApiBase } from "./core/apiBase";
+
+declare const __DEV__: boolean | undefined;
+
+export const BASE: string = resolveApiBase(process.env.EXPO_PUBLIC_API_URL, typeof __DEV__ === "undefined" ? true : __DEV__);
 const KEY = "mpanko.tokens";
 
 export interface Tokens {

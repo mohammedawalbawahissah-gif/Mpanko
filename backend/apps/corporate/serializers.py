@@ -243,7 +243,7 @@ class SupportContactSerializer(serializers.ModelSerializer):
         try:
             attrs["value"] = clean_value(kind, value)
         except DjangoValidationError as e:
-            raise serializers.ValidationError({"value": e.messages[0]})
+            raise serializers.ValidationError({"value": e.messages[0]}) from e
         attrs["label"] = attrs.get("label", self.instance.label if self.instance else "").strip()
         # With more than one of a kind, each needs its own name or the buttons look identical.
         others = SupportContact.objects.filter(kind=kind, is_active=True)

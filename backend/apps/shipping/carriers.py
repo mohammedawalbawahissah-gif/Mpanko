@@ -96,7 +96,7 @@ class LiveCarrier:
         try:
             resp = requests.request(method, url, **kw)
         except requests.RequestException as exc:
-            raise CarrierError(f"{self.label} unreachable: {exc}")
+            raise CarrierError(f"{self.label} unreachable: {exc}") from exc
         try:
             data = resp.json()
         except ValueError:
@@ -285,7 +285,7 @@ class FedEx(LiveCarrier):
             number = ts["masterTrackingNumber"]
             label = ts["pieceResponses"][0]["packageDocuments"][0]["encodedLabel"]
         except (KeyError, IndexError, TypeError):
-            raise CarrierError("FedEx did not return a tracking number and label.")
+            raise CarrierError("FedEx did not return a tracking number and label.") from None
         return Booking(number, base64.b64decode(label), "pdf")
 
     STATUS_MAP = {"PU": "in_transit", "IT": "in_transit", "OD": "out_for_delivery", "DL": "delivered", "DE": "exception", "SE": "exception", "OC": "assigned"}
@@ -308,7 +308,7 @@ class FedEx(LiveCarrier):
             desc = sc.get("eventDescription", "")
             loc = (sc.get("scanLocation") or {}).get("city", "")
             out.append({"status": status, "description": desc[:255], "location": loc[:150], "occurred_at": when,
-                        "external_id": hashlib.sha1(f"{shipment.tracking_number}|{sc.get('date')}|{desc}".encode()).hexdigest()[:40]})
+                        "external_id": hashlib.sha1(f"{shipment.tracking_number}|{sc.get('date')}|{desc}".encode(), usedforsecurity=False).hexdigest()[:40]})
         return out
 
 
@@ -401,7 +401,7 @@ class UPS(LiveCarrier):
             number = results["ShipmentIdentificationNumber"]
             label = pkg["ShippingLabel"]["GraphicImage"]
         except (KeyError, IndexError, TypeError):
-            raise CarrierError("UPS did not return a tracking number and label.")
+            raise CarrierError("UPS did not return a tracking number and label.") from None
         return Booking(number, base64.b64decode(label), "gif")
 
     STATUS_MAP = {"M": "assigned", "I": "in_transit", "D": "delivered", "X": "exception", "P": "in_transit", "O": "out_for_delivery"}
@@ -426,7 +426,7 @@ class UPS(LiveCarrier):
             desc = (a.get("status") or {}).get("description", "")
             loc = ((a.get("location") or {}).get("address") or {}).get("city", "")
             out.append({"status": status, "description": desc[:255], "location": loc[:150], "occurred_at": when,
-                        "external_id": hashlib.sha1(f"{shipment.tracking_number}|{raw}|{desc}".encode()).hexdigest()[:40]})
+                        "external_id": hashlib.sha1(f"{shipment.tracking_number}|{raw}|{desc}".encode(), usedforsecurity=False).hexdigest()[:40]})
         return out
 
 

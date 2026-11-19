@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .models import AttemptStatus, Dispute, PaymentAttempt
+from .models import Dispute, PaymentAttempt
 
 logger = logging.getLogger(__name__)
 

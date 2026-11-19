@@ -1,9 +1,11 @@
+import hashlib
 import re
 
 from django.conf import settings
 from django.contrib.auth import password_validation
 from django.contrib.auth.models import update_last_login
-from rest_framework import serializers
+from django.core.cache import cache
+from rest_framework import exceptions, serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 
 from . import address_rules, mfa, phone as phone_utils
@@ -11,6 +13,7 @@ from .models import STAFF_ROLES, Address, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()  # declared so the model's unique-email check does not reveal who is registered
     password = serializers.CharField(write_only=True, min_length=8)
     accept_terms = serializers.BooleanField(write_only=True)
     marketing_opt_in = serializers.BooleanField(required=False, default=False)
@@ -25,10 +28,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_email(self, value):
-        value = value.lower()
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("An account with this email already exists.")
-        return value
+        # Whether this address already has an account is deliberately not revealed here; RegisterView handles it.
+        return value.lower()
 
     def validate(self, attrs):
         password_validation.validate_password(attrs["password"], User(email=attrs["email"]))
@@ -100,7 +101,20 @@ class MpankoTokenSerializer(TokenObtainSerializer):
     default_error_messages = {"no_active_account": "Email or password is wrong. Try again, or reset your password."}
 
     def validate(self, attrs):
-        super().validate(attrs)  # authenticates and sets self.user; raises on bad credentials
+        # Per-account lockout, on top of the per-IP throttle: guessing from many addresses still runs into this.
+        key = "login-fail:" + hashlib.sha256((attrs.get(self.username_field) or "").strip().lower().encode()).hexdigest()
+        if cache.get(key, 0) >= settings.LOGIN_MAX_FAILURES:
+            raise exceptions.Throttled(detail="Too many failed attempts. Try again in a few minutes, or reset your password.")
+        try:
+            super().validate(attrs)  # authenticates and sets self.user; raises on bad credentials
+        except exceptions.AuthenticationFailed:
+            try:
+                cache.add(key, 0, settings.LOGIN_LOCKOUT_SECONDS)
+                cache.incr(key)
+            except ValueError:
+                cache.set(key, 1, settings.LOGIN_LOCKOUT_SECONDS)
+            raise
+        cache.delete(key)
         user = self.user
         if user.role in STAFF_ROLES:
             if mfa.has_confirmed_device(user):

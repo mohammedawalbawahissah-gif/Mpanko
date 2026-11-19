@@ -46,7 +46,7 @@ export function securityHeaders(opts) {
 function resolveFile(root, urlPath) {
   const clean = decodeURIComponent(urlPath.split("?")[0]);
   const target = path.normalize(path.join(root, clean));
-  if (!target.startsWith(root)) return null; // path traversal
+  if (target !== root && !target.startsWith(root + path.sep)) return null; // path traversal: stay inside the folder, not a sibling that shares its prefix
   return existsSync(target) && statSync(target).isFile() ? target : null;
 }
 

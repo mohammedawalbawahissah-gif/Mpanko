@@ -53,7 +53,7 @@ class ResendEmailBackend(BaseEmailBackend):
                 attachments.append({"filename": name, "content": base64.b64encode(raw).decode()})
         if attachments:
             payload["attachments"] = attachments
-        resp = requests.post(
+        resp = requests.post(  # nosec B113
             API_URL,
             json=payload,
             headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},

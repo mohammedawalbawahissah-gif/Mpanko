@@ -8,7 +8,6 @@ import pytest
 from apps.payments.providers import InvalidSignature, ProviderError, get_provider
 from apps.payments.providers_momo import msisdn, request_id
 
-from .conftest import place_order
 
 pytestmark = pytest.mark.django_db
 

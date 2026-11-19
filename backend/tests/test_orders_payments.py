@@ -9,7 +9,7 @@ from apps.catalog.models import Inventory
 from apps.orders.models import Order, OrderStatus
 from apps.orders.services import expire_unpaid_orders
 from apps.payments.models import PaymentAttempt, Refund, WebhookEvent
-from apps.shipping.models import Carrier, Shipment
+from apps.shipping.models import Carrier
 
 from .conftest import client_for, make_product, make_user, place_order, signed_mock_webhook
 
@@ -170,7 +170,6 @@ def test_customer_return_verifies_with_provider(customer, address, product):
 
 
 def test_provider_must_support_order_currency(customer, address, product, settings):
-    from apps.payments import providers
     _, variant = product
     c, r = place_order(customer, variant, address, currency="GHS", service="local-standard")
     settings.PAYMENT_PROVIDERS_ENABLED = ["mock"]

@@ -1,6 +1,7 @@
+import http from "node:http";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { build } from "./build.mjs";
@@ -236,4 +237,21 @@ test("the menu page lists every section and sends each orderable dish to the sho
 test("the menu page is missing without a QT Eatery business and unavailable when the API is down", async () => {
   await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [FOODS], menu: MENU });
   await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [QT] });
+});
+
+test("a sibling folder that shares the site folder's name prefix is not served", async () => {
+  const parent = mkdtempSync(path.join(os.tmpdir(), "corp-"));
+  const dir = await build(path.join(parent, "dist"));
+  mkdirSync(path.join(parent, "dist-private"));
+  writeFileSync(path.join(parent, "dist-private", "key.txt"), "SECRET");
+  const server = makeServer({ root: dir, apiUrl: "http://api.test", siteUrl: "https://www.example.org", fetchImpl: fakeApi({ mode: "up", businesses: [FOODS], calls: [], posts: [] }) });
+  await new Promise((r) => server.listen(0, r));
+  const port = server.address().port;
+  const raw = (p) => new Promise((resolve) => {
+    const req = http.request({ host: "127.0.0.1", port, path: p, method: "GET" }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode)); });
+    req.end();
+  });
+  try {
+    for (const p of ["/../dist-private/key.txt", "/%2e%2e/dist-private/key.txt"]) assert.equal(await raw(p), 404, p);
+  } finally { server.close(); }
 });

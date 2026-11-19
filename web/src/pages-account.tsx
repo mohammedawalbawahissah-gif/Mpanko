@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { BrowserPushToggle } from "./pages-notifications";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { safeNext } from "./safe-next";
 import { api, ApiError, downloadFile, type Page } from "./api";
 import { AddressForm } from "./address";
 import { Alert, Field, Loading, PasswordInput, useAsync } from "./components";
@@ -37,7 +38,7 @@ export function Login() {
   const { t } = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const next = params.get("next") || "/";
+  const next = safeNext(params.get("next"));
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -130,7 +131,7 @@ export function Register() {
   const { t } = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const next = params.get("next") || "/";
+  const next = safeNext(params.get("next"));
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

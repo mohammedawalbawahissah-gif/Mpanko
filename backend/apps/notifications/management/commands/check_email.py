@@ -15,5 +15,5 @@ class Command(BaseCommand):
         try:
             send_mail("Mpanko email check", "If you can read this, Mpanko can send email.", settings.DEFAULT_FROM_EMAIL, [to])
         except Exception as exc:  # noqa: BLE001 — show any provider error plainly
-            raise CommandError(f"Sending failed: {exc}")
+            raise CommandError(f"Sending failed: {exc}") from exc
         self.stdout.write(self.style.SUCCESS(f"Sent to {to}. Check the inbox (and spam)."))

@@ -1,11 +1,12 @@
 // @vitest-environment node
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import http from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { csp, makeServer } from "../server.mjs";
 
-let server, base;
+let server, base, siblingName;
 beforeAll(async () => {
   const root = mkdtempSync(path.join(tmpdir(), "site-"));
   mkdirSync(path.join(root, "assets"));
@@ -14,6 +15,9 @@ beforeAll(async () => {
   writeFileSync(path.join(root, "assets", "app-abc.js"), "console.log(1)");
   writeFileSync(path.join(root, "shop", "kente", "index.html"), "<html>kente</html>");
   writeFileSync(path.join(root, "secret.txt"), "top");
+  mkdirSync(`${root}-private`);
+  writeFileSync(path.join(`${root}-private`, "key.txt"), "SECRET");
+  siblingName = path.basename(root) + "-private";
   server = makeServer({ root: path.join(root, "."), apiOrigin: "https://api.example.com" });
   await new Promise((r) => server.listen(0, r));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -64,5 +68,15 @@ describe("static server", () => {
   it("lets images come from the configured origins only", () => {
     expect(csp({ imgOrigins: "https://cdn.example.com" })).toContain("img-src 'self' data: https://cdn.example.com");
     expect(csp({})).toContain("img-src 'self' data: https:");
+  });
+
+  it("does not serve a sibling folder that shares the site folder's name prefix", async () => {
+    const raw = (p) => new Promise((resolve) => {
+      const req = http.request({ host: "127.0.0.1", port: server.address().port, path: p, method: "GET" }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode)); });
+      req.end();
+    });
+    for (const p of [`/../${siblingName}/key.txt`, `/%2e%2e/${siblingName}/key.txt`, `/..%2f${siblingName}/key.txt`]) {
+      expect(await raw(p), p).toBe(404);
+    }
   });
 });

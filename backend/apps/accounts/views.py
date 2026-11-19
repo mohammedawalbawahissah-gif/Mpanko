@@ -34,9 +34,24 @@ class RegisterView(AuthThrottled, generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        transaction.on_commit(lambda: send_verification_email.delay(user.pk))
+    def create(self, request, *args, **kwargs):
+        """
+        The reply is the same whether or not the address already has an account, so this form cannot be used to find out
+        who is registered. An existing owner gets a password-reset email instead of a new account.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+        existing = User.objects.filter(email__iexact=d["email"]).first()
+        if existing:
+            if existing.is_active:
+                transaction.on_commit(lambda: send_password_reset_email.delay(existing.pk))
+        else:
+            user = serializer.save()
+            transaction.on_commit(lambda: send_verification_email.delay(user.pk))
+        return Response(
+            {"email": d["email"], "full_name": d.get("full_name", ""), "phone": d.get("phone", "")}, status=status.HTTP_201_CREATED,
+        )
 
 
 class LoginView(AuthThrottled, TokenObtainPairView):
@@ -140,7 +155,7 @@ class PasswordResetConfirmView(AuthThrottled, APIView):
         try:
             password_validation.validate_password(s.validated_data["new_password"], user)
         except Exception as exc:
-            raise ValidationError({"new_password": list(getattr(exc, "messages", [str(exc)]))})
+            raise ValidationError({"new_password": list(getattr(exc, "messages", [str(exc)]))}) from exc
         user.set_password(s.validated_data["new_password"])
         user.save(update_fields=["password"])  # also invalidates the reset token (it hashes the old password)
         _revoke_all_sessions(user)
@@ -157,7 +172,7 @@ class ChangePasswordView(AuthThrottled, APIView):
         try:
             password_validation.validate_password(s.validated_data["new_password"], request.user)
         except Exception as exc:
-            raise ValidationError({"new_password": list(getattr(exc, "messages", [str(exc)]))})
+            raise ValidationError({"new_password": list(getattr(exc, "messages", [str(exc)]))}) from exc
         request.user.set_password(s.validated_data["new_password"])
         request.user.save(update_fields=["password"])
         _revoke_all_sessions(request.user)
@@ -289,7 +304,7 @@ class PhoneLoginRequestView(AuthThrottled, APIView):
         try:
             phone_utils.request_login_code(s.validated_data["phone"])
         except phone_utils.PhoneError as exc:
-            raise ValidationError({"phone": str(exc)})
+            raise ValidationError({"phone": str(exc)}) from exc
         return Response({"detail": "If that number is linked to an account, a code has been sent by SMS."})
 
 
@@ -314,7 +329,7 @@ class PhoneVerifyRequestView(AuthThrottled, APIView):
         try:
             phone = phone_utils.request_verify_code(request.user, s.validated_data["phone"])
         except phone_utils.PhoneError as exc:
-            raise ValidationError({"phone": str(exc)})
+            raise ValidationError({"phone": str(exc)}) from exc
         return Response({"detail": "We sent a code by SMS.", "phone": phone})
 
 
@@ -326,7 +341,7 @@ class PhoneVerifyConfirmView(AuthThrottled, APIView):
         try:
             user = phone_utils.confirm_verify_code(request.user, s.validated_data["phone"], s.validated_data["code"])
         except phone_utils.PhoneError as exc:
-            raise ValidationError({"code": str(exc)})
+            raise ValidationError({"code": str(exc)}) from exc
         return Response(UserSerializer(user).data)
 
 

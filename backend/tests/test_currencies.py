@@ -8,7 +8,7 @@ from apps.currency.models import ExchangeRate
 from apps.currency.services import refresh_if_stale, refresh_live_rates
 from apps.orders import pricing
 
-from .conftest import client_for, make_product, place_order
+from .conftest import client_for, place_order
 from .test_fx_carriers import FakeResponse
 
 pytestmark = pytest.mark.django_db

@@ -1,8 +1,9 @@
 """Extra response headers for the API. JSON has nothing to render, so the policy is as strict as it can be."""
+from django.conf import settings
 
 PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
 # The API docs page loads its viewer from a CDN, and Django's own admin has inline scripts, so those paths keep their own rules.
-RELAXED_PREFIXES = ("/api/v1/docs", "/api/v1/schema", "/django-admin", "/admin/")
+RELAXED_PREFIXES = ("/api/v1/docs", "/api/v1/schema", "/django-admin", "/" + settings.ADMIN_URL)
 
 
 class SecurityHeadersMiddleware:

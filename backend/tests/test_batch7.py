@@ -8,17 +8,17 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
 from apps.accounts import phone as phone_utils
-from apps.accounts.models import Address, PhoneOTP, Role, User
-from apps.catalog.models import Inventory, Product, ProductVariant
+from apps.accounts.models import PhoneOTP, User
+from apps.catalog.models import Product
 from apps.notifications.models import NotificationLog
 from apps.orders.models import Order, OrderStatus
 from apps.payments.models import Dispute, PaymentAttempt
 from apps.payments.providers import MockProvider
-from apps.shipping.models import Carrier, ShippingRate, ShippingZone
+from apps.shipping.models import ShippingRate, ShippingZone
 from apps.tax.models import DutyRule, TaxRule
 
-from .conftest import client_for, make_product, make_user, place_order
-from .test_batch1 import assigned_shipment, pay
+from .conftest import client_for, make_product, place_order
+from .test_batch1 import assigned_shipment
 from .test_orders_payments import paid_order
 
 pytestmark = pytest.mark.django_db

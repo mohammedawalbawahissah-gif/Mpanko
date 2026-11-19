@@ -55,7 +55,7 @@ def template_detail(request, key):
     try:
         services.validate_template(key, s.validated_data["subject"], s.validated_data["body"])
     except ValueError as exc:
-        raise ValidationError({"body": f"This text cannot be used: {exc}"})
+        raise ValidationError({"body": f"This text cannot be used: {exc}"}) from exc
     row, _ = EmailTemplate.objects.update_or_create(key=key, defaults={**s.validated_data, "updated_by": request.user})
     AuditLog.record(request.user, "email_template.update", row, key=key)
     return Response(_describe(key))
@@ -165,8 +165,32 @@ class InboxViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.Gen
 # ---- browser push --------------------------------------------------------------------------------------------
 
 
+# Browsers hand out push endpoints on their vendor's push service. Anything else would make the server send requests to a
+# host the customer chose, so only https URLs on these hosts (or their subdomains) are accepted.
+WEB_PUSH_HOSTS = ("fcm.googleapis.com", "android.googleapis.com", "push.services.mozilla.com", "push.apple.com", "notify.windows.com", "push.microsoft.com")
+
+
+def is_push_endpoint(url):
+    from urllib.parse import urlparse
+
+    try:
+        parts = urlparse(url)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return False
+    if parts.scheme != "https" or parts.username or parts.password or parts.port not in (None, 443):
+        return False
+    return any(host == h or host.endswith("." + h) for h in WEB_PUSH_HOSTS)
+
+
 class WebPushSerializer(serializers.Serializer):
     endpoint = serializers.URLField(max_length=500)
+
+    def validate_endpoint(self, value):
+        if not is_push_endpoint(value):
+            raise serializers.ValidationError("That is not a browser push address.")
+        return value
+
     p256dh = serializers.CharField(max_length=200, required=False)
     auth = serializers.CharField(max_length=100, required=False)
 

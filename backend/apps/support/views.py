@@ -2,20 +2,20 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, permissions, status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog, Role
-from apps.accounts.permissions import FinanceStaff, IsStaffRole, roles_permission
+from apps.accounts.permissions import FinanceStaff, roles_permission
 from apps.orders.models import Order
 from apps.payments.providers import ProviderError
 
 from . import services
 from .models import ReturnRequest, SupportCase, SupportMessage
 from .serializers import (
-    ApproveSerializer, CaseCreateSerializer, CaseSerializer, MessageCreateSerializer, MessageSerializer, ReceiveSerializer,
+    ApproveSerializer, CaseCreateSerializer, CaseSerializer, MessageCreateSerializer, ReceiveSerializer,
     RejectSerializer, ReturnCreateSerializer, ReturnSerializer,
 )
 from .tasks import send_case_reply, send_return_email
@@ -67,7 +67,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = services.create_return(request.user, order, d["items"], d["reason"], d["note"])
         except services.ReturnError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         transaction.on_commit(lambda: send_return_email.delay("return_requested", req.pk))
         return Response(ReturnSerializer(req).data, status=status.HTTP_201_CREATED)
 
@@ -78,7 +78,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = fn(req, **kwargs)
         except (services.ReturnError, ProviderError) as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         if key:
             transaction.on_commit(lambda: send_return_email.delay(key, req.pk))
         if audit:

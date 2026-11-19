@@ -1,7 +1,6 @@
 """Receives crashes from the web, admin and mobile apps so they appear next to server errors (NFR-05)."""
 import logging
 
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, serializers
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes

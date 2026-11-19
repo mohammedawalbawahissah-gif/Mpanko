@@ -16,7 +16,7 @@ def clean_value(kind, raw):
         try:
             validate_email(raw)
         except ValidationError:
-            raise ValidationError("Enter a valid email address.")
+            raise ValidationError("Enter a valid email address.") from None
         return raw.lower()
     digits = re.sub(r"\D", "", raw)
     if not 7 <= len(digits) <= 15:

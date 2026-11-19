@@ -16,6 +16,7 @@ def _settings(settings):
     settings.FX_AUTO_REFRESH = False
     settings.MANUAL_FX_RATES = {"GHS": "10"}
     settings.SHIPPING_FLAT_RATE = "30.00"
+    settings.LAUNCH_COUNTRIES = []  # a LAUNCH_COUNTRIES line in a developer's .env must not change what the tests see
     settings.TAX_RATE = "0"
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "DEFAULT_THROTTLE_CLASSES": ()}

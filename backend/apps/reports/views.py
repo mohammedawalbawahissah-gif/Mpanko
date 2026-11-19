@@ -31,7 +31,7 @@ def _date(value, name):
     try:
         return date.fromisoformat(value)
     except ValueError:
-        raise ValidationError({name: "Use YYYY-MM-DD."})
+        raise ValidationError({name: "Use YYYY-MM-DD."}) from None
 
 
 def window(request):
@@ -54,7 +54,7 @@ def respond(request, filename, columns, rows):
         writer.writerow(columns)
         for row in rows:
             # Prefix values that spreadsheets would treat as formulas, so exported data cannot run code when opened.
-            writer.writerow([("'" + str(row[c])) if isinstance(row[c], str) and row[c][:1] in "=+-@" else row[c] for c in columns])
+            writer.writerow([("'" + row[c]) if isinstance(row[c], str) and row[c][:1] and row[c][0] in "=+-@\t\r" else row[c] for c in columns])
         return resp
     return Response({"columns": columns, "rows": rows, "count": len(rows)})
 

@@ -11,7 +11,7 @@ import pytest
 from apps.payments.models import AttemptStatus, Dispute, PaymentAttempt
 from apps.payments.providers import InvalidSignature, ProviderError, enabled_providers, get_provider
 
-from .conftest import client_for, place_order
+from .conftest import place_order
 
 pytestmark = pytest.mark.django_db
 

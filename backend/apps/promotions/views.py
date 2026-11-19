@@ -1,6 +1,6 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, serializers, viewsets
+from rest_framework import serializers, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -65,7 +65,7 @@ def check(request):
         coupon = services.find(s.validated_data["code"])
         amount = services.discount_for(coupon, request.user, subtotal, 0, currency)
     except services.CouponError as exc:
-        raise ValidationError({"code": str(exc)})
+        raise ValidationError({"code": str(exc)}) from exc
     return Response({
         "code": coupon.code, "kind": coupon.kind, "description": coupon.description, "currency": currency,
         "discount": str(amount) if coupon.kind != "free_shipping" else "0", "free_shipping": coupon.kind == "free_shipping",

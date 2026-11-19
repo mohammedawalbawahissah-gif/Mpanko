@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.orders.models import Order, OrderStatus
 from apps.orders.services import transition
-from apps.privacy.models import ConsentRecord, LegalPage
+from apps.privacy.models import LegalPage
 from apps.privacy.services import apply_retention
 
 from .conftest import client_for, make_product

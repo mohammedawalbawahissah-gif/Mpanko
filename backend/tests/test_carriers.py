@@ -4,7 +4,6 @@ from decimal import Decimal
 import pytest
 import requests
 
-from apps.orders.models import Order
 from apps.shipping import carriers, providers
 from apps.shipping.models import Carrier, Shipment
 

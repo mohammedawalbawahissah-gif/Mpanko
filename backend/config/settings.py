@@ -106,7 +106,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # emailed verify/reset links live 24h
-REQUIRE_STAFF_MFA = env_bool("REQUIRE_STAFF_MFA", False)  # on in production once staff have enrolled
+# Staff must use a second step in production; they are walked through enrolment at their next sign-in. Off while DEBUG is on.
+REQUIRE_STAFF_MFA = env_bool("REQUIRE_STAFF_MFA", not DEBUG)
+ADMIN_URL = os.environ.get("ADMIN_URL", "admin/").strip("/") + "/"  # set to something unguessable in production
+API_DOCS_PUBLIC = env_bool("API_DOCS_PUBLIC", False)
+LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "10"))
+LOGIN_LOCKOUT_SECONDS = int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "900"))
 REQUIRE_VERIFIED_EMAIL = env_bool("REQUIRE_VERIFIED_EMAIL", False)  # block checkout until email is verified
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -122,6 +127,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Refuse images that decode to an enormous number of pixels (decompression bombs); real photos are far below this.
+from PIL import Image as _PILImage  # noqa: E402
+
+_PILImage.MAX_IMAGE_PIXELS = 50_000_000
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 STORAGES = {
@@ -166,7 +175,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ),
-    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "1000/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "client_errors": "30/hour", "guest_checkout": "30/hour", "corporate_contact": os.environ.get("THROTTLE_CORPORATE_CONTACT", "200/hour")},
+    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "600/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "webhook": os.environ.get("THROTTLE_WEBHOOK", "300/minute"), "account_delete": "5/hour", "client_errors": "30/hour", "guest_checkout": "30/hour", "corporate_contact": os.environ.get("THROTTLE_CORPORATE_CONTACT", "200/hour")},
 }
 
 SIMPLE_JWT = {

@@ -7,7 +7,6 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from apps.accounts.models import Role
 from apps.currency.models import ExchangeRate
 from apps.currency.services import refresh_live_rates
 from apps.orders import pricing
@@ -17,7 +16,7 @@ from apps.shipping.providers import DHLTracking, TrackingError
 from apps.shipping.services import sync_shipment
 from apps.shipping.tasks import poll_active_shipments
 
-from .conftest import client_for, make_user, place_order
+from .conftest import client_for, place_order
 from .test_orders_payments import paid_order
 
 pytestmark = pytest.mark.django_db

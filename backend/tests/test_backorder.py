@@ -1,7 +1,7 @@
 """FR-CAT-04: staff can let shoppers order out-of-stock items, with a wait time."""
 import pytest
 
-from .conftest import client_for, make_product, place_order
+from .conftest import client_for, make_product
 
 pytestmark = pytest.mark.django_db
 

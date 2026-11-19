@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.accounts.tokens import email_verification_token
 from apps.catalog.models import Inventory
-from apps.orders.guest import SALT, make_token
+from apps.orders.guest import make_token
 from apps.orders.models import Order
 from apps.promotions.models import Coupon
 

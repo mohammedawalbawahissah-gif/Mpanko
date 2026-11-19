@@ -105,7 +105,7 @@ class GuestCheckoutView(GuestOnly, Throttled, APIView):
                 guest={"email": d["email"], "items": [(i["variant"], i["quantity"]) for i in d["items"]]},
             )
         except CheckoutError as exc:
-            raise ValidationError({exc.field: exc.message})
+            raise ValidationError({exc.field: exc.message}) from exc
         if created:
             from .tasks import send_guest_order_link
 

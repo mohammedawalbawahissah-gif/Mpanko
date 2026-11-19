@@ -70,18 +70,18 @@ def test_browser_push_needs_keys_and_subscribes_per_browser(api, customer, setti
     settings.VAPID_PUBLIC_KEY, settings.VAPID_PRIVATE_KEY = pub, priv
     assert api.get("/api/v1/notifications/web-push/key/").data == {"public_key": pub}
     c = client_for(customer)
-    body = {"endpoint": "https://push.example/abc", "p256dh": "k", "auth": "a"}
+    body = {"endpoint": "https://fcm.googleapis.com/fcm/send/abc", "p256dh": "k", "auth": "a"}
     assert c.post("/api/v1/notifications/web-push/", body, format="json").data == {"subscribed": True}
-    assert c.post("/api/v1/notifications/web-push/", {"endpoint": "https://push.example/abc"}, format="json").status_code == 400
+    assert c.post("/api/v1/notifications/web-push/", {"endpoint": "https://fcm.googleapis.com/fcm/send/abc"}, format="json").status_code == 400
     assert WebPushSubscription.objects.filter(user=customer).count() == 1
-    assert c.delete("/api/v1/notifications/web-push/", {"endpoint": "https://push.example/abc"}, format="json").data == {"subscribed": False}
+    assert c.delete("/api/v1/notifications/web-push/", {"endpoint": "https://fcm.googleapis.com/fcm/send/abc"}, format="json").data == {"subscribed": False}
     assert WebPushSubscription.objects.count() == 0
 
 
 @pytest.mark.django_db
 def test_an_event_is_pushed_to_the_customers_browsers_when_they_allow_it(customer, settings):
     settings.VAPID_PUBLIC_KEY, settings.VAPID_PRIVATE_KEY = make_keys()
-    WebPushSubscription.objects.create(user=customer, endpoint="https://push.example/abc", p256dh="k", auth="a")
+    WebPushSubscription.objects.create(user=customer, endpoint="https://fcm.googleapis.com/fcm/send/abc", p256dh="k", auth="a")
     ctx = {**CTX, "name": "A", "total": "1", "order_url": "x", "items": ""}
     with patch("pywebpush.webpush") as sent:
         send_notification("order_confirmation", customer.email, ctx, ref="1")  # push is off by default
@@ -101,7 +101,7 @@ def test_a_dead_browser_is_forgotten(customer, settings):
     from apps.notifications.push import send_web_push
 
     settings.VAPID_PUBLIC_KEY, settings.VAPID_PRIVATE_KEY = make_keys()
-    WebPushSubscription.objects.create(user=customer, endpoint="https://push.example/gone", p256dh="k", auth="a")
+    WebPushSubscription.objects.create(user=customer, endpoint="https://fcm.googleapis.com/fcm/send/gone", p256dh="k", auth="a")
 
     class Gone:
         status_code = 410
@@ -136,7 +136,7 @@ def test_deleting_an_account_removes_notifications_and_devices(customer):
     from apps.privacy.services import delete_account, export_user_data
 
     InboxMessage.objects.create(user=customer, key="k", title="Order confirmed", path="orders")
-    WebPushSubscription.objects.create(user=customer, endpoint="https://push.example/x", p256dh="k", auth="a")
+    WebPushSubscription.objects.create(user=customer, endpoint="https://fcm.googleapis.com/fcm/send/x", p256dh="k", auth="a")
     DeviceToken.objects.create(user=customer, token="ExponentPushToken[z]")
     assert export_user_data(customer)["notifications"][0]["title"] == "Order confirmed"
     delete_account(customer)

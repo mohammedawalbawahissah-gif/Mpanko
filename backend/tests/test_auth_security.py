@@ -5,9 +5,9 @@ import pyotp
 import pytest
 from django.core import mail
 
-from apps.accounts.models import Role, TOTPDevice
+from apps.accounts.models import TOTPDevice
 
-from .conftest import client_for, make_user, place_order
+from .conftest import client_for, place_order
 
 pytestmark = pytest.mark.django_db
 

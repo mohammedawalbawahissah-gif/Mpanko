@@ -117,23 +117,36 @@ def refundable_amount(attempt):
     return attempt.amount - refunded
 
 
-@transaction.atomic
 def issue_refund(order, amount, reason, actor):
-    attempt = order.payment_attempts.select_for_update().filter(status=AttemptStatus.SUCCEEDED).first()
-    if not attempt:
-        raise ProviderError("This order has no successful payment to refund.")
-    remaining = refundable_amount(attempt)
-    amount = Decimal(amount) if amount is not None else remaining
-    if amount <= 0 or amount > remaining:
-        raise ProviderError(f"Refund must be between 0.01 and {remaining} {attempt.currency}.")
-    provider_ref = get_provider(attempt.provider).refund(attempt, amount, reason)
-    refund = Refund.objects.create(
-        attempt=attempt, order=order, amount=amount, currency=attempt.currency, reason=reason,
-        status=Refund.Status.SUCCEEDED, provider_reference=provider_ref, requested_by=actor,
-    )
-    if refundable_amount(attempt) == 0:
-        move_attempt(attempt, S.REFUNDED, "refund", reason)
-        order_services.transition(order, OrderStatus.REFUNDED, actor=actor, note=reason or "Fully refunded")
+    """
+    Refund in three steps so the provider is never called while a database lock is held and a crash cannot
+    leave money moved with no record: (1) reserve the amount as a pending Refund, (2) ask the provider,
+    (3) record the outcome. A refund that was reserved but whose outcome is unknown stays 'pending' for reconciliation.
+    """
+    with transaction.atomic():
+        attempt = order.payment_attempts.select_for_update().filter(status=AttemptStatus.SUCCEEDED).first()
+        if not attempt:
+            raise ProviderError("This order has no successful payment to refund.")
+        remaining = refundable_amount(attempt)
+        amount = Decimal(amount) if amount is not None else remaining
+        if amount <= 0 or amount > remaining:
+            raise ProviderError(f"Refund must be between 0.01 and {remaining} {attempt.currency}.")
+        refund = Refund.objects.create(
+            attempt=attempt, order=order, amount=amount, currency=attempt.currency, reason=reason,
+            status=Refund.Status.PENDING, requested_by=actor,
+        )
+    try:
+        provider_ref = get_provider(attempt.provider).refund(attempt, amount, reason)
+    except ProviderError:
+        Refund.objects.filter(pk=refund.pk).update(status=Refund.Status.FAILED)
+        raise
+    with transaction.atomic():
+        refund.status, refund.provider_reference = Refund.Status.SUCCEEDED, provider_ref
+        refund.save(update_fields=["status", "provider_reference"])
+        attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt.pk)
+        if refundable_amount(attempt) == 0:
+            move_attempt(attempt, S.REFUNDED, "refund", reason)
+            order_services.transition(order, OrderStatus.REFUNDED, actor=actor, note=reason or "Fully refunded")
     return refund
 
 

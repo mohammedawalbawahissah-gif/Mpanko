@@ -42,7 +42,7 @@ def _call(method, url, what, **kwargs):
     try:
         resp = requests.request(method, url, timeout=kwargs.pop("timeout", 20), **kwargs)
     except requests.RequestException as exc:
-        raise ProviderError(f"{what} unreachable: {exc}")
+        raise ProviderError(f"{what} unreachable: {exc}") from exc
     try:
         data = resp.json() if resp.content else {}
     except ValueError:
@@ -120,7 +120,7 @@ class StripeProvider(PaymentProvider):
         try:
             age = abs(time.time() - int(stamp))
         except ValueError:
-            raise InvalidSignature()
+            raise InvalidSignature() from None
         if age > self.tolerance_seconds:
             raise InvalidSignature()
 
@@ -392,7 +392,7 @@ class PayPalProvider(PaymentProvider):
         try:
             resp, data = _call("POST", f"{self.base_url}/v1/notifications/verify-webhook-signature", "PayPal", headers=self._headers(), json=body)
         except ProviderError:
-            raise InvalidSignature()
+            raise InvalidSignature() from None
         if not resp.ok or data.get("verification_status") != "SUCCESS":
             raise InvalidSignature()
 
