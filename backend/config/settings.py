@@ -211,6 +211,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_BEAT_SCHEDULE = {
     # Release stock held by unpaid orders once their reservation window passes.
     "expire-unpaid-orders": {"task": "apps.orders.tasks.expire_unpaid_orders_task", "schedule": 300.0},
+    "reverify-pending-payments": {"task": "apps.payments.tasks.reverify_pending_payments_task", "schedule": 300.0},
     "poll-carrier-tracking": {"task": "apps.shipping.tasks.poll_active_shipments", "schedule": 1800.0},
     "apply-retention": {"task": "apps.privacy.tasks.run_retention", "schedule": 24 * 3600.0},
     "refresh-fx-rates": {"task": "apps.currency.tasks.refresh_fx_rates", "schedule": 6 * 3600.0},
