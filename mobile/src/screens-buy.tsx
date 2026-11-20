@@ -17,7 +17,7 @@ import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, S
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
   OrderDetail: { number: string }; Return: { number: string };
-  Profile: undefined; Notifications: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
+  Profile: undefined; Legal: { slug: string }; Notifications: undefined; SupportList: undefined; SupportNew: { order?: string }; SupportThread: { number: string };
 };
 type Nav = NavigationProp<RootParams>;
 

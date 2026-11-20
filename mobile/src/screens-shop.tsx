@@ -12,14 +12,15 @@ import { mainPhoto, photoList } from "./core/images";
 import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
 
 const GRID_GAP = 10;
-export type ShopStack = { List: undefined; Product: { slug: string }; Menu: { slug: string } };
-export type RootTabs = { Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
+export type ShopStack = { List: { category?: string } | undefined; Product: { slug: string }; Menu: { slug: string } };
+export type RootTabs = { Home: undefined; Shop: undefined; Bag: undefined; Orders: undefined; Account: undefined };
 
-export function ShopList({ navigation }: NativeStackScreenProps<ShopStack, "List">) {
+export function ShopList({ navigation, route }: NativeStackScreenProps<ShopStack, "List">) {
   const { t, money, currency } = usePrefs();
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string | null>(null); // a category address (slug), which the shop API filters on
+  const [cat, setCat] = useState<string | null>(route.params?.category ?? null); // a category address (slug), which the shop API filters on
+  useEffect(() => { if (route.params?.category) setCat(route.params.category); }, [route.params?.category]);
   // Search as you type: wait for a short pause so each keystroke is not a request.
   useEffect(() => {
     const id = setTimeout(() => setQuery(q.trim()), 350);

@@ -18,6 +18,8 @@ import { ErrorBoundary } from "./src/crash";
 import { installGlobalErrorReporting, setCurrentScreen } from "./src/report";
 import { FindOrderScreen, GuestCheckoutScreen, GuestOrderScreen } from "./src/screens-guest";
 import { BagScreen, CheckoutScreen, OrderDetailScreen, OrdersScreen, type RootParams } from "./src/screens-buy";
+import { HomeScreen } from "./src/screens-home";
+import { LegalScreen } from "./src/screens-legal";
 import { MenuScreen } from "./src/screens-menu";
 import { ProductScreen, ShopList, type RootTabs, type ShopStack } from "./src/screens-shop";
 import { NotificationBell, NotificationsScreen } from "./src/screens-notifications";
@@ -56,6 +58,13 @@ function TabLabel({ text, focused }: { text: string; focused: boolean }) {
 function TabIcon({ name, tint }: { name: keyof RootTabs; tint: string }) {
   const line = { borderColor: tint, borderWidth: 2 } as const;
   const box = { width: 22, height: 22, alignItems: "center" as const, justifyContent: "center" as const };
+  if (name === "Home")
+    return (
+      <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={{ width: 0, height: 0, borderLeftWidth: 11, borderRightWidth: 11, borderBottomWidth: 9, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: tint }} />
+        <View style={{ width: 16, height: 9, backgroundColor: tint }} />
+      </View>
+    );
   if (name === "Shop")
     return (
       <View style={box} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
@@ -94,6 +103,7 @@ function TabsNav() {
   const count = user ? cart.reduce((n, i) => n + i.quantity, 0) : guestLines.reduce((n, l) => n + l.quantity, 0);
   return (
     <Tabs.Navigator screenOptions={({ route }) => ({ ...header(), tabBarActiveTintColor: color.teal, tabBarInactiveTintColor: color.muted, headerRight: () => <NotificationBell />, headerBackground: () => (<View style={{ flex: 1, backgroundColor: color.ink, justifyContent: "flex-end" }}><KenteBand /></View>), tabBarIcon: ({ color: tint }) => <TabIcon name={route.name} tint={tint} /> })}>
+      <Tabs.Screen name="Home" component={HomeScreen} options={{ title: "Mpanko", tabBarLabel: ({ focused }) => <TabLabel text={t("tab.home")} focused={focused} /> }} />
       <Tabs.Screen name="Shop" component={ShopNav} options={{ headerShown: false, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.shop")} focused={focused} /> }} />
       <Tabs.Screen name="Bag" component={BagScreen} options={{ title: t("tab.bag"), tabBarBadge: count > 0 ? count : undefined, tabBarLabel: ({ focused }) => <TabLabel text={t("tab.bag")} focused={focused} /> }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ title: t("tab.orders"), tabBarLabel: ({ focused }) => <TabLabel text={t("tab.orders")} focused={focused} /> }} />
@@ -151,6 +161,7 @@ function RootNav() {
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: t("orders.order") }} />
       <Root.Screen name="Return" component={ReturnScreen} options={{ title: t("m.returnItems") }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: t("notifications.title") }} />
+      <Root.Screen name="Legal" component={LegalScreen} options={({ route }) => ({ title: ({ privacy: t("m.legalPrivacy"), terms: t("m.legalTerms"), returns: t("m.legalReturns"), cookies: t("m.legalCookies") } as Record<string, string>)[route.params.slug] ?? "Mpanko" })} />
       <Root.Screen name="Profile" component={ProfileScreen} options={{ title: t("prefs.title") }} />
       <Root.Screen name="SupportList" component={SupportListScreen} options={{ title: t("m.helpSupport") }} />
       <Root.Screen name="SupportNew" component={SupportNewScreen} options={{ title: t("m.askUs") }} />

@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Alert, Linking, Share, Switch, View } from "react-native";
+import { Alert, Share, Switch, View } from "react-native";
 import { Text } from "./text";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { api, ApiError, BASE } from "./api";
+import { api, ApiError } from "./api";
 import type { RootParams } from "./screens-buy";
 import { useAuth } from "./auth";
 import { color } from "./theme";
 import { usePrefs } from "./prefs";
 import { FormScreen, Button, Input, Notice, ContactButtons, s } from "./ui";
 
-const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? BASE.replace(/\/api\/v1\/?$/, "").replace(":8000", ":5173");
 
 export function AccountScreen() {
   const { user, logout, login, register, requestPhoneCode, loginWithPhone } = useAuth();
@@ -96,7 +95,10 @@ export function AccountScreen() {
           <Button title={t("m.deleteAccount")} kind="quiet" onPress={() => setDeleting(true)} />
         )}
         <View style={{ height: 8 }} />
-        <Button title={t("m.privacyPolicy")} kind="quiet" onPress={() => Linking.openURL(`${webUrl}/privacy`)} />
+        <Button title={t("m.privacyPolicy")} kind="quiet" onPress={() => nav.navigate("Legal", { slug: "privacy" })} />
+        <Button title={t("m.legalTerms")} kind="quiet" onPress={() => nav.navigate("Legal", { slug: "terms" })} />
+        <Button title={t("m.legalReturns")} kind="quiet" onPress={() => nav.navigate("Legal", { slug: "returns" })} />
+        <Button title={t("m.legalCookies")} kind="quiet" onPress={() => nav.navigate("Legal", { slug: "cookies" })} />
       </FormScreen>
     );
   }
@@ -133,7 +135,7 @@ export function AccountScreen() {
             <Text style={{ flex: 1 }} importantForAccessibility="no" accessibilityElementsHidden onPress={() => setAgree(!agree)}>{t("register.agree")} {t("register.terms")} {t("register.and")} {t("register.privacy")}</Text>
             <Switch accessibilityLabel={t("m.acceptTermsPrivacy")} value={agree} onValueChange={setAgree} />
           </View>
-          <Text accessibilityRole="link" style={{ color: color.teal, paddingVertical: 12 }} onPress={() => Linking.openURL(`${webUrl}/terms`)}>{t("m.readTerms")}</Text>
+          <Text accessibilityRole="link" style={{ color: color.teal, paddingVertical: 12 }} onPress={() => nav.navigate("Legal", { slug: "terms" })}>{t("m.readTerms")}</Text>
           {!!errors.accept_terms && <Text style={s.fieldError}>{errors.accept_terms}</Text>}
           <View style={[s.row, { marginBottom: 14 }]}>
             <Text style={{ flex: 1 }} importantForAccessibility="no" accessibilityElementsHidden onPress={() => setMarketing(!marketing)}>{t("register.marketing")}</Text>
