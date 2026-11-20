@@ -109,7 +109,8 @@ interface Options {
 
 export async function api<T = unknown>(path: string, opts: Options = {}, retry = true): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(opts.headers ?? {}) };
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  if (opts.body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   const tokens = await getTokens();
   if (tokens) headers.Authorization = `Bearer ${tokens.access}`;
   let res: Response;
@@ -117,7 +118,7 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retry =
     res = await fetch(`${BASE}${path}`, {
       method: opts.method ?? "GET",
       headers,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
     });
   } catch {
     throw new ApiError(0, { detail: "Can't reach the Mpanko server. Check your connection and try again." });
