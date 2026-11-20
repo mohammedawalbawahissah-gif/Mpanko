@@ -234,6 +234,31 @@ test("the menu page lists every section and sends each orderable dish to the sho
   }, { businesses: [QT], menu: MENU, shopUrl: "https://shop.example.org" });
 });
 
+test("the menu has drop-down categories, a search bar with a field choice, and sort buttons", async () => {
+  await withServer(async (base) => {
+    const html = await (await fetch(base + "/menu")).text();
+    assert.equal((html.match(/<details class="menu-dd"/g) || []).length, 2, "each category is a drop-down");
+    assert.ok(html.includes('name="q"') && html.includes('name="in"'));
+    assert.ok(html.includes('<option value="name">Dish</option>'));
+    assert.ok(!html.includes("<select name=\"sort\""), "sorting is buttons, not a select box");
+    assert.equal((html.match(/class="sortbtn"/g) || []).length, 5);
+  }, { businesses: [QT], menu: MENU, shopUrl: "https://shop.example.org" });
+});
+
+test("searching the menu narrows it to what matches and keeps the choices", async () => {
+  await withServer(async (base) => {
+    const hit = await (await fetch(base + "/menu?q=tuo&in=name&sort=price")).text();
+    assert.ok(hit.includes("Tuo Zaafi") && !hit.includes("Waakye"));
+    assert.ok(hit.includes('value="tuo"') && hit.includes('<option value="name" selected>'));
+    assert.ok(hit.includes('aria-pressed="true"'));
+    assert.ok(hit.includes("noindex"), "a filtered view is not indexed");
+    const none = await (await fetch(base + "/menu?q=zzzz")).text();
+    assert.ok(none.includes("No dishes match"));
+    const odd = await (await fetch(base + "/menu?q=%3Cscript%3E&in=bogus&sort=bogus")).text();
+    assert.ok(!odd.includes("<script>alert") && !odd.includes('value="<script>'));
+  }, { businesses: [QT], menu: MENU, shopUrl: "https://shop.example.org" });
+});
+
 test("the menu page is missing without a QT Eatery business and unavailable when the API is down", async () => {
   await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [FOODS], menu: MENU });
   await withServer(async (base) => { assert.equal((await fetch(base + "/menu")).status, 404); }, { businesses: [QT] });

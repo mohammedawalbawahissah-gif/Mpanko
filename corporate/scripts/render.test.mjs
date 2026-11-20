@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aboutPage, servicePage, servicesPage, magaziaPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
+import { arrangeMenu, menuQuery, aboutPage, servicePage, servicesPage, magaziaPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
 import { fallbackBusinesses, fallbackProfile } from "../src/content.mjs";
 
 const site = { url: "https://www.example.org", shopUrl: "https://shop.example.org" };
@@ -189,4 +189,21 @@ test("the About page puts the story on the left with vision, mission and approac
   assert.ok(html.includes("<p>Worcester, Massachusetts, USA</p>"));
   const bare = aboutPage({ site: { url: "", shopUrl: "" }, profile: { ...profile, vision: "", mission: "", approach: "" }, businesses: [], pages: {}, gallery: [] });
   assert.ok(!bare.includes('class="pillars"'));
+});
+
+test("arrangeMenu filters by the chosen field and sorts with unpriced dishes last", () => {
+  const dish = (name, price, description = "") => ({ name, slug: name, description, orderable: price !== null, variants: price === null ? [] : [{ price }] });
+  const sections = [{ name: "Soups", items: [dish("Zom", "9.00"), dish("Ayoyo", null, "with goat"), dish("Banku", "4.00")] }, { name: "Drinks", items: [dish("Zobo", "2.00")] }];
+  assert.deepEqual(arrangeMenu(sections, { sort: "price" })[0].items.map((i) => i.name), ["Banku", "Zom", "Ayoyo"]);
+  assert.deepEqual(arrangeMenu(sections, { sort: "price-desc" })[0].items.map((i) => i.name), ["Zom", "Banku", "Ayoyo"]);
+  assert.deepEqual(arrangeMenu(sections, { sort: "name-desc" })[0].items.map((i) => i.name), ["Zom", "Banku", "Ayoyo"]);
+  assert.deepEqual(arrangeMenu(sections, { q: "goat", field: "description" }).map((s) => s.name), ["Soups"]);
+  assert.deepEqual(arrangeMenu(sections, { q: "goat", field: "name" }), []);
+  assert.deepEqual(arrangeMenu(sections, { q: "drinks", field: "section" })[0].items.map((i) => i.name), ["Zobo"]);
+  assert.equal(arrangeMenu(sections).length, 2);
+});
+
+test("menuQuery keeps only choices the page offers", () => {
+  assert.deepEqual(menuQuery(new URLSearchParams("q=%20soup%20&in=name&sort=price")), { q: "soup", field: "name", sort: "price" });
+  assert.deepEqual(menuQuery(new URLSearchParams("in=drop&sort=drop")), { q: "", field: "all", sort: "menu" });
 });

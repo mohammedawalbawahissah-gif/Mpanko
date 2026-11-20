@@ -217,7 +217,7 @@ export function makeServer({ root, apiUrl = envSite.apiUrl, siteUrl = envSite.ur
       if (p === "/menu") {
         if (!ctx.businesses.some((b) => b.slug === MENU_SLUG)) return send(req, res, 404, notFoundPage(ctx));
         const found = await api.menu(MENU_SLUG);
-        if (found.status === "ok") return send(req, res, 200, menuPage(ctx, found.data));
+        if (found.status === "ok") return send(req, res, 200, menuPage(ctx, found.data, url.searchParams));
         return send(req, res, found.status === "missing" ? 404 : 503, found.status === "missing" ? notFoundPage(ctx) : unavailablePage(ctx));
       }
       // The old address for the list of services keeps working.

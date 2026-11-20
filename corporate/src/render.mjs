@@ -363,11 +363,53 @@ const dishPrice = (item) => {
   try { return new Intl.NumberFormat("en-US", { style: "currency", currency: item.currency || "USD" }).format(n); } catch { return `${n.toFixed(2)} ${item.currency || ""}`.trim(); }
 };
 
-/** The full QT Eatery menu in the flyer's sections. Each dish that can be ordered links to the same dish on the shop's order page. */
-export function menuPage(ctx, menu) {
+export const MENU_SEARCH_FIELDS = [["all", "Everything"], ["name", "Dish"], ["description", "Description"], ["section", "Category"]];
+export const MENU_SORTS = [["menu", "Menu order"], ["name", "Name A to Z"], ["name-desc", "Name Z to A"], ["price", "Price: low to high"], ["price-desc", "Price: high to low"]];
+
+/** Reads the search and sort choices from the address, keeping only values the page offers. */
+export function menuQuery(params) {
+  const get = (k) => (params && typeof params.get === "function" ? params.get(k) : params?.[k]) || "";
+  const q = String(get("q")).replace(/\s+/g, " ").trim().slice(0, 80);
+  const field = MENU_SEARCH_FIELDS.some(([v]) => v === get("in")) ? get("in") : "all";
+  const sort = MENU_SORTS.some(([v]) => v === get("sort")) ? get("sort") : "menu";
+  return { q, field, sort };
+}
+
+const priceOf = (item) => {
+  const v = item.variants?.[0];
+  const n = item.orderable && v ? Number(v.price) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/** Keeps the dishes that match, then orders each section. A dish without a price goes last when sorting by price. */
+export function arrangeMenu(sections, { q = "", field = "all", sort = "menu" } = {}) {
+  const needle = q.toLowerCase();
+  const hit = (text) => String(text || "").toLowerCase().includes(needle);
+  const out = (sections || []).map((sec) => {
+    let items = sec.items || [];
+    if (needle) {
+      items = items.filter((i) => (field === "name" ? hit(i.name) : field === "description" ? hit(i.description) : field === "section" ? hit(sec.name) : hit(i.name) || hit(i.description) || hit(sec.name)));
+    }
+    items = [...items];
+    if (sort === "name" || sort === "name-desc") items.sort((a, b) => String(a.name).localeCompare(String(b.name)) * (sort === "name" ? 1 : -1));
+    if (sort === "price" || sort === "price-desc") {
+      const dir = sort === "price" ? 1 : -1;
+      items.sort((a, b) => { const x = priceOf(a), y = priceOf(b); if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1; return (x - y) * dir; });
+    }
+    return { ...sec, items };
+  });
+  // A category with nothing left is dropped only while searching; the full menu keeps every category.
+  return needle ? out.filter((sec) => sec.items.length) : out;
+}
+
+/** The full QT Eatery menu. Each category is a drop-down button; search and sort are plain form fields, so they work without scripts. Each dish that can be ordered links to the same dish on the shop's order page. */
+export function menuPage(ctx, menu, query = {}) {
   const shop = safeUrl(ctx.site.shopUrl);
   const orderPage = shop ? `${shop.replace(/\/$/, "")}/menu/${encodeURIComponent(menu.category?.slug || MENU_SLUG)}` : "";
-  const sections = menu.sections || [];
+  const { q, field, sort } = menuQuery(query);
+  const filtered = !!q || sort !== "menu";
+  const sections = arrangeMenu(menu.sections || [], { q, field, sort });
+  const total = sections.reduce((n, sec) => n + sec.items.length, 0);
   const body = `<section class="page-head">
     <div class="wrap one">
       <p class="crumb"><a href="/services/${MENU_SLUG}">QT Eatery</a></p>
@@ -378,19 +420,29 @@ export function menuPage(ctx, menu) {
   </section>
   <section aria-label="Menu">
     <div class="wrap one">
-      <nav aria-label="Menu sections"><ul class="menu-jump">${sections.map((sec, i) => `<li><a href="#menu-${i}">${esc(sec.name)}</a></li>`).join("")}</ul></nav>
-      ${sections.map((sec, i) => `<div class="menu-section">
-        <h2 id="menu-${i}">${esc(sec.name)}</h2>
-        <ul class="menu-list">${sec.items.map((item) => {
+      <form class="menu-tools" method="get" action="/menu">
+        <div class="searchbox" role="search">
+          <label for="menu-q" class="sr">Search the menu</label>
+          <select name="in" class="select" aria-label="Search in">${MENU_SEARCH_FIELDS.map(([v, l]) => `<option value="${v}"${v === field ? " selected" : ""}>${l}</option>`).join("")}</select>
+          <input id="menu-q" class="input" type="search" name="q" placeholder="Search the menu" maxlength="80" value="${esc(q)}">
+          <button class="btn quiet" type="submit">Search</button>
+        </div>
+        <div class="sortbuttons" role="group" aria-label="Sort dishes"><span class="sortbuttons-label">Sort by</span>${MENU_SORTS.map(([v, l]) => `<button class="sortbtn" type="submit" name="sort" value="${v}" aria-pressed="${v === sort}">${l}</button>`).join("")}</div>
+        <input type="hidden" name="sort" value="${esc(sort)}">
+        ${filtered ? `<p class="menu-found" role="status">${total ? `${total} ${total === 1 ? "dish" : "dishes"}${q ? ` for \u201c${esc(q)}\u201d` : ""}. <a href="/menu">Clear</a>` : `No dishes match${q ? ` \u201c${esc(q)}\u201d` : ""}. <a href="/menu">Show the whole menu</a>`}</p>` : ""}
+      </form>
+      ${sections.map((sec, i) => `<details class="menu-dd" id="menu-${i}"${q || i === 0 ? " open" : ""}>
+        <summary><span>${esc(sec.name)}</span><span class="menu-count">${sec.items.length}</span></summary>
+        ${sec.items.length ? "" : `<p class="menu-empty">Dishes coming soon.</p>`}<ul class="menu-list">${sec.items.map((item) => {
           const price = dishPrice(item);
           const link = orderPage && item.orderable ? `<a class="menu-order" href="${esc(`${orderPage}#${dishId(item.slug)}`)}" rel="noopener">Order<span class="sr"> ${esc(item.name)}</span></a>` : "";
           return `<li><div><strong>${esc(item.name)}</strong>${item.description ? `<span class="menu-desc">${esc(item.description)}</span>` : ""}</div><span class="menu-price">${price ? esc(price) : "Price coming soon"}</span>${link}</li>`;
         }).join("")}</ul>
-      </div>`).join("")}
+      </details>`).join("")}
     </div>
   </section>
   ${contactCta()}`;
-  return layout({ ...ctx, title: "QT Eatery menu", path: "/menu", description: "The full QT Eatery menu: northern foods, pastries, Ghanaian dishes, appetizers, continental dishes and healthy drinks. Pick a dish and order it in the shop.", body });
+  return layout({ ...ctx, title: "QT Eatery menu", path: "/menu", noindex: filtered, description: "The full QT Eatery menu: northern foods, pastries, Ghanaian dishes, appetizers, continental dishes and healthy drinks. Pick a dish and order it in the shop.", body });
 }
 
 export function magaziaPage(ctx, page) {
