@@ -14,11 +14,13 @@ import { Chargebacks, ManualPayments, Reconciliation, ReconciliationRun, Reports
 import { TaxAndDuties } from "./pages-tax";
 import { Security } from "./pages-security";
 import { MenuPrices } from "./pages-menu";
+import { Alerts, Announcements } from "./pages-notifications";
 import { Businesses, Contacts, Enquiries, Gallery, SitePages, SiteDetails } from "./pages-corporate";
 
 const ALL_STAFF = ["super_admin", "store_admin", "fulfillment", "finance", "support"];
 const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
   { to: "/", name: "Dashboard", roles: ALL_STAFF, group: "" },
+  { to: "/alerts", name: "Alerts", roles: ALL_STAFF, group: "" },
   { to: "/orders", name: "Orders", roles: ALL_STAFF, group: "Sell" },
   { to: "/manual-payments", name: "Manual payments", roles: ["super_admin", "store_admin", "finance"], group: "Sell" },
   { to: "/returns", name: "Returns", roles: ["super_admin", "store_admin", "fulfillment", "finance", "support"], group: "Sell" },
@@ -37,6 +39,7 @@ const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
   { to: "/tax", name: "Tax and duties", roles: ["super_admin", "store_admin", "finance"], group: "Money" },
   { to: "/reports", name: "Reports", roles: ["super_admin", "store_admin", "finance", "fulfillment"], group: "Money" },
   { to: "/pages", name: "Policy pages", roles: ["super_admin", "store_admin"], group: "Content" },
+  { to: "/announcements", name: "Announcements", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/emails", name: "Emails", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/businesses", name: "Businesses", roles: ["super_admin", "store_admin"], group: "Content" },
   { to: "/site-details", name: "Site details", roles: ["super_admin", "store_admin"], group: "Content" },
@@ -52,12 +55,20 @@ const NAV: { to: string; name: string; roles: string[]; group: string }[] = [
 /** Counts that need someone's attention, shown beside the menu item that handles them. */
 function useBadges(role: string | undefined) {
   const [badges, setBadges] = useState<Record<string, number>>({});
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setTick((t) => t + 1);
+    window.addEventListener("mpanko:alerts", bump);
+    const timer = window.setInterval(bump, 60000);
+    return () => { window.removeEventListener("mpanko:alerts", bump); window.clearInterval(timer); };
+  }, []);
   useEffect(() => {
     if (!role || role === "carrier") return;
     api<{ to_ship?: number; shipping_exceptions?: number; low_stock?: number; unresolved_reconciliation?: number }>("/reports/dashboard/")
       .then((d) => setBadges({ "/orders": d.to_ship ?? 0, "/shipments": d.shipping_exceptions ?? 0, "/stock": d.low_stock ?? 0, "/reconciliation": d.unresolved_reconciliation ?? 0 }))
+      .then(() => api<{ count: number }>("/notifications/inbox/unread-count/").then((u) => setBadges((b) => ({ ...b, "/alerts": u.count }))).catch(() => undefined))
       .catch(() => setBadges({}));
-  }, [role]);
+  }, [role, tick]);
   return badges;
 }
 
@@ -163,6 +174,8 @@ export default function App() {
             <Route path="products" element={route("/products", <Products />)} />
             <Route path="stock" element={route("/stock", <Stock />)} />
             <Route path="reports" element={route("/reports", <Reports />)} />
+            <Route path="alerts" element={route("/alerts", <Alerts />)} />
+            <Route path="announcements" element={route("/announcements", <Announcements />)} />
             <Route path="emails" element={route("/emails", <Emails />)} />
             <Route path="manual-payments" element={route("/manual-payments", <ManualPayments />)} />
             <Route path="chargebacks" element={route("/chargebacks", <Chargebacks />)} />

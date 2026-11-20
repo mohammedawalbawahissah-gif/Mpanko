@@ -79,7 +79,7 @@ carries a one-click unsubscribe link.
 ### Settings
 | Variable | Purpose |
 |---|---|
-| `ADMIN_URL` | The admin app address (for example `https://mpanko-admin.wolbiroyal.com`). Used for links inside staff alerts. |
+| `ADMIN_APP_URL` | The admin app address (for example `https://mpanko-admin.wolbiroyal.com`). Used for links inside staff alerts. |
 | `STAFF_ALERT_WHATSAPP` | Comma list of numbers (with country code) that get urgent alerts on WhatsApp: new orders, payments to confirm, chargebacks. Needs WhatsApp set up (section 3). |
 | `STAFF_ALERT_EMAILS` | Extra addresses that also get staff emails for low stock, chargebacks and website enquiries. |
 | `ADMIN_APP_SCHEME` | Deep-link scheme of the admin phone app. Default `mpanko-admin`. |

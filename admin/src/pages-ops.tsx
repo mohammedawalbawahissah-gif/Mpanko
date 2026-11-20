@@ -197,6 +197,15 @@ export function OrderDetail() {
               <button key={to} className={`btn ${to === "cancelled" ? "danger" : ""}`} disabled={busy} onClick={() => move(to)}>Mark {label(to).toLowerCase()}</button>
             ))}
           </div>
+          {canFulfil && ["paid", "processing"].includes(o.status) && /pickup/i.test(o.shipping_service.service_name ?? "") && (
+            <p>
+              <button className="btn quiet" disabled={busy} onClick={async () => {
+                setBusy(true); setMsg(null);
+                try { await api(`/orders/${o.number}/ready-for-pickup/`, { method: "POST" }); setMsg({ kind: "ok", text: "The customer has been told their order is ready to collect." }); }
+                catch (e) { setMsg({ kind: "error", text: errText(e) }); } finally { setBusy(false); }
+              }}>Tell customer it is ready to collect</button>
+            </p>
+          )}
           {canFinance && ["paid", "processing", "shipped", "delivered", "cancelled"].includes(o.status) && <RefundForm order={o} onDone={reload} />}
           {canFulfil && ["paid", "processing", "shipped"].includes(o.status) && <ShipmentForm orderNumber={o.number} chosen={o.shipping_service.service_name ?? ""} onDone={reload} />}
 

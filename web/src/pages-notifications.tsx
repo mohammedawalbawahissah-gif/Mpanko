@@ -130,3 +130,83 @@ export function BrowserPushToggle() {
     </section>
   );
 }
+
+type Cell = { enabled: boolean; locked: boolean; available: boolean };
+type PrefRow = { category: string; label: string; channels: Record<"email" | "sms" | "whatsapp" | "push", Cell> };
+type Prefs = { categories: PrefRow[]; marketing_opt_in: boolean; phone_verified: boolean; has_push_device: boolean };
+
+const CHANNELS = ["email", "sms", "whatsapp", "push"] as const;
+
+/** Account > Message settings: choose, per kind of message, how Mpanko contacts the customer. */
+export function MessageSettings() {
+  const { t } = useT();
+  const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api<Prefs>("/notifications/preferences/").then(setPrefs).catch(() => setError(t("notifications.failed")));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const send = async (body: object) => {
+    setError("");
+    try {
+      setPrefs(await api<Prefs>("/notifications/preferences/", { method: "PUT", body }));
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError(t("notifications.failed"));
+    }
+  };
+
+  if (!prefs) return error ? <div className="wrap page"><Alert>{error}</Alert></div> : <div className="wrap page"><Loading /></div>;
+  const name = (key: string) => t(`msg.${key}` as never);
+  return (
+    <div className="wrap page narrow">
+      <p><Link to="/account">{t("msg.back")}</Link></p>
+      <h1>{t("msg.title")}</h1>
+      <p className="muted">{t("msg.intro")}</p>
+      {error && <Alert>{error}</Alert>}
+      <label className="small" style={{ display: "block", margin: "1rem 0" }}>
+        <input type="checkbox" checked={prefs.marketing_opt_in} onChange={(e) => send({ marketing_opt_in: e.target.checked })} /> {t("msg.offersOptIn")}
+      </label>
+      <div className="table-scroll">
+        <table className="table">
+          <thead>
+            <tr><th scope="col" /> {CHANNELS.map((c) => <th scope="col" key={c}>{name(c)}</th>)}</tr>
+          </thead>
+          <tbody>
+            {prefs.categories.map((row) => (
+              <tr key={row.category}>
+                <th scope="row">{name(row.category)}</th>
+                {CHANNELS.map((ch) => {
+                  const cell = row.channels[ch];
+                  const needs = ch === "sms" || ch === "whatsapp" ? t("msg.needPhone") : ch === "push" ? t("msg.needPush") : "";
+                  const blocked = row.category === "offers" && !prefs.marketing_opt_in;
+                  return (
+                    <td key={ch}>
+                      {cell.locked ? (
+                        <span className="small">{t("msg.alwaysOn")}</span>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          aria-label={`${name(row.category)}: ${name(ch)}`}
+                          title={!cell.available ? needs : undefined}
+                          checked={cell.enabled}
+                          disabled={blocked || (!cell.available && !cell.enabled && ch !== "push")}
+                          onChange={(e) => send({ categories: { [row.category]: { [ch]: e.target.checked } } })}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!prefs.phone_verified && <p className="small muted">{t("msg.needPhone")}</p>}
+      <p className="small" role="status" aria-live="polite">{saved ? t("msg.saved") : ""}</p>
+    </div>
+  );
+}

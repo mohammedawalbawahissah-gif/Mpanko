@@ -194,7 +194,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
         shipping_total = pricing.convert(rate.price, settings.BASE_CURRENCY, currency)
         note = pricing.fx_note(currency)
     except pricing.PricingError as exc:
-        raise CheckoutError(str(exc), "currency")
+        raise CheckoutError(str(exc), "currency") from exc
     coupon, discount = None, Decimal("0")
     if (d.get("coupon_code") or "").strip():
         from apps.promotions import services as promo
@@ -203,7 +203,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
             coupon = promo.find(d["coupon_code"], lock=True)
             discount = promo.discount_for(coupon, user, subtotal, shipping_total, currency)
         except (promo.CouponError, pricing.PricingError) as exc:
-            raise CheckoutError(str(exc), "coupon_code")
+            raise CheckoutError(str(exc), "coupon_code") from exc
     item_discount = discount if coupon and coupon.kind != "free_shipping" else Decimal("0")
     tax_total = pricing.tax_for(subtotal - item_discount, country, currency, shipping=shipping_total)
     grand_total = subtotal - discount + shipping_total + tax_total
@@ -228,7 +228,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
         try:
             adjust_stock(variant.id, -item.quantity, StockMovement.Reason.ORDER, actor=user, order_ref=order.number)
         except OutOfStock as exc:
-            raise CheckoutError(f"Not enough stock for {product.name} ({exc.sku}).", "cart")
+            raise CheckoutError(f"Not enough stock for {product.name} ({exc.sku}).", "cart") from exc
         OrderItem.objects.create(
             order=order, variant=variant, product_name=product.name, variant_name=variant.name, sku=variant.sku,
             unit_price=unit, quantity=item.quantity, line_total=line_total,

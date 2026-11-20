@@ -3,6 +3,7 @@ import { FlatList, Pressable, ScrollView, TextInput, View, useWindowDimensions }
 import { Text } from "./text";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError, type Page } from "./api";
+import { NotifyWhenBack } from "./screens-messages";
 import { useAuth } from "./auth";
 import { usePrefs } from "./prefs";
 import { color, font, type } from "./theme";
@@ -206,6 +207,7 @@ export function ProductScreen({ route, navigation }: NativeStackScreenProps<Shop
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <Button title={!user && !guestEnabled ? t("m.signInToAdd") : busy ? t("m.adding") : t("m.addToBag")} disabled={busy || !chosen || !chosen.in_stock} onPress={add} />
         {chosen && !chosen.in_stock && <Text style={[s.muted, { marginTop: 8 }]}>{t("m.thisSoldOut")}</Text>}
+        {chosen && !chosen.in_stock && <NotifyWhenBack variantId={chosen.id} signedIn={!!user} />}
         {chosen?.made_to_order && <Text style={[s.muted, { marginTop: 8 }]}>{t("product.madeToOrder")}{chosen.lead_time_days ? `. ${t("product.backorderDays", { days: chosen.lead_time_days })}` : ""}</Text>}
         {chosen?.on_backorder && !chosen.made_to_order && <Text style={[s.muted, { marginTop: 8 }]}>{t("product.backorder")}{chosen.backorder_days ? `. ${t("product.backorderDays", { days: chosen.backorder_days })}` : ""}</Text>}
       </View>

@@ -8,6 +8,7 @@ import { LANGUAGES } from "./core/i18n";
 import { searchCurrencies } from "./core/money";
 import { usePrefs } from "./prefs";
 import { disablePush, enablePush } from "./push";
+import { MessageSettings } from "./screens-messages";
 import { color } from "./theme";
 import type { Address, User } from "./types";
 import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, Select, s, useAsync, useCountryOptions } from "./ui";
@@ -28,18 +29,12 @@ export function ProfileScreen() {
   const { user, refreshUser } = useAuth();
   const { t, lang, setLang, currency, setCurrency, rates } = usePrefs();
   const [name, setName] = useState(user?.full_name ?? "");
-  const [orderEmails, setOrderEmails] = useState(user?.notify_order_emails ?? true);
-  const [sms, setSms] = useState(user?.notify_sms ?? false);
-  const [whatsapp, setWhatsapp] = useState(user?.notify_whatsapp ?? false);
   const [push, setPush] = useState(user?.notify_push ?? false);
-  const [marketing, setMarketing] = useState(user?.marketing_opt_in ?? false);
+  const [pushVersion, setPushVersion] = useState(0);
   const [search, setSearch] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
-
-  // The phone is only offered a text-message switch once it has been verified.
-  const verified = !!user?.phone_verified;
 
   const save = async () => {
     setBusy(true);
@@ -48,7 +43,7 @@ export function ProfileScreen() {
     try {
       await api("/auth/me/", {
         method: "PATCH",
-        body: { full_name: name, notify_order_emails: orderEmails, notify_sms: verified && sms, notify_whatsapp: verified && whatsapp, marketing_opt_in: marketing, preferred_currency: currency },
+        body: { full_name: name, preferred_currency: currency },
       });
       await refreshUser();
       setMsg({ kind: "ok", text: t("prefs.saved") });
@@ -65,11 +60,12 @@ export function ProfileScreen() {
     setMsg(null);
     try {
       if (on) {
-        if (await enablePush()) setPush(true);
+        if (await enablePush()) { setPush(true); setPushVersion((n) => n + 1); }
         else setMsg({ kind: "error", text: t("m.notifBlocked") });
       } else {
         await disablePush();
         setPush(false);
+        setPushVersion((n) => n + 1);
       }
     } catch (e) {
       setMsg({ kind: "error", text: errorText(e, t).text });
@@ -109,11 +105,9 @@ export function ProfileScreen() {
       </View>
 
       <Text accessibilityRole="header" style={s.h2}>{t("prefs.notifications")}</Text>
-      <Toggle label={t("prefs.orderEmails")} value={orderEmails} onChange={setOrderEmails} />
-      <Toggle label={t("prefs.sms")} value={verified && sms} onChange={setSms} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
-      <Toggle label={t("prefs.whatsapp")} value={verified && whatsapp} onChange={setWhatsapp} disabled={!verified} hint={verified ? undefined : t("prefs.smsNeedsNumber")} />
       <Toggle label={t("prefs.push")} value={push} onChange={togglePush} />
-      <Toggle label={t("prefs.marketing")} value={marketing} onChange={setMarketing} />
+      <View style={{ height: 8 }} />
+      <MessageSettings refreshKey={pushVersion} />
 
       <View style={{ height: 8 }} />
       <Button title={busy ? "…" : t("prefs.save")} disabled={busy} onPress={save} />

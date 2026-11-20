@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { BrowserPushToggle } from "./pages-notifications";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { safeNext } from "./safe-next";
 import { api, ApiError, downloadFile, type Page } from "./api";
 import { AddressForm } from "./address";
 import { Alert, Field, Loading, PasswordInput, useAsync } from "./components";
@@ -9,6 +8,7 @@ import { useAuth, useCurrency } from "./context";
 import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
 import type { Address } from "./types";
+import { safeNext } from "./safe-next";
 
 function useSubmit() {
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -313,13 +313,10 @@ function PhonePanel({ onVerified }: { onVerified: () => void | Promise<void> }) 
 
 function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
   const { user } = useAuth();
+  const { t } = useT();
   const { currencies, names } = useCurrency();
   const [name, setName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
-  const [orderEmails, setOrderEmails] = useState(user?.notify_order_emails ?? true);
-  const [marketing, setMarketing] = useState(user?.marketing_opt_in ?? false);
-  const [sms, setSms] = useState(user?.notify_sms ?? false);
-  const [whatsapp, setWhatsapp] = useState(user?.notify_whatsapp ?? false);
   const [currency, setCurrency] = useState(user?.preferred_currency ?? "");
   const f = useSubmit();
   const save = (e: FormEvent) => {
@@ -327,7 +324,7 @@ function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
     f.run(async () => {
       await api("/auth/me/", {
         method: "PATCH",
-        body: { full_name: name, phone, notify_order_emails: orderEmails, marketing_opt_in: marketing, notify_sms: sms, notify_whatsapp: whatsapp, preferred_currency: currency },
+        body: { full_name: name, phone, preferred_currency: currency },
       });
       await onSaved();
     });
@@ -343,13 +340,7 @@ function ProfileForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           {currencies.map((c) => <option key={c} value={c}>{names[c] ? `${c} · ${names[c]}` : c}</option>)}
         </select>
       </Field>
-      <fieldset style={{ border: 0, padding: 0, margin: "0 0 1rem" }}>
-        <legend className="small">Contact me about</legend>
-        <label className="small"><input type="checkbox" checked={orderEmails} onChange={(e) => setOrderEmails(e.target.checked)} /> Shipping and delivery updates by email</label><br />
-        <label className="small"><input type="checkbox" checked={sms} onChange={(e) => setSms(e.target.checked)} /> Text messages about my orders</label><br />
-        <label className="small"><input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} /> WhatsApp messages about my orders</label><br />
-        <label className="small"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} /> News and offers</label>
-      </fieldset>
+      <p className="small"><Link to="/account/notifications">{t("msg.manage")}</Link></p>
       <button className="btn" disabled={f.busy}>Save details</button>
     </form>
   );

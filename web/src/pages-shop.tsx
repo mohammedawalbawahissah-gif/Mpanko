@@ -346,7 +346,12 @@ export function ProductPage() {
           {variant?.made_to_order && <p className="stock-ok">{t("product.madeToOrder")}{variant.lead_time_days ? `. ${t("product.backorderDays", { days: variant.lead_time_days })}` : ""}</p>}
           {variant && !variant.made_to_order && (variant.on_backorder
             ? <p className="stock-ok">{t("product.backorder")}{variant.backorder_days ? `. ${t("product.backorderDays", { days: variant.backorder_days })}` : ""}</p>
-            : variant.in_stock ? <p className="stock-ok">In stock</p> : <p className="stock-out">Sold out</p>)}
+            : variant.in_stock ? <p className="stock-ok">In stock</p> : (
+              <>
+                <p className="stock-out">Sold out</p>
+                {variant && <NotifyWhenBack variantId={variant.id} />}
+              </>
+            ))}
           <div className="buy-row">
             <div className="qty" role="group" aria-label="Quantity">
               <button aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
@@ -451,5 +456,34 @@ export function Bag() {
         </aside>
       </div>
     </div>
+  );
+}
+
+
+/** On a sold-out item: ask to be emailed when it returns. Signed-out visitors are sent to sign in first. */
+function NotifyWhenBack({ variantId }: { variantId: number }) {
+  const { user } = useAuth();
+  const { t } = useT();
+  const [on, setOn] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    api<{ variant_id: number }[]>("/notifications/stock-alerts/").then((rows) => setOn(rows.some((r) => r.variant_id === variantId))).catch(() => undefined);
+  }, [user, variantId]);
+  if (!user) return <p className="small"><Link to="/login">{t("stock.signIn")}</Link></p>;
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      if (on) await api(`/notifications/stock-alerts/?variant=${variantId}`, { method: "DELETE" });
+      else await api("/notifications/stock-alerts/", { method: "POST", body: { variant: variantId } });
+      setOn(!on);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <p className="small" role="status">
+      {on ? <>{t("stock.on")} <button className="linklike" onClick={toggle} disabled={busy}>{t("stock.stop")}</button></> : <button className="btn quiet" onClick={toggle} disabled={busy}>{t("stock.notify")}</button>}
+    </p>
   );
 }

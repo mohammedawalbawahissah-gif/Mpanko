@@ -94,3 +94,14 @@ describe("product photo checks", () => {
     expect(r.problems[0]).toContain("at most 10");
   });
 });
+
+describe("where an alert opens", () => {
+  it("sends each kind of alert to its screen", async () => {
+    const { target } = await import("./pages-notifications");
+    expect(target("orders/MP-1001")).toBe("/orders/MP-1001");
+    expect(target("/support/SC-4")).toBe("/support/SC-4");
+    expect(target("payments")).toBe("/manual-payments");
+    expect(target("")).toBe("/");
+    expect(target("unknown/thing")).toBe("/");
+  });
+});

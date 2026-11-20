@@ -26,7 +26,7 @@ def eager(settings, monkeypatch):
     settings.PAYMENT_PROVIDERS_ENABLED = ["mock", "zelle"]
     settings.ZELLE_RECIPIENT, settings.ZELLE_NAME = "508-410-9719", "Teefa Fuseini"
     settings.STAFF_ALERT_WHATSAPP = []
-    settings.ADMIN_URL = "https://admin.example.com"
+    settings.ADMIN_APP_URL = "https://admin.example.com"
 
 
 def subjects():
@@ -60,13 +60,24 @@ def test_offers_need_opt_in_and_sms_needs_a_verified_phone(customer):
     assert preferences.allowed(customer, "orders", "sms")
 
 
-def test_a_per_type_switch_narrows_a_channel_but_cannot_widen_it(customer):
-    customer.notify_push, customer.notify_sms = True, False
+def test_a_per_type_switch_narrows_a_channel(customer):
+    customer.notify_push = True
     customer.save()
-    preferences.set_preferences(customer, {"orders": {"push": False, "sms": True}})
+    preferences.set_preferences(customer, {"orders": {"push": False}})
     assert not preferences.allowed(customer, "orders", "push")
-    assert not preferences.allowed(customer, "orders", "sms")  # the account-level SMS switch is off
     assert preferences.allowed(customer, "support", "push")
+
+
+def test_ticking_a_channel_needs_a_verified_number_and_turns_it_on_for_that_type_only(customer):
+    preferences.set_preferences(customer, {"orders": {"sms": True}})
+    assert not preferences.allowed(customer, "orders", "sms")  # no verified number yet
+    customer.phone, customer.phone_verified = "+12025550100", True
+    customer.save()
+    preferences.set_preferences(customer, {"orders": {"sms": True}})
+    customer.refresh_from_db()
+    assert customer.notify_sms is True
+    assert preferences.allowed(customer, "orders", "sms")
+    assert not preferences.allowed(customer, "support", "sms") and not preferences.allowed(customer, "reminders", "sms")
 
 
 def test_the_preferences_api_reads_and_writes(customer):

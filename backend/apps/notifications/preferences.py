@@ -80,6 +80,21 @@ def staff_matrix(user):
     return {"category": STAFF_CATEGORY, "label": "Alerts for you and your team", "channels": cells}
 
 
+MASTER_FIELDS = {"sms": "notify_sms", "whatsapp": "notify_whatsapp", "push": "notify_push"}
+
+
+def _turn_on_channel(user, channel, chosen_category):
+    """Ticking a channel for one kind of message switches the channel on for the account, and keeps the other kinds off until chosen."""
+    field = MASTER_FIELDS.get(channel)
+    if not field or getattr(user, field):
+        return
+    setattr(user, field, True)
+    user.save(update_fields=[field])
+    for category in CUSTOMER_CATEGORIES:
+        if category != chosen_category:
+            NotificationPreference.objects.get_or_create(user=user, category=category, channel=channel, defaults={"enabled": False})
+
+
 def set_preferences(user, changes):
     """Apply {"category": {"channel": bool}} from the screen. Locked switches and unknown names are ignored. Returns the new matrix."""
     for category, channels in (changes or {}).items():
@@ -90,6 +105,10 @@ def set_preferences(user, changes):
                 continue
             if channel == "email" and category in LOCKED_EMAIL:
                 continue
+            if value and channel in ("sms", "whatsapp") and not (user.phone and user.phone_verified):
+                continue  # cannot reach them until a number is verified
+            if value:
+                _turn_on_channel(user, channel, category)
             NotificationPreference.objects.update_or_create(user=user, category=category, channel=channel, defaults={"enabled": value})
     return matrix(user)
 

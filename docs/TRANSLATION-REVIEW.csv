@@ -386,3 +386,15 @@
 "notifications.blocked","Notifications are blocked for this site. Allow them in your browser’s settings, then try again.","Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur, puis réessayez.","Las notificaciones están bloqueadas para este sitio. Permítelas en los ajustes del navegador e inténtalo de nuevo.","An toshe sanarwa a wannan shafi. Ka ba da izini a saitin browser ɗinka, sannan ka sake gwadawa.",""
 "notifications.failed","We couldn’t change this. Try again shortly.","Nous n’avons pas pu modifier ce réglage. Réessayez dans un instant.","No pudimos cambiar esto. Inténtalo de nuevo en un momento.","Ba mu iya canza wannan ba. Sake gwadawa nan da nan.",""
 "shop.filters","Filters","Filtres","Filtros","Tace",""
+msg.title,Message settings,Réglages des messages,Ajustes de mensajes,,NEW: Hausa shows English until a native speaker supplies this
+msg.intro,"Choose how Mpanko contacts you. Order, payment and support emails are always sent, so you never miss something important.","Choisissez comment Mpanko vous contacte. Les e-mails de commande, de paiement et d’assistance sont toujours envoyés, pour que vous ne manquiez rien d’important.","Elige cómo se comunica Mpanko contigo. Los correos de pedidos, pagos y soporte siempre se envían, para que no te pierdas nada importante.",,NEW: Hausa shows English until a native speaker supplies this
+msg.orders,Orders and payments,Commandes et paiements,Pedidos y pagos,,NEW: Hausa shows English until a native speaker supplies this
+msg.support,Support and returns,Assistance et retours,Soporte y devoluciones,,NEW: Hausa shows English until a native speaker supplies this
+msg.reminders,Reminders and requests,Rappels et demandes,Recordatorios y solicitudes,,NEW: Hausa shows English until a native speaker supplies this
+msg.offers,News and offers,Actualités et offres,Novedades y ofertas,,NEW: Hausa shows English until a native speaker supplies this
+msg.alwaysOn,Always on,Toujours actif,Siempre activo,,NEW: Hausa shows English until a native speaker supplies this
+msg.offersOptIn,Send me news and offers,Envoyez-moi les actualités et offres,Quiero recibir novedades y ofertas,,NEW: Hausa shows English until a native speaker supplies this
+stock.notify,Tell me when it is back,Prévenez-moi du retour en stock,Avísame cuando vuelva,,NEW: Hausa shows English until a native speaker supplies this
+stock.on,We will tell you when it is back.,Nous vous préviendrons dès que l’article sera de retour.,Te avisaremos cuando vuelva a estar disponible.,,NEW: Hausa shows English until a native speaker supplies this
+stock.signIn,Sign in to be told when it is back.,Connectez-vous pour être prévenu du retour en stock.,Inicia sesión para que te avisemos cuando vuelva.,,NEW: Hausa shows English until a native speaker supplies this
+stock.stop,Stop telling me,Ne plus me prévenir,Dejar de avisarme,,NEW: Hausa shows English until a native speaker supplies this

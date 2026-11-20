@@ -67,7 +67,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = services.create_return(request.user, order, d["items"], d["reason"], d["note"])
         except services.ReturnError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         transaction.on_commit(lambda: send_return_email.delay("return_requested", req.pk))
         transaction.on_commit(lambda: alert_staff_return.delay(req.pk))
         return Response(ReturnSerializer(req).data, status=status.HTTP_201_CREATED)
@@ -79,7 +79,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = fn(req, **kwargs)
         except (services.ReturnError, ProviderError) as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         if key:
             transaction.on_commit(lambda: send_return_email.delay(key, req.pk))
         if audit:

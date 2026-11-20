@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def admin_link(path=""):
-    return f"{settings.ADMIN_URL}/{path.lstrip('/')}" if settings.ADMIN_URL else ""
+    return f"{settings.ADMIN_APP_URL}/{path.lstrip('/')}" if settings.ADMIN_APP_URL else ""
 
 
 def _summary(key, context):
