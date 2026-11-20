@@ -90,3 +90,12 @@ Scheduled jobs (run by the `beat` service): bag reminders hourly, feedback reque
 ### Announcements
 Admin > Announcements: write a subject and message, choose email, the app list and push, optionally limit by country, send yourself a test,
 then send. A campaign sends once and only to customers who opted in.
+
+## The admin phone app
+
+`admin-mobile/` is a small Expo app for staff: the alerts list, orders (with the status buttons and "ready to collect"), and confirming manual payments. It signs in with the same email, password and authenticator code as the admin website, so roles and permissions are identical.
+
+Phone alerts work like this: signing in registers the phone, **Me > Phone alerts** switches them on for that person, and the server sends them through Expo whenever a store event happens (new order, payment to confirm, and so on). Tapping an alert opens the order or screen it is about, through the `mpanko-admin://` link.
+
+Phone alerts need a real build, not Expo Go. Follow `admin-mobile/README.md`: an Expo account, `eas init`, an Android build, and (for Android alerts) a one-time Firebase key. iPhones also need a paid Apple developer account.
+

@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Mpanko Admin",
+    "slug": "mpanko-admin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wolbiroyal.mpankoadmin"
+    },
+    "android": {
+      "package": "com.wolbiroyal.mpankoadmin"
+    },
+    "scheme": "mpanko-admin",
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications"
+    ]
+  }
+}

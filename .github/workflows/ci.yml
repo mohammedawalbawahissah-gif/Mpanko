@@ -46,7 +46,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: |
-          for app in web admin mobile corporate; do
+          for app in web admin mobile admin-mobile corporate; do
             echo "== $app"
             (cd $app && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high && npm audit --audit-level=critical)
           done
@@ -91,6 +91,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: mobile/package-lock.json }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vitest run
+
+  admin-mobile:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: admin-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: admin-mobile/package-lock.json }
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx vitest run
