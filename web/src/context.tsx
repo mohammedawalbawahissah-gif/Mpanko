@@ -27,9 +27,6 @@ interface LoginResponse extends Partial<Tokens> {
   mfa_token?: string;
 }
 
-/** Customers and the super admin may shop; other staff roles use the admin dashboard. */
-const SHOP_ROLES = new Set(["customer", "super_admin"]);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
@@ -55,9 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const accept = useCallback((data: LoginResponse) => {
     if (!data.access || !data.refresh || !data.user) throw new ApiError(400, { detail: "Unexpected response from the server." });
-    if (!SHOP_ROLES.has(data.user.role)) {
-      throw new ApiError(400, { detail: "Staff accounts sign in at the admin dashboard." });
-    }
     setTokens({ access: data.access, refresh: data.refresh });
     setUser(data.user);
   }, []);
@@ -67,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await api<LoginResponse>("/auth/login/", { method: "POST", body: { email, password } });
       if (data.mfa_required && data.mfa_token) return { mfaTicket: data.mfa_token };
       if (data.mfa_enrollment_required) {
-        throw new ApiError(400, { detail: "Set up two-step sign-in at the admin dashboard first, then come back here." });
+        throw new ApiError(400, { detail: "Staff accounts must turn on two-step sign-in at the admin dashboard first, then come back here." });
       }
       accept(data);
       return null;
