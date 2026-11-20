@@ -61,9 +61,9 @@ def notify_staff(key, context, ref="", path_ref="", extra_emails=()):
                 send_push.delay(user.pk, title, body, {"url": f"{settings.ADMIN_APP_SCHEME}://{path}"})
                 did = True
             if staff_allows(user, "whatsapp", explicit) and channel_available(user, "whatsapp"):
-                from .whatsapp import send_whatsapp
+                from .whatsapp import send_staff_whatsapp
 
-                send_whatsapp(user.phone, f"Mpanko: {body}", kind=key, ref=ref)
+                send_staff_whatsapp(user.phone, body, kind=key, ref=ref)
                 did = True
             reached += 1 if did else 0
         except Exception as exc:  # noqa: BLE001 — one person's problem must not stop the others
@@ -72,11 +72,11 @@ def notify_staff(key, context, ref="", path_ref="", extra_emails=()):
         if address and address.lower() not in emailed:
             services.send_notification(key, address, context, ref=f"{ref}:{address}" if ref else "", fanout=False, dedupe=bool(ref))
     if event["urgent"]:
-        from .whatsapp import send_whatsapp
+        from .whatsapp import send_staff_whatsapp
 
         for number in settings.STAFF_ALERT_WHATSAPP:
             try:
-                send_whatsapp(number, f"Mpanko: {body}", kind=key, ref=ref)
+                send_staff_whatsapp(number, body, kind=key, ref=ref)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Urgent WhatsApp alert %s to %s failed: %s", key, number, exc)
     return reached

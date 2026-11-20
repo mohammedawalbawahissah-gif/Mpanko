@@ -79,6 +79,22 @@ def deliver_whatsapp(to, body, kind="notice", ref="", template=None):
     return status == NotificationLog.Status.SENT
 
 
+def staff_template(body):
+    """The approved staff-alert template and its one placeholder, or None when no template is set (the message then goes as plain text).
+
+    The template text is "Mpanko alert: {{1}}. Open the Mpanko admin app for details." (WhatsApp does not allow a placeholder at the very start or end). WhatsApp rejects line breaks, tabs and long runs of spaces inside a placeholder, so they are squeezed out."""
+    sid = getattr(settings, "WHATSAPP_STAFF_TEMPLATE_SID", "")
+    if not sid:
+        return None
+    one_line = " ".join(str(body).split())[:300]
+    return (sid, {"1": one_line})
+
+
+def send_staff_whatsapp(to, body, kind="notice", ref=""):
+    """A staff alert on WhatsApp. Alerts can arrive at any hour, so with a template set it works outside the 24-hour window."""
+    return send_whatsapp(to, f"Mpanko: {body}", kind=kind, ref=ref, template=staff_template(body))
+
+
 def _template_sids():
     try:
         sids = json.loads(settings.WHATSAPP_TEMPLATE_SIDS or "{}")

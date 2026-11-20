@@ -237,6 +237,8 @@ def check_messaging(offline):
         if settings.WHATSAPP_BACKEND == "twilio":
             out.append(Result(g, "WhatsApp sender", PASS if settings.TWILIO_WHATSAPP_FROM else FAIL, "", "Set TWILIO_WHATSAPP_FROM, for example whatsapp:+14155238886."))
             out.append(Result(g, "WhatsApp templates", PASS if settings.WHATSAPP_TEMPLATE_SIDS else WARN, "" if settings.WHATSAPP_TEMPLATE_SIDS else "Free text only works inside a 24-hour window.", "Approve one template per event in Twilio and list them in WHATSAPP_TEMPLATE_SIDS."))
+            has = bool(settings.WHATSAPP_STAFF_TEMPLATE_SID)
+            out.append(Result(g, "WhatsApp staff alert template", PASS if has else WARN, "" if has else "Staff alerts are plain text, so they only arrive within 24 hours of the person last messaging your WhatsApp number.", "Approve a template reading \"Mpanko alert: {{1}}. Open the Mpanko admin app for details.\" in Twilio and set WHATSAPP_STAFF_TEMPLATE_SID."))
     return out
 
 

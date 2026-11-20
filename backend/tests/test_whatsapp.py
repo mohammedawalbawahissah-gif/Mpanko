@@ -107,3 +107,30 @@ def test_preference_is_saved_through_the_profile_endpoint(customer):
     c = client_for(customer)
     r = c.patch("/api/v1/auth/me/", {"notify_whatsapp": True}, format="json")
     assert r.status_code == 200 and r.json()["notify_whatsapp"] is True
+
+
+def test_staff_alert_uses_the_template_when_set(sent, settings):
+    settings.WHATSAPP_STAFF_TEMPLATE_SID = "HXstaff"
+    whatsapp.send_staff_whatsapp("+233240000001", "New order MP-1\n\n   paid   GHS 10", kind="new_order", ref="MP-1")
+    data = sent[0][1]["data"]
+    assert data["ContentSid"] == "HXstaff"
+    assert json.loads(data["ContentVariables"]) == {"1": "New order MP-1 paid GHS 10"}
+    assert "Body" not in data
+    assert data["To"] == "whatsapp:+233240000001"
+
+
+def test_staff_alert_is_plain_text_without_a_template(sent, settings):
+    settings.WHATSAPP_STAFF_TEMPLATE_SID = ""
+    whatsapp.send_staff_whatsapp("+233240000001", "New order MP-1")
+    data = sent[0][1]["data"]
+    assert data["Body"] == "Mpanko: New order MP-1" and "ContentSid" not in data
+
+
+def test_urgent_staff_event_goes_to_the_owner_numbers_with_the_template(sent, settings, admin):
+    from apps.notifications.staff import notify_staff
+
+    settings.WHATSAPP_STAFF_TEMPLATE_SID = "HXstaff"
+    settings.STAFF_ALERT_WHATSAPP = ["+233240000009"]
+    notify_staff("staff_new_order", {"order_number": "MP-7", "currency": "GHS", "total": "10.00", "customer_email": "x@example.com"}, ref="MP-7")
+    owners = [c for c in sent if c[1]["data"]["To"] == "whatsapp:+233240000009"]
+    assert owners and owners[0][1]["data"]["ContentSid"] == "HXstaff"

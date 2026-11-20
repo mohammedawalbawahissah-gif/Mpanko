@@ -23,6 +23,11 @@ class Command(BaseCommand):
         if phone:
             self._try(f"SMS ({settings.SMS_BACKEND})", lambda: sms.BACKENDS[settings.SMS_BACKEND](phone, "Mpanko test: if you can read this, SMS works."))
             self._try(f"WhatsApp ({settings.WHATSAPP_BACKEND})", lambda: whatsapp.BACKENDS[settings.WHATSAPP_BACKEND](phone, "Mpanko test: if you can read this, WhatsApp works."))
+            sent = whatsapp.staff_template("Mpanko test: if you can read this, staff alerts work.")
+            if sent:
+                self._try("WhatsApp staff alert template", lambda: whatsapp.BACKENDS[settings.WHATSAPP_BACKEND](phone, "", sent))
+            else:
+                self.stdout.write(self.style.WARNING("WhatsApp staff alert template: WHATSAPP_STAFF_TEMPLATE_SID is not set, so staff alerts go as plain text and only arrive inside the 24-hour window."))
         if user:
             from apps.accounts.models import User
 

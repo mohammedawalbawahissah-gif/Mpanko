@@ -36,9 +36,23 @@ See section 3 of GO-LIVE.md. Verify your sending domain, set `RESEND_API_KEY` an
 3. Run `check_notifications --phone +233...` and confirm the text arrives.
 
 ## 3. WhatsApp (Twilio)
-1. While testing, use the Twilio WhatsApp sandbox: on your phone, send the join code Twilio shows to the sandbox number. Set `WHATSAPP_BACKEND=twilio` and `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886`.
-2. For real customers you need a WhatsApp sender approved by Meta through Twilio, plus an approved message template for each event. Put the template ids in `WHATSAPP_TEMPLATE_SIDS` as JSON (event key to template id). Without templates, WhatsApp only accepts free text inside 24 hours of the customer's last message to you.
-3. Run `check_notifications --phone +233...` and confirm the message arrives.
+Two things use WhatsApp: **staff alerts** (new order, payment to confirm, chargeback) and **customer order updates**. Both go through Twilio.
+
+**Testing first (sandbox).**
+1. Twilio Console > Messaging > Try it out > Send a WhatsApp message. On each phone that should receive messages, send the join code shown there to the sandbox number.
+2. On the api and worker services set `WHATSAPP_BACKEND=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886`.
+3. Set `STAFF_ALERT_WHATSAPP` to the owner's number with country code (for example `+233240000000`); several numbers are separated by commas.
+4. Run `python manage.py check_notifications --phone +233...` and confirm the message arrives.
+
+**Going live (real sender).**
+1. Twilio Console > Messaging > Senders > WhatsApp senders > Create new sender. You need a Meta business account and a phone number that can receive a verification call or text and is not already used on WhatsApp.
+2. Staff alerts: Messaging > Content Template Builder > create a WhatsApp template, category **Utility**, text `Mpanko alert: {{1}}. Open the Mpanko admin app for details.` and submit it for approval. WhatsApp does not allow a placeholder at the very start or end of a template, which is why there is text on both sides. When approved, copy its Content SID (it starts with `HX`) into `WHATSAPP_STAFF_TEMPLATE_SID`.
+3. Customer updates: one approved template per event, listed as JSON in `WHATSAPP_TEMPLATE_SIDS` (see section above for the event keys).
+4. Change `TWILIO_WHATSAPP_FROM` to your approved sender, then run `check_notifications --phone +233...` again. It also tests the staff template.
+
+Without the staff template, staff alerts are sent as plain text, and WhatsApp only delivers plain text within 24 hours of that person last messaging your WhatsApp number. That is why `preflight` warns until `WHATSAPP_STAFF_TEMPLATE_SID` is set.
+
+Each staff member can also switch WhatsApp on for themselves in the admin app (it uses the phone number on their account).
 
 ## 4. Phone push (Expo)
 Expo Go cannot receive push on Android, so push is tested with a development build of the app.
@@ -80,6 +94,7 @@ carries a one-click unsubscribe link.
 | Variable | Purpose |
 |---|---|
 | `ADMIN_APP_URL` | The admin app address (for example `https://mpanko-admin.wolbiroyal.com`). Used for links inside staff alerts. |
+| `WHATSAPP_STAFF_TEMPLATE_SID` | The approved Twilio template for staff alerts (`Mpanko alert: {{1}}. Open the Mpanko admin app for details.`). Needed so alerts arrive at any hour. |
 | `STAFF_ALERT_WHATSAPP` | Comma list of numbers (with country code) that get urgent alerts on WhatsApp: new orders, payments to confirm, chargebacks. Needs WhatsApp set up (section 3). |
 | `STAFF_ALERT_EMAILS` | Extra addresses that also get staff emails for low stock, chargebacks and website enquiries. |
 | `ADMIN_APP_SCHEME` | Deep-link scheme of the admin phone app. Default `mpanko-admin`. |

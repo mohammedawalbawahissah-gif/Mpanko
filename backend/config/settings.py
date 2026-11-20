@@ -309,6 +309,7 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "").strip() or "mailto:" + (os.environ.get("SUPPORT_EMAIL_ADDRESS", "").strip() or "admin@example.com")
 WHATSAPP_BACKEND = os.environ.get("WHATSAPP_BACKEND", "log")
 TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")  # e.g. whatsapp:+14155238886 (the Twilio sandbox number)
+WHATSAPP_STAFF_TEMPLATE_SID = os.environ.get("WHATSAPP_STAFF_TEMPLATE_SID", "")  # approved Twilio template for staff alerts: "Mpanko alert: {{1}}. Open the Mpanko admin app for details."
 WHATSAPP_TEMPLATE_SIDS = os.environ.get("WHATSAPP_TEMPLATE_SIDS", "")  # JSON: event key -> approved Twilio template sid
 
 APP_SCHEME = os.environ.get("APP_SCHEME", "mpanko")  # deep-link scheme of the mobile app

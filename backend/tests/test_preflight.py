@@ -109,6 +109,9 @@ def test_whatsapp_needs_sender_and_templates(settings):
     r = by_name(preflight.check_messaging(offline=True))
     assert r["WhatsApp sender"].level == FAIL
     assert r["WhatsApp templates"].level == WARN
+    assert r["WhatsApp staff alert template"].level == WARN
+    settings.WHATSAPP_STAFF_TEMPLATE_SID = "HX1"
+    assert by_name(preflight.check_messaging(offline=True))["WhatsApp staff alert template"].level == PASS
 
 
 def test_half_configured_carrier_fails(settings):
