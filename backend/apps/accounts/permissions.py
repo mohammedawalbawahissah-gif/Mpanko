@@ -1,17 +1,17 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .models import STAFF_ROLES, Role
+from .models import Role
 
 
 def has_role(user, *roles):
-    return bool(user and user.is_authenticated and user.role in roles)
+    return bool(user and user.is_authenticated and user.role in roles and not getattr(user, "shop_scope", False))
 
 
 class IsStaffRole(BasePermission):
     """Any back-office staff role."""
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role in STAFF_ROLES)
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff_role)
 
 
 def roles_permission(*roles):

@@ -68,9 +68,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    # Set in memory only (never saved) when the request carries a shop-only token: see authentication.py.
+    shop_scope = False
+
     @property
     def is_staff_role(self):
-        return self.role in STAFF_ROLES
+        return self.role in STAFF_ROLES and not self.shop_scope
 
 
 class Address(models.Model):

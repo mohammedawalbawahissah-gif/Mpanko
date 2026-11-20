@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -184,6 +184,8 @@ class ChangePasswordView(AuthThrottled, APIView):
 def _mfa_user(request, purposes):
     """The signed-in user, or the user named by a valid password-step ticket."""
     if request.user and request.user.is_authenticated:
+        if getattr(request.user, "shop_scope", False):
+            raise PermissionDenied("Sign in at the admin dashboard to manage two-step sign-in.")
         return request.user
     user = mfa.read_ticket(request.data.get("mfa_token", ""), purposes)
     if not user:

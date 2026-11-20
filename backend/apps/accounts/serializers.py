@@ -85,9 +85,11 @@ class UserSerializer(serializers.ModelSerializer):
         return mfa.has_confirmed_device(obj)
 
 
-def tokens_for(user):
+def tokens_for(user, scope=None):
     refresh = TokenObtainPairSerializer.get_token(user)
     refresh["role"] = user.role
+    if scope:
+        refresh["scope"] = scope  # copied onto every access token minted from this refresh token
     update_last_login(None, user)
     return {"refresh": str(refresh), "access": str(refresh.access_token), "user": UserSerializer(user).data}
 
@@ -116,6 +118,9 @@ class MpankoTokenSerializer(TokenObtainSerializer):
             raise
         cache.delete(key)
         user = self.user
+        if user.role in STAFF_ROLES and (getattr(self, "initial_data", None) or {}).get("scope") == "shop":
+            # Shopping as a customer: a shop-only token, with no back-office access, so no authenticator code.
+            return tokens_for(user, scope="shop")
         if user.role in STAFF_ROLES:
             if mfa.has_confirmed_device(user):
                 return {"mfa_required": True, "mfa_token": mfa.issue_ticket(user, "login")}

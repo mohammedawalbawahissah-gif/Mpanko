@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     ready,
     cart,
-    login: async (email, password) => accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password } })),
+    login: async (email, password) => accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password, scope: "shop" } })),
     requestPhoneCode: async (phone) => {
       await api("/auth/phone/login/", { method: "POST", body: { phone } });
     },
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     register: async (email, password, fullName, marketing = false) => {
       await api("/auth/register/", { method: "POST", body: { email, password, full_name: fullName, accept_terms: true, marketing_opt_in: marketing } });
-      await accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password } }));
+      await accept(await api<LoginResult>("/auth/login/", { method: "POST", body: { email, password, scope: "shop" } }));
     },
     logout: async () => {
       await unregisterDevice().catch(() => undefined);

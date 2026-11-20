@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const data = await api<LoginResponse>("/auth/login/", { method: "POST", body: { email, password } });
+      const data = await api<LoginResponse>("/auth/login/", { method: "POST", body: { email, password, scope: "shop" } });
       if (data.mfa_required && data.mfa_token) return { mfaTicket: data.mfa_token };
       if (data.mfa_enrollment_required) {
         throw new ApiError(400, { detail: "Staff accounts must turn on two-step sign-in at the admin dashboard first, then come back here." });
