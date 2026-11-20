@@ -404,10 +404,47 @@ export function CustomerDetail() {
 
 /* ------------------------------------------------------------------ Staff */
 
-interface StaffRow { id: number; email: string; full_name: string; role: string; is_active: boolean; mfa_enabled: boolean }
+interface StaffRow { id: number; email: string; full_name: string; role: string; is_active: boolean; mfa_enabled: boolean; phone: string; phone_verified: boolean }
 const ROLES: Record<string, string> = {
   store_admin: "Store administrator", fulfillment: "Order / fulfillment staff", finance: "Finance staff", support: "Support staff", carrier: "Carrier partner user", super_admin: "Super administrator",
 };
+
+/** A staff member's phone number. Setting it here confirms it, so they can get WhatsApp alerts without waiting for a text-message code. */
+function PhoneCell({ s, editable, onSaved }: { s: StaffRow; editable: boolean; onSaved: (text: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(s.phone);
+  const [err, setErr] = useState("");
+  const save = async (phone: string) => {
+    setErr("");
+    try {
+      await api(`/staff/${s.id}/phone/`, { method: "POST", body: { phone } });
+      setOpen(false);
+      onSaved(phone ? `Phone number saved and confirmed for ${s.full_name || s.email}.` : `Phone number removed for ${s.full_name || s.email}.`);
+    } catch (x) {
+      setErr(errText(x));
+    }
+  };
+  if (open) {
+    return (
+      <div>
+        <label className="sr-only" htmlFor={`ph-${s.id}`}>Phone number for {s.email}</label>
+        <input id={`ph-${s.id}`} className="input" inputMode="tel" placeholder="+233240000000" value={value} onChange={(e) => setValue(e.target.value)} />
+        {err && <div className="field-error">{err}</div>}
+        <div className="row" style={{ marginTop: "0.4rem" }}>
+          <button type="button" className="btn" onClick={() => save(value.trim())}>Save</button>
+          {s.phone && <button type="button" className="btn quiet" onClick={() => save("")}>Remove</button>}
+          <button type="button" className="btn quiet" onClick={() => { setOpen(false); setErr(""); setValue(s.phone); }}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <>
+      {s.phone ? <>{s.phone}<div className="small muted">{s.phone_verified ? "Confirmed" : "Not confirmed"}</div></> : <span className="muted">None</span>}
+      {editable && <div><button className="link-button" onClick={() => setOpen(true)}>{s.phone ? "Change" : "Add number"}</button></div>}
+    </>
+  );
+}
 
 export function StaffPage() {
   const { user } = useAuth();
@@ -446,7 +483,7 @@ export function StaffPage() {
       {list.data && (
         <div className="scroll">
           <table className="table">
-            <thead><tr><th>Person</th><th>Role</th><th>Two-step sign-in</th><th>Access</th></tr></thead>
+            <thead><tr><th>Person</th><th>Role</th><th>Phone (for WhatsApp alerts)</th><th>Two-step sign-in</th><th>Access</th></tr></thead>
             <tbody>
               {list.data.map((s) => {
                 const locked = s.id === user?.id || (["super_admin", "store_admin"].includes(s.role) && !isSuper);
@@ -460,6 +497,7 @@ export function StaffPage() {
                         </select>
                       )}
                     </td>
+                    <td><PhoneCell s={s} editable={s.id === user?.id || !(["super_admin", "store_admin"].includes(s.role) && !isSuper)} onSaved={(text) => { setMsg({ kind: "ok", text }); list.reload(); }} /></td>
                     <td>{s.mfa_enabled ? "On" : "Not set up"}</td>
                     <td>{locked ? (s.is_active ? "Active" : "Switched off") : <button className="link-button" onClick={() => patch(s.id, { is_active: !s.is_active })}>{s.is_active ? "Switch off" : "Switch on"}</button>}</td>
                   </tr>

@@ -343,8 +343,10 @@ export const RESOURCES: Resource[] = [
       { key: "role", label: "Role", kind: "select", options: Object.entries(ROLE_NAMES).filter(([k]) => k !== "super_admin").map(([value, l]) => ({ value, label: l })) },
     ],
     create: { label: "Invite someone", defaults: { role: "fulfillment" } },
-    lines: (r) => [["Email", r.email], ["Role", ROLE_NAMES[r.role] ?? r.role], ["Two-step sign-in", r.mfa_enabled ? "On" : "Not set up"], ["Account", r.is_active ? "Active" : "Switched off"]] as [string, string][],
+    lines: (r) => [["Email", r.email], ["Role", ROLE_NAMES[r.role] ?? r.role], ["Phone (for WhatsApp alerts)", r.phone ? `${r.phone} (${r.phone_verified ? "confirmed" : "not confirmed"})` : "None"], ["Two-step sign-in", r.mfa_enabled ? "On" : "Not set up"], ["Account", r.is_active ? "Active" : "Switched off"]] as [string, string][],
     actions: [
+      { label: "Set phone number", tone: "quiet", path: (r) => `/staff/${r.id}/phone/`, fields: [{ key: "phone", label: "Phone number with country code", kind: "phone" }], body: (v) => ({ phone: String(v.phone ?? "").trim() }), done: "Phone number saved and confirmed." },
+      { label: "Remove phone number", tone: "quiet", path: (r) => `/staff/${r.id}/phone/`, show: (r) => !!r.phone, body: () => ({ phone: "" }), confirm: "Remove this phone number? They will stop getting WhatsApp alerts.", done: "Phone number removed." },
       ...["store_admin", "fulfillment", "finance", "support", "carrier"].map((role): Action => ({ label: `Make ${ROLE_NAMES[role].toLowerCase()}`, tone: "quiet", path: (r) => `/staff/${r.id}/`, method: "PATCH", show: (r, me) => r.role !== role && r.role !== "super_admin" && (me === "super_admin" || role !== "store_admin") && (me === "super_admin" || r.role !== "store_admin"), confirm: `Change this person's role to ${ROLE_NAMES[role]}?`, body: () => ({ role }), done: "Role changed." })),
       { label: "Switch off", tone: "danger", path: (r) => `/staff/${r.id}/`, method: "PATCH", show: (r) => r.is_active && r.role !== "super_admin", confirm: "Switch this account off? They will be signed out.", body: () => ({ is_active: false }), done: "Account switched off." },
       { label: "Switch on", path: (r) => `/staff/${r.id}/`, method: "PATCH", show: (r) => !r.is_active, body: () => ({ is_active: true }), done: "Account switched on." },

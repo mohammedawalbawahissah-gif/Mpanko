@@ -1,10 +1,13 @@
 """Back-office views: customers list, staff accounts, audit log browser (S1-01, FR-ADM-02, FR-ADM-04)."""
 from django.db.models import Count, Max
 from rest_framework import mixins, serializers, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from .models import STAFF_ROLES, Address, AuditLog, Role, User
 from .permissions import roles_permission
+from .phone import normalize
 from .tasks import send_staff_invite
 
 CustomerStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
@@ -83,8 +86,8 @@ class StaffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "role", "is_active", "mfa_enabled", "date_joined")
-        read_only_fields = ("id", "date_joined")
+        fields = ("id", "email", "full_name", "role", "is_active", "mfa_enabled", "date_joined", "phone", "phone_verified")
+        read_only_fields = ("id", "date_joined", "phone", "phone_verified")
 
     def validate_role(self, role):
         if role not in {r.value for r in STAFF_ROLES} | {Role.CARRIER}:
@@ -139,6 +142,29 @@ class StaffViewSet(viewsets.ModelViewSet):
                     RefreshToken(t.token).blacklist()
                 except Exception:  # noqa: BLE001 — already blacklisted or expired
                     pass
+
+    @action(detail=True, methods=["post"], url_path="phone")
+    def phone(self, request, pk=None):
+        """Set a staff member's phone number and mark it confirmed, or clear it. This is what lets them get alerts on WhatsApp
+        without waiting for a text-message code. Anyone allowed on this screen can set their own number; other administrators'
+        numbers can only be set by the super administrator."""
+        target = self.get_object()
+        actor = request.user
+        if target.pk != actor.pk and target.role in {Role.SUPER_ADMIN, Role.STORE_ADMIN} and actor.role != Role.SUPER_ADMIN:
+            raise PermissionDenied("Only the super administrator can change an administrator's phone number.")
+        raw = str(request.data.get("phone", "")).strip()
+        if raw:
+            number = normalize(raw)
+            if not number:
+                raise ValidationError({"phone": "Enter a full phone number with the country code, for example +233240000000."})
+            if User.objects.filter(phone=number, phone_verified=True).exclude(pk=target.pk).exists():
+                raise ValidationError({"phone": "That number is already confirmed on another account."})
+            target.phone, target.phone_verified = number, True
+        else:
+            target.phone, target.phone_verified = "", False
+        target.save(update_fields=["phone", "phone_verified"])
+        AuditLog.record(actor, "staff.phone", target, email=target.email, phone_set=bool(target.phone))
+        return Response(self.get_serializer(target).data)
 
 
 class AuditSerializer(serializers.ModelSerializer):
