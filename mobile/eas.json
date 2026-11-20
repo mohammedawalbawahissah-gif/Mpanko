@@ -1,16 +1,32 @@
 {
-  "cli": { "version": ">= 12.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://YOUR-API.up.railway.app/api/v1" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mpanko-api.wolbiroyal.com/api/v1",
+        "EXPO_PUBLIC_WEB_URL": "https://shop.wolbiroyal.com"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://YOUR-API.up.railway.app/api/v1" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mpanko-api.wolbiroyal.com/api/v1",
+        "EXPO_PUBLIC_WEB_URL": "https://shop.wolbiroyal.com"
+      }
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {}
+  }
 }
