@@ -177,14 +177,43 @@ export function SearchBox({ id, label, value, onChange, field, onField, fields, 
   );
 }
 
-/** Sort choices as a row of buttons; the chosen one is pressed. */
+export type SortKind = "date" | "name" | "price" | "count" | "status" | "menu";
+
+/** Which icon a sort choice gets, read from its value ("-created_at", "name-desc", "grand_total"). */
+export function sortIcon(value: string): { kind: SortKind; dir: "asc" | "desc" } {
+  const dir = value.startsWith("-") || value.endsWith("-desc") ? "desc" : "asc";
+  const key = value.replace(/^-/, "").replace(/-desc$/, "");
+  const kind: SortKind = /created|joined|updated|date|_at$/.test(key) ? "date" : /price|total/.test(key) ? "price" : /count/.test(key) ? "count" : key === "status" ? "status" : key === "menu" ? "menu" : "name";
+  return { kind, dir };
+}
+
+/** The icon for one sort choice: what it sorts by on the left, which way on the right. */
+export function SortIcon({ value }: { value: string }) {
+  const { kind, dir } = sortIcon(value);
+  const glyph = (t: string) => <text x="8" y="15" textAnchor="middle" fontSize="14" fontWeight="700" fill="currentColor" stroke="none">{t}</text>;
+  return (
+    <svg width="28" height="20" viewBox="0 0 28 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      {kind === "date" && <><rect x="1" y="4" width="14" height="13" rx="2" /><path d="M1 8h14M5 2v3M11 2v3" /></>}
+      {kind === "name" && glyph("A")}
+      {kind === "price" && glyph("$")}
+      {kind === "count" && glyph("#")}
+      {kind === "status" && <path d="M3 11l4 4 8-9" />}
+      {kind === "menu" && <path d="M2 5h12M2 10h12M2 15h12" />}
+      {kind !== "status" && kind !== "menu" && (dir === "desc" ? <path d="M23 3v14M19 13l4 4 4-4" /> : <path d="M23 17V3M19 7l4-4 4 4" />)}
+    </svg>
+  );
+}
+
+/** Sort choices as icon buttons (each has a name for screen readers and a tooltip); the chosen one is filled in and named beside them. */
 export function SortButtons({ label = "Sort by", value, options, onChange }: { label?: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  const current = options.find((o) => o.value === value)?.label;
   return (
     <div className="sortbuttons" role="group" aria-label={label}>
       <span className="sortbuttons-label">{label}</span>
       {options.map((o) => (
-        <button key={o.value} type="button" className="sortbtn" aria-pressed={value === o.value} onClick={() => onChange(o.value)}>{o.label}</button>
+        <button key={o.value} type="button" className="sortbtn" title={o.label} aria-label={o.label} aria-pressed={value === o.value} onClick={() => onChange(o.value)}><SortIcon value={o.value} /></button>
       ))}
+      {current && <span className="sortbuttons-current" aria-live="polite">{current}</span>}
     </div>
   );
 }

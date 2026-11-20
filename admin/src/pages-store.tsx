@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Page } from "./api";
 import { useAuth } from "./auth";
-import { Alert, Field, Loading, Pill, SearchBox, errText, label, useAsync, when } from "./ui";
+import { Alert, Field, Loading, Pill, SearchBox, SortButtons, errText, label, useAsync, when } from "./ui";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
 
@@ -330,12 +330,17 @@ export function Customers() {
   const [query, setQuery] = useState("");
   const [applied, setApplied] = useState("");
   const [searchIn, setSearchIn] = useState("");
-  const { data, error, loading } = useAsync(() => api<Page<CustomerRow>>(`/customers/${applied ? `?search=${encodeURIComponent(applied)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}`), [applied, searchIn]);
+  const [sort, setSort] = useState("-date_joined");
+  const { data, error, loading } = useAsync(() => api<Page<CustomerRow>>(`/customers/?ordering=${sort}${applied ? `&search=${encodeURIComponent(applied)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}`), [applied, searchIn, sort]);
   return (
     <>
       <h1>Customers</h1>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setApplied(query.trim()); }}>
         <SearchBox id="cq" label="Search customers" value={query} onChange={setQuery} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "full_name", label: "Name" }, { value: "email", label: "Email" }, { value: "phone", label: "Phone" }]} onSubmit={() => setApplied(query.trim())} />
+        <SortButtons value={sort} onChange={setSort} options={[
+          { value: "-date_joined", label: "Newest customers first" }, { value: "date_joined", label: "Oldest customers first" },
+          { value: "-order_count", label: "Most orders first" }, { value: "order_count", label: "Fewest orders first" },
+        ]} />
       </form>
       {loading && <Loading />}
       {error && <Alert>{error}</Alert>}
@@ -487,16 +492,21 @@ export function AuditLog() {
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState("");
   const [searchIn, setSearchIn] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const qs = [applied && `search=${encodeURIComponent(applied)}`, applied && searchIn && `search_in=${searchIn}`, from && `from=${from}`, to && `to=${to}`].filter(Boolean).join("&");
-  const { data, error, loading } = useAsync(() => api<Page<AuditRow>>(`/audit/${qs ? `?${qs}` : ""}`), [qs]);
+  const qs = [`ordering=${sort}`, applied && `search=${encodeURIComponent(applied)}`, applied && searchIn && `search_in=${searchIn}`, from && `from=${from}`, to && `to=${to}`].filter(Boolean).join("&");
+  const { data, error, loading } = useAsync(() => api<Page<AuditRow>>(`/audit/?${qs}`), [qs]);
   return (
     <>
       <h1>Activity log</h1>
       <p className="muted">Who did what in the back office. Entries can't be edited.</p>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setApplied(search.trim()); }}>
         <SearchBox id="al-q" label="Search the activity log" value={search} onChange={setSearch} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "action", label: "Action" }, { value: "actor__email", label: "Person" }, { value: "object_type", label: "Item type" }, { value: "object_id", label: "Item ID" }]} onSubmit={() => setApplied(search.trim())} />
+        <SortButtons value={sort} onChange={setSort} options={[
+          { value: "-created_at", label: "Newest first" }, { value: "created_at", label: "Oldest first" },
+          { value: "action", label: "Action A to Z" }, { value: "-action", label: "Action Z to A" }, { value: "object_type", label: "Item type A to Z" },
+        ]} />
         <Field id="al-f" label="From"><input id="al-f" type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
         <Field id="al-t" label="To"><input id="al-t" type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
       </form>

@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { api, ApiError } from "./api";
 import { useAuth } from "./auth";
 import { errText } from "./hooks";
-import { bodyFrom, Chooser, FieldsForm, initialVals, SearchBox, type Vals } from "./kit";
+import { bodyFrom, Chooser, FieldsForm, initialVals, SearchBox, SortButtons, type Vals } from "./kit";
 import { GROUPS, byKey, navFor, type Action, type Row } from "./core/resources";
 import { Busy, Button, Card, Empty, Field, Notice, Pill, s } from "./ui";
 
@@ -50,6 +50,7 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
   const [q, setQ] = useState("");
   const [applied, setApplied] = useState("");
   const [searchIn, setSearchIn] = useState("");
+  const [sort, setSort] = useState(res.sorts?.[0]?.value ?? "");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState<Row[] | null>(null);
@@ -59,12 +60,13 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
   const qs = useMemo(() => {
     const p: string[] = [];
     for (const [k, v] of Object.entries(filters)) if (v) p.push(`${k}=${encodeURIComponent(v)}`);
+    if (res.sorts && sort) p.push(`ordering=${sort}`);
     if (res.search && applied) p.push(`${res.search.param}=${encodeURIComponent(applied)}`);
     if (res.search && applied && searchIn) p.push(`search_in=${searchIn}`);
     if (res.dates && from) p.push(`${res.dates.from}=${from}`);
     if (res.dates && to) p.push(`${res.dates.to}=${to}`);
     return p.length ? `?${p.join("&")}` : "";
-  }, [filters, applied, searchIn, from, to, res]);
+  }, [filters, applied, searchIn, sort, from, to, res]);
   const load = useCallback(async () => {
     try {
       const d = await api<unknown>(`${res.path}${qs}`);
@@ -100,6 +102,7 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
           {res.search ? (
             <SearchBox label={res.search.label} value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={res.search.fields ?? [{ value: "", label: "Everything" }]} onSubmit={() => setApplied(q.trim())} />
           ) : null}
+          {res.sorts ? <SortButtons value={sort} options={res.sorts} onChange={setSort} /> : null}
           {res.dates ? (
             <View>
               <Field label="From (YYYY-MM-DD)" value={from} onChangeText={setFrom} autoCapitalize="none" placeholder="YYYY-MM-DD" />

@@ -154,6 +154,8 @@ class AuditLogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = AuditSerializer
     search_fields = ["action", "actor__email", "object_type", "object_id"]
     filterset_fields = ["action", "object_type"]
+    ordering_fields = ["created_at", "action", "object_type"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         qs = AuditLog.objects.select_related("actor")

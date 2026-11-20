@@ -364,6 +364,17 @@ const dishPrice = (item) => {
 };
 
 export const MENU_SEARCH_FIELDS = [["all", "Everything"], ["name", "Dish"], ["description", "Description"], ["section", "Category"]];
+/** The icon for one sort choice: what it sorts by on the left, which way on the right (the same set the shop and admin use). */
+export function sortIconSvg(value) {
+  const dir = value.startsWith("-") || value.endsWith("-desc") ? "desc" : "asc";
+  const key = value.replace(/^-/, "").replace(/-desc$/, "");
+  const kind = /created|joined|updated|date|_at$/.test(key) ? "date" : /price|total/.test(key) ? "price" : /count/.test(key) ? "count" : key === "status" ? "status" : key === "menu" ? "menu" : "name";
+  const text = (t) => `<text x="8" y="15" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor" stroke="none">${t}</text>`;
+  const glyph = { date: '<rect x="1" y="4" width="14" height="13" rx="2"/><path d="M1 8h14M5 2v3M11 2v3"/>', name: text("A"), price: text("$"), count: text("#"), status: '<path d="M3 11l4 4 8-9"/>', menu: '<path d="M2 5h12M2 10h12M2 15h12"/>' }[kind];
+  const arrow = kind === "status" || kind === "menu" ? "" : dir === "desc" ? '<path d="M23 3v14M19 13l4 4 4-4"/>' : '<path d="M23 17V3M19 7l4-4 4 4"/>';
+  return `<svg width="28" height="20" viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${glyph}${arrow}</svg>`;
+}
+
 export const MENU_SORTS = [["menu", "Menu order"], ["name", "Name A to Z"], ["name-desc", "Name Z to A"], ["price", "Price: low to high"], ["price-desc", "Price: high to low"]];
 
 /** Reads the search and sort choices from the address, keeping only values the page offers. */
@@ -427,7 +438,7 @@ export function menuPage(ctx, menu, query = {}) {
           <input id="menu-q" class="input" type="search" name="q" placeholder="Search the menu" maxlength="80" value="${esc(q)}">
           <button class="btn quiet" type="submit">Search</button>
         </div>
-        <div class="sortbuttons" role="group" aria-label="Sort dishes"><span class="sortbuttons-label">Sort by</span>${MENU_SORTS.map(([v, l]) => `<button class="sortbtn" type="submit" name="sort" value="${v}" aria-pressed="${v === sort}">${l}</button>`).join("")}</div>
+        <div class="sortbuttons" role="group" aria-label="Sort dishes"><span class="sortbuttons-label">Sort by</span>${MENU_SORTS.map(([v, l]) => `<button class="sortbtn" type="submit" name="sort" value="${v}" title="${l}" aria-label="${l}" aria-pressed="${v === sort}">${sortIconSvg(v)}</button>`).join("")}<span class="sortbuttons-current">${esc(MENU_SORTS.find(([v]) => v === sort)?.[1] || "")}</span></div>
         <input type="hidden" name="sort" value="${esc(sort)}">
         ${filtered ? `<p class="menu-found" role="status">${total ? `${total} ${total === 1 ? "dish" : "dishes"}${q ? ` for \u201c${esc(q)}\u201d` : ""}. <a href="/menu">Clear</a>` : `No dishes match${q ? ` \u201c${esc(q)}\u201d` : ""}. <a href="/menu">Show the whole menu</a>`}</p>` : ""}
       </form>

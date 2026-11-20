@@ -9,6 +9,7 @@ import { fetchWithCache } from "./core/cache";
 import type { MessageKey } from "./core/i18n";
 import { photoLabel, type ProductPhoto } from "./core/images";
 import { contactItems, type ContactConfig } from "./core/contacts";
+import { sortIcon } from "./core/sortIcon";
 import { layoutFor, READABLE, type Layout } from "./core/layout";
 import { usePrefs } from "./prefs";
 import { color, font, radius, stripes, type } from "./theme";
@@ -496,18 +497,36 @@ export function SearchBox({ label, value, onChange, field, onField, fields, onSu
   );
 }
 
-/** Sort choices as a wrapped row of buttons; the chosen one is filled in. */
+/** The icon for one sort choice: what it sorts by, then which way (an arrow up or down). */
+export function SortIcon({ value, on }: { value: string; on: boolean }) {
+  const { kind, dir } = sortIcon(value);
+  const tint = on ? "#fff" : color.ink;
+  const glyph = { name: "A", price: "$", count: "#", status: "\u2713", menu: "\u2261", date: "" }[kind];
+  return (
+    <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      {kind === "date" ? (
+        <View style={{ width: 18, height: 18, borderWidth: 2, borderColor: tint, borderRadius: 3 }}>
+          <View style={{ height: 4, marginTop: 2, backgroundColor: tint }} />
+        </View>
+      ) : <Text style={{ color: tint, fontSize: 18, fontWeight: "800", minWidth: 18, textAlign: "center" }}>{glyph}</Text>}
+      {kind !== "status" && kind !== "menu" ? <Text style={{ color: tint, fontSize: 18, fontWeight: "800" }}>{dir === "desc" ? "\u2193" : "\u2191"}</Text> : null}
+    </View>
+  );
+}
+
+/** Sort choices as icon buttons (each has a spoken name); the chosen one is filled in and named beside the row. */
 export function SortButtons({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  const current = options.find((o) => o.value === value)?.label;
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={s.label}>{label}</Text>
+      <Text style={s.label}>{label}{current ? `: ${current}` : ""}</Text>
       <View accessibilityRole="radiogroup" style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {options.map((o) => {
           const on = o.value === value;
           return (
-            <Pressable key={o.value} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.value)}
-              style={{ minHeight: 44, paddingHorizontal: 14, justifyContent: "center", borderRadius: 999, borderWidth: 1.5, borderColor: on ? color.ink : color.line, backgroundColor: on ? color.ink : "#fff" }}>
-              <Text style={{ color: on ? "#fff" : color.ink, fontWeight: "600" }}>{o.label}</Text>
+            <Pressable key={o.value} accessibilityRole="button" accessibilityLabel={o.label} accessibilityState={{ selected: on }} onPress={() => onChange(o.value)}
+              style={{ minHeight: 48, minWidth: 56, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", borderRadius: 999, borderWidth: 1.5, borderColor: on ? color.ink : color.line, backgroundColor: on ? color.ink : "#fff" }}>
+              <SortIcon value={o.value} on={on} />
             </Pressable>
           );
         })}

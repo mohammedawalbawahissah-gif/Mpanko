@@ -32,4 +32,7 @@ describe("admin sections", () => {
       expect(f.length).toBeGreaterThan(2);
     }
   });
+  it("every list with a search can also be sorted", () => {
+    for (const r of RESOURCES) if (r.search) expect(r.sorts?.length, r.key).toBeGreaterThan(1);
+  });
 });

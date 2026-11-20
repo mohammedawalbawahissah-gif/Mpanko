@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { arrangeMenu, menuQuery, aboutPage, servicePage, servicesPage, magaziaPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
+import { arrangeMenu, menuQuery, sortIconSvg, aboutPage, servicePage, servicesPage, magaziaPage, contactPage, esc, homePage, monogram, notFoundPage, paragraphs, safeUrl, sitemap } from "../src/render.mjs";
 import { fallbackBusinesses, fallbackProfile } from "../src/content.mjs";
 
 const site = { url: "https://www.example.org", shopUrl: "https://shop.example.org" };
@@ -206,4 +206,10 @@ test("arrangeMenu filters by the chosen field and sorts with unpriced dishes las
 test("menuQuery keeps only choices the page offers", () => {
   assert.deepEqual(menuQuery(new URLSearchParams("q=%20soup%20&in=name&sort=price")), { q: "soup", field: "name", sort: "price" });
   assert.deepEqual(menuQuery(new URLSearchParams("in=drop&sort=drop")), { q: "", field: "all", sort: "menu" });
+});
+
+test("sort icons point the way the sort goes", () => {
+  assert.ok(sortIconSvg("price").includes("M23 17V3"), "low to high points up");
+  assert.ok(sortIconSvg("price-desc").includes("M23 3v14"), "high to low points down");
+  assert.ok(!sortIconSvg("menu").includes("M23"), "menu order has no arrow");
 });

@@ -242,6 +242,7 @@ test("the menu has drop-down categories, a search bar with a field choice, and s
     assert.ok(html.includes('<option value="name">Dish</option>'));
     assert.ok(!html.includes("<select name=\"sort\""), "sorting is buttons, not a select box");
     assert.equal((html.match(/class="sortbtn"/g) || []).length, 5);
+    assert.equal((html.match(/<button class="sortbtn"[^>]*aria-label="[^"]+"[^>]*><svg/g) || []).length, 5, "sort choices are icon buttons with a name");
   }, { businesses: [QT], menu: MENU, shopUrl: "https://shop.example.org" });
 });
 

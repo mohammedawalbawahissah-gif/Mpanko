@@ -453,3 +453,7 @@ strong, b { font-weight: 650; }
 .sortbtn:focus-visible { outline: 3px solid var(--focus, #1a73e8); outline-offset: 2px; }
 .order-tools .searchbox { flex-basis: 100%; }
 .order-tools .sortbuttons { flex-basis: 100%; }
+
+/* Sort choices are icon buttons. */
+.sortbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; padding: 0.35rem 0.6rem; }
+.sortbuttons-current { font-size: var(--t-sm); color: var(--muted, #4a6462); margin-left: 0.25rem; }

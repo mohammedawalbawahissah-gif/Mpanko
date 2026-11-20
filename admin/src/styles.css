@@ -192,3 +192,7 @@ code.secret { background: var(--wash); padding: 0.15rem 0.4rem; border-radius: 6
 .sortbtn:hover { background: var(--wash); }
 .sortbtn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .sortbtn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* Sort choices are icon buttons. */
+.sortbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; padding: 0.35rem 0.6rem; }
+.sortbuttons-current { font-size: var(--t-sm); color: var(--muted, #4a6462); margin-left: 0.25rem; }

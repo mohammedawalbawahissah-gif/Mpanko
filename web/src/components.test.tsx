@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SearchBox, SortButtons, StatusPill, pattern, routeTitle, statusLabel } from "./components";
+import { SearchBox, SortButtons, sortIcon, StatusPill, pattern, routeTitle, statusLabel } from "./components";
 
 describe("statusLabel", () => {
   it("makes API statuses readable", () => {
@@ -55,5 +55,17 @@ describe("search and sort controls", () => {
     expect(html).not.toContain("<select");
     expect(html.match(/<button/g)).toHaveLength(2);
     expect(html).toContain('aria-pressed="true"');
+  });
+  it("sort buttons are icons with a spoken name and a tooltip, and the chosen one is named beside them", () => {
+    const html = renderToStaticMarkup(<SortButtons label="Sort by" value="-created_at" onChange={() => undefined} options={[{ value: "-created_at", label: "Newest first" }, { value: "name", label: "Name A to Z" }]} />);
+    expect(html.match(/<svg/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="Newest first"');
+    expect(html).toContain('title="Name A to Z"');
+    expect(html).toContain('class="sortbuttons-current"');
+  });
+  it("reads the icon from the sort value", () => {
+    expect(sortIcon("-grand_total")).toEqual({ kind: "price", dir: "desc" });
+    expect(sortIcon("created_at")).toEqual({ kind: "date", dir: "asc" });
+    expect(sortIcon("name")).toEqual({ kind: "name", dir: "asc" });
   });
 });

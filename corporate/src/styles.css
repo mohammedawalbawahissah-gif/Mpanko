@@ -300,3 +300,5 @@ footer p { margin: 0; }
 .pillars h3 { margin: 0 0 0.4rem; font: 650 var(--t-lg)/1.25 var(--display); color: var(--teal); }
 .pillars p { margin: 0; }
 .menu-empty { margin: 0; padding: 1rem 1.25rem; color: #3d5654; }
+.sortbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; padding: 0.4rem 0.7rem; }
+.sortbuttons-current { font-size: var(--t-sm); color: #3d5654; margin-left: 0.25rem; }
