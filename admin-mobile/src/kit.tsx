@@ -214,3 +214,59 @@ export function bodyFrom(fields: FieldDef[], vals: Vals, blanks: "keep" | "null"
   }
   return { json, form, hasFile: multipart };
 }
+
+// ---------------------------------------------------------------- search and sort
+
+/** One search bar with a drop-down (on the left) that picks which detail to search by. */
+export function SearchBox({ label, value, onChange, field, onField, fields, onSubmit }: {
+  label: string; value: string; onChange: (v: string) => void; field: string; onField: (v: string) => void; fields: Opt[]; onSubmit: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const shown = fields.find((f) => f.value === field)?.label ?? fields[0]?.label ?? "";
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <View accessibilityRole="search" style={{ flexDirection: "row", alignItems: "stretch" }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Search in: ${shown}`} onPress={() => setOpen(true)}
+          style={{ minHeight: 48, paddingHorizontal: 12, justifyContent: "center", backgroundColor: color.wash, borderWidth: 1.5, borderColor: color.field, borderRightWidth: 0, borderTopLeftRadius: 12, borderBottomLeftRadius: 12, maxWidth: "42%" }}>
+          <Text numberOfLines={1} style={{ fontWeight: "700", color: color.ink }}>{shown} {"▾"}</Text>
+        </Pressable>
+        <TextInput accessibilityLabel={label} placeholder={label} placeholderTextColor={color.muted} returnKeyType="search" autoCapitalize="none" autoCorrect={false}
+          value={value} onChangeText={onChange} onSubmitEditing={onSubmit} style={[s.input, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]} />
+      </View>
+      <Button title="Search" tone="quiet" onPress={onSubmit} />
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: 24 }}>
+          <View style={{ backgroundColor: "#fff", borderRadius: 16, padding: 8 }}>
+            <Text accessibilityRole="header" style={[s.h2, { padding: 12, marginTop: 0, marginBottom: 0 }]}>Search in</Text>
+            {fields.map((f) => (
+              <Pressable key={f.value} accessibilityRole="button" accessibilityState={{ selected: f.value === field }} onPress={() => { onField(f.value); setOpen(false); }}
+                style={{ minHeight: 48, paddingHorizontal: 12, justifyContent: "center", borderTopWidth: 1, borderTopColor: color.line }}>
+                <Text style={{ color: f.value === field ? color.teal : color.ink, fontWeight: f.value === field ? "700" : "400", fontSize: type.md }}>{f.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+/** Sort choices as a wrapped row of buttons; the chosen one is filled in. */
+export function SortButtons({ label = "Sort by", value, options, onChange }: { label?: string; value: string; options: Opt[]; onChange: (v: string) => void }) {
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={s.label}>{label}</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <Pressable key={o.value} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.value)}
+              style={{ minHeight: 44, paddingHorizontal: 14, justifyContent: "center", borderRadius: 999, borderWidth: 1.5, borderColor: on ? color.ink : color.line, backgroundColor: on ? color.ink : "#fff" }}>
+              <Text style={{ color: on ? "#fff" : color.ink, fontWeight: "600" }}>{o.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}

@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { api, ApiError } from "./api";
 import { useAuth } from "./auth";
 import { errText } from "./hooks";
-import { bodyFrom, Chooser, FieldsForm, initialVals, type Vals } from "./kit";
+import { bodyFrom, Chooser, FieldsForm, initialVals, SearchBox, type Vals } from "./kit";
 import { GROUPS, byKey, navFor, type Action, type Row } from "./core/resources";
 import { Busy, Button, Card, Empty, Field, Notice, Pill, s } from "./ui";
 
@@ -49,6 +49,7 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
   const [filters, setFilters] = useState<Record<string, string>>(() => Object.fromEntries((res.filters ?? []).map((f) => [f.param, f.def ?? ""])));
   const [q, setQ] = useState("");
   const [applied, setApplied] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState<Row[] | null>(null);
@@ -59,10 +60,11 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
     const p: string[] = [];
     for (const [k, v] of Object.entries(filters)) if (v) p.push(`${k}=${encodeURIComponent(v)}`);
     if (res.search && applied) p.push(`${res.search.param}=${encodeURIComponent(applied)}`);
+    if (res.search && applied && searchIn) p.push(`search_in=${searchIn}`);
     if (res.dates && from) p.push(`${res.dates.from}=${from}`);
     if (res.dates && to) p.push(`${res.dates.to}=${to}`);
     return p.length ? `?${p.join("&")}` : "";
-  }, [filters, applied, from, to, res]);
+  }, [filters, applied, searchIn, from, to, res]);
   const load = useCallback(async () => {
     try {
       const d = await api<unknown>(`${res.path}${qs}`);
@@ -96,10 +98,7 @@ export function ListScreen({ route }: { route: { params: { res: string } } }) {
           {res.create && canEdit ? <Button title={res.create.label} onPress={() => nav.navigate("Record", { res: res.key, id: "new" })} /> : null}
           {(res.filters ?? []).map((f) => <Chooser key={f.param} label={f.label} value={filters[f.param]} options={f.options} onPick={(v) => setFilters((p) => ({ ...p, [f.param]: v }))} />)}
           {res.search ? (
-            <View>
-              <Field label={res.search.label} value={q} onChangeText={setQ} autoCapitalize="none" returnKeyType="search" onSubmitEditing={() => setApplied(q.trim())} />
-              <Button title="Search" tone="quiet" onPress={() => setApplied(q.trim())} />
-            </View>
+            <SearchBox label={res.search.label} value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={res.search.fields ?? [{ value: "", label: "Everything" }]} onSubmit={() => setApplied(q.trim())} />
           ) : null}
           {res.dates ? (
             <View>

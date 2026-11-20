@@ -25,4 +25,11 @@ describe("admin sections", () => {
     expect(fromPercent("12.5%")).toBe("0.125");
     expect(fromPercent("abc")).toBe("");
   });
+  it("searches that can be narrowed offer a choice of detail, starting with everything", () => {
+    for (const key of ["customers", "audit"]) {
+      const f = byKey(key)!.search!.fields!;
+      expect(f[0]).toEqual({ value: "", label: "Everything" });
+      expect(f.length).toBeGreaterThan(2);
+    }
+  });
 });

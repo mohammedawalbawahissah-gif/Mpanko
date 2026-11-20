@@ -397,3 +397,37 @@ export function PasswordInput({ id, value, onChange, autoComplete, required }: {
     </div>
   );
 }
+
+/* ------------------------------------------------------- search and sort */
+
+export interface SearchField { value: string; label: string }
+
+/** One search bar with a drop-down that picks which detail to search by. */
+export function SearchBox({ id, label, value, onChange, field, onField, fields, placeholder, onSubmit, submitLabel }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; field: string; onField: (v: string) => void; fields: SearchField[];
+  placeholder?: string; onSubmit?: () => void; submitLabel?: string;
+}) {
+  const { t } = useT();
+  return (
+    <div className="searchbox" role="search">
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <select id={`${id}-in`} className="select" aria-label={t("search.in")} value={field} onChange={(e) => onField(e.target.value)}>
+        {fields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+      </select>
+      <input id={id} className="input" type="search" placeholder={placeholder ?? label} value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSubmit?.(); } }} />
+      {submitLabel && <button className="btn quiet" type="button" onClick={() => onSubmit?.()}>{submitLabel}</button>}
+    </div>
+  );
+}
+
+/** Sort choices as a row of buttons; the chosen one is pressed. */
+export function SortButtons({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  return (
+    <div className="sortbuttons" role="group" aria-label={label}>
+      <span className="sortbuttons-label">{label}</span>
+      {options.map((o) => (
+        <button key={o.value} type="button" className="sortbtn" aria-pressed={value === o.value} onClick={() => onChange(o.value)}>{o.label}</button>
+      ))}
+    </div>
+  );
+}

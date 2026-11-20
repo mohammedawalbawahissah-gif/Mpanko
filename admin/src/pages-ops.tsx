@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, downloadFile, type Page } from "./api";
 import { useAuth } from "./auth";
-import { Alert, Field, Loading, Pill, Stat, errText, label, useAsync, when } from "./ui";
+import { Alert, Field, Loading, Pill, SearchBox, SortButtons, Stat, errText, label, useAsync, when } from "./ui";
 
 /* ------------------------------------------------------------- dashboard */
 
@@ -52,18 +52,19 @@ export function Orders() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [sort, setSort] = useState("-created_at");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const { data, error, loading } = useAsync(
-    () => api<Page<OrderRow>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
-    [status, query, sort, from, to]
+    () => api<Page<OrderRow>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
+    [status, query, searchIn, sort, from, to]
   );
   return (
     <>
       <h1>Orders</h1>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setQuery(q); }}>
-        <Field id="f-q" label="Order number or email"><input id="f-q" className="input" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
+        <SearchBox id="f-q" label="Search orders" value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "number", label: "Order number" }, { value: "contact_email", label: "Email" }]} onSubmit={() => setQuery(q)} />
         <Field id="f-s" label="Status">
           <select id="f-s" className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All</option>
@@ -73,16 +74,10 @@ export function Orders() {
         <Field id="f-f" label="Placed from"><input id="f-f" className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
         <Field id="f-t" label="Placed until"><input id="f-t" className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
         {(from || to) && <button type="button" className="btn quiet" onClick={() => { setFrom(""); setTo(""); }}>Clear dates</button>}
-        <Field id="f-o" label="Sort by">
-          <select id="f-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="-created_at">Newest first</option>
-            <option value="created_at">Oldest first</option>
-            <option value="-grand_total">Total: high to low</option>
-            <option value="grand_total">Total: low to high</option>
-            <option value="status">Status</option>
-          </select>
-        </Field>
-        <button className="btn quiet">Search</button>
+        <SortButtons value={sort} onChange={setSort} options={[
+          { value: "-created_at", label: "Newest first" }, { value: "created_at", label: "Oldest first" },
+          { value: "-grand_total", label: "Total: high to low" }, { value: "grand_total", label: "Total: low to high" }, { value: "status", label: "Status" },
+        ]} />
       </form>
       {loading && <Loading />}
       {error && <Alert>{error}</Alert>}

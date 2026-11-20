@@ -5,7 +5,7 @@ import { api } from "./api";
 import { useAuth } from "./auth";
 import { downloadAndShare } from "./files";
 import { errText, rowsOf, useLoad, useRunner } from "./hooks";
-import { Chooser, FieldsForm, ImagePick, type FieldDef, type ImageVal, type Opt, type Vals } from "./kit";
+import { Chooser, FieldsForm, ImagePick, SearchBox, SortButtons, type FieldDef, type ImageVal, type Opt, type Vals } from "./kit";
 import { when } from "./core/resources";
 import { color } from "./theme";
 import { Busy, Button, Card, Empty, Field, Notice, Pill, s } from "./ui";
@@ -77,10 +77,11 @@ export function OrdersScreen() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [sort, setSort] = useState("-created_at");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const path = `/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`;
+  const path = `/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${query ? `&search=${encodeURIComponent(query)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`;
   const { data, error, reload } = useLoad(() => api<unknown>(path), [path]);
   const [refreshing, setRefreshing] = useState(false);
   const list = data ? rowsOf<OrderRow>(data) : null;
@@ -93,12 +94,11 @@ export function OrdersScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false); }} />}
       ListHeaderComponent={
         <>
-          <Field label="Order number or email" value={q} onChangeText={setQ} autoCapitalize="none" returnKeyType="search" onSubmitEditing={() => setQuery(q.trim())} />
+          <SearchBox label="Search orders" value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "number", label: "Order number" }, { value: "contact_email", label: "Email" }]} onSubmit={() => setQuery(q.trim())} />
           <Chooser label="Status" value={status} options={[{ value: "", label: "All" }, ...opts("pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded")]} onPick={setStatus} />
           <Field label="Placed from (YYYY-MM-DD)" value={from} onChangeText={setFrom} autoCapitalize="none" placeholder="YYYY-MM-DD" />
           <Field label="Placed until (YYYY-MM-DD)" value={to} onChangeText={setTo} autoCapitalize="none" placeholder="YYYY-MM-DD" />
-          <Chooser label="Sort by" value={sort} options={[{ value: "-created_at", label: "Newest first" }, { value: "created_at", label: "Oldest first" }, { value: "-grand_total", label: "Total: high to low" }, { value: "grand_total", label: "Total: low to high" }, { value: "status", label: "Status" }]} onPick={setSort} />
-          <Button title="Search" tone="quiet" onPress={() => setQuery(q.trim())} />
+          <SortButtons value={sort} options={[{ value: "-created_at", label: "Newest first" }, { value: "created_at", label: "Oldest first" }, { value: "-grand_total", label: "Total: high to low" }, { value: "grand_total", label: "Total: low to high" }, { value: "status", label: "Status" }]} onChange={setSort} />
           {error ? <Notice>{error}</Notice> : null}
         </>
       }

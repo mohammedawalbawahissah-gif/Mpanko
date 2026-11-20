@@ -180,3 +180,15 @@ code.secret { background: var(--wash); padding: 0.15rem 0.4rem; border-radius: 6
 .pill.s-handled { background: #D6EFE5; color: #075A40; }
 .pill.s-new { background: #FBEFC4; color: #6A4C00; }
 .input.narrow { width: 6rem; }
+
+/* One search bar with a "search in" drop-down, and sort choices as buttons. */
+.searchbox { display: flex; align-items: stretch; flex: 1 1 24rem; min-width: 0; margin-bottom: 1rem; }
+.searchbox .select { flex: none; width: auto; max-width: 45%; border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; background-color: var(--wash); font-weight: 600; }
+.searchbox .input { flex: 1 1 auto; min-width: 0; border-radius: 0; }
+.searchbox .btn { flex: none; border-radius: 0 999px 999px 0; }
+.sortbuttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 1rem; flex-basis: 100%; }
+.sortbuttons-label { font-weight: 650; margin-right: 0.25rem; }
+.sortbtn { font: inherit; font-weight: 550; min-height: 40px; padding: 0.35rem 0.9rem; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper, #fff); color: var(--ink); cursor: pointer; }
+.sortbtn:hover { background: var(--wash); }
+.sortbtn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.sortbtn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }

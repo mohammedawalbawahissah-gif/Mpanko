@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, downloadFile, idempotencyKey, type Page } from "./api";
 import { AddressForm } from "./address";
-import { Alert, Field, Loading, StatusPill, statusLabel, useAsync } from "./components";
+import { Alert, Field, Loading, SearchBox, SortButtons, StatusPill, statusLabel, useAsync } from "./components";
 import { useAuth, useCart, useCurrency } from "./context";
 import { useT } from "./i18n";
 import { countryName } from "./pages-shop";
@@ -448,6 +448,7 @@ export function Orders() {
   const { currency, exact } = useCurrency();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("-created_at");
   const [from, setFrom] = useState("");
@@ -457,8 +458,8 @@ export function Orders() {
     return () => clearTimeout(id);
   }, [q]);
   const { data, error, loading } = useAsync(
-    () => api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
-    [sort, status, search, from, to]
+    () => api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`),
+    [sort, status, search, searchIn, from, to]
   );
   const filtering = !!(search || status || from || to);
   void currency;
@@ -467,7 +468,7 @@ export function Orders() {
       <h1>{t("orders.title")}</h1>
       {(data?.results.length || filtering) ? (
         <form className="order-tools" role="search" onSubmit={(e) => e.preventDefault()}>
-          <Field id="o-q" label={t("orders.search")}><input id="o-q" className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
+          <SearchBox id="o-q" label={t("orders.search")} value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: t("search.everything") }, { value: "number", label: t("search.orderNumber") }]} />
           <Field id="o-s" label={t("orders.status")}>
             <select id="o-s" className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">{t("orders.allStatuses")}</option>
@@ -477,15 +478,13 @@ export function Orders() {
           <Field id="o-f" label={t("orders.from")}><input id="o-f" className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
           <Field id="o-t" label={t("orders.to")}><input id="o-t" className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
           {(from || to) && <button type="button" className="btn quiet sm" onClick={() => { setFrom(""); setTo(""); }}>{t("orders.clearDate")}</button>}
-          <Field id="o-o" label={t("orders.sort")}>
-            <select id="o-o" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="-created_at">{t("orders.sortNewest")}</option>
-              <option value="created_at">{t("orders.sortOldest")}</option>
-              <option value="-grand_total">{t("orders.sortHigh")}</option>
-              <option value="grand_total">{t("orders.sortLow")}</option>
-              <option value="status">{t("orders.sortStatus")}</option>
-            </select>
-          </Field>
+          <SortButtons label={t("orders.sort")} value={sort} onChange={setSort} options={[
+            { value: "-created_at", label: t("orders.sortNewest") },
+            { value: "created_at", label: t("orders.sortOldest") },
+            { value: "-grand_total", label: t("orders.sortHigh") },
+            { value: "grand_total", label: t("orders.sortLow") },
+            { value: "status", label: t("orders.sortStatus") },
+          ]} />
         </form>
       ) : null}
       {loading && <Loading what="Loading orders" />}

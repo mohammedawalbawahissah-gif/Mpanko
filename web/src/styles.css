@@ -438,3 +438,18 @@ strong, b { font-weight: 650; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--teal); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .table-scroll { overflow-x: auto; }
 .table td input[type="checkbox"] { width: 1.25rem; height: 1.25rem; }
+
+/* One search bar with a "search in" drop-down, and sort choices as buttons. */
+.searchbox { display: flex; align-items: stretch; gap: 0; flex: 1 1 22rem; min-width: 0; }
+.searchbox .select { flex: none; width: auto; max-width: 45%; border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; background-color: var(--wash); font-weight: 600; }
+.searchbox .input { flex: 1 1 auto; min-width: 0; border-radius: 0; }
+.searchbox .input:last-child { border-top-right-radius: var(--radius, 8px); border-bottom-right-radius: var(--radius, 8px); }
+.searchbox .btn { flex: none; border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+.sortbuttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.sortbuttons-label { font-size: var(--t-sm); font-weight: 650; margin-right: 0.25rem; }
+.sortbtn { font: inherit; font-size: var(--t-sm); font-weight: 550; min-height: 40px; padding: 0.35rem 0.85rem; border-radius: 999px; border: 1.5px solid var(--line, #cfd6dc); background: #fff; color: var(--ink); cursor: pointer; }
+.sortbtn:hover { background: var(--wash); }
+.sortbtn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.sortbtn:focus-visible { outline: 3px solid var(--focus, #1a73e8); outline-offset: 2px; }
+.order-tools .searchbox { flex-basis: 100%; }
+.order-tools .sortbuttons { flex-basis: 100%; }

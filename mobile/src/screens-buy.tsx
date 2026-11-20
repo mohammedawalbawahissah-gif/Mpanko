@@ -12,7 +12,7 @@ import type { Address, Order, OrderSummary, PaymentMethod, ShippingService, TaxE
 import { OrderReturns } from "./screens-help";
 import { GuestBag } from "./screens-guest";
 import { AddressForm } from "./address-form";
-import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, Select, methodLabel, s, statusText, useAsync, usePullRefresh, readable } from "./ui";
+import { FormScreen, Busy, Button, ErrorRetry, Input, Notice, DateField, Pill, SearchBox, Select, SortButtons, methodLabel, s, statusText, useAsync, usePullRefresh, readable } from "./ui";
 
 export type RootParams = {
   Tabs: undefined; Checkout: undefined; GuestCheckout: undefined; GuestOrder: { number: string; token?: string; reference?: string }; FindOrder: undefined;
@@ -316,6 +316,7 @@ export function OrdersScreen() {
   const nav = useNavigation<Nav>();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("-created_at");
   const [from, setFrom] = useState("");
@@ -325,8 +326,8 @@ export function OrdersScreen() {
     return () => clearTimeout(id);
   }, [q]);
   const { data, error, loading, reload } = useAsync(
-    () => (user ? api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`) : Promise.resolve(null)),
-    [user?.id, sort, status, search, from, to]
+    () => (user ? api<Page<OrderSummary>>(`/orders/?ordering=${sort}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}${from ? `&placed_from=${from}` : ""}${to ? `&placed_to=${to}` : ""}`) : Promise.resolve(null)),
+    [user?.id, sort, status, search, searchIn, from, to]
   );
   useFocusEffect(useCallback(() => { if (user) reload(); }, [user, reload]));
   const pull = usePullRefresh(reload);
@@ -345,12 +346,12 @@ export function OrdersScreen() {
       <Text accessibilityRole="header" style={s.h1}>{t("orders.title")}</Text>
       {(!!data?.results.length || filtering) && (
         <>
-          <Input label={t("orders.search")} value={q} onChangeText={setQ} autoCapitalize="characters" autoCorrect={false} returnKeyType="search" />
+          <SearchBox label={t("orders.search")} value={q} onChange={setQ} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: t("search.everything") }, { value: "number", label: t("search.orderNumber") }]} onSubmit={() => setSearch(q.trim())} />
           <Select label={t("orders.status")} value={status} onChange={setStatus}
             options={[{ value: "", label: t("orders.allStatuses") }, ...["pending_payment", "paid", "processing", "shipped", "delivered", "cancelled", "expired", "refunded"].map((v) => ({ value: v, label: statusText(t, v) }))]} />
           <DateField label={t("orders.from")} value={from} onChange={setFrom} max={to || undefined} />
           <DateField label={t("orders.to")} value={to} onChange={setTo} min={from || undefined} />
-          <Select label={t("orders.sort")} value={sort} onChange={setSort}
+          <SortButtons label={t("orders.sort")} value={sort} onChange={setSort}
             options={[
               { value: "-created_at", label: t("orders.sortNewest") },
               { value: "created_at", label: t("orders.sortOldest") },

@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, type Page } from "./api";
 import { departmentOf, departments } from "./categories";
-import { Alert, AskBanner, Loading, pattern, ProductArt, ProductTile, useAsync } from "./components";
+import { Alert, AskBanner, Loading, pattern, ProductArt, ProductTile, SearchBox, SortButtons, useAsync } from "./components";
 import { useAuth, useCart, useCurrency, type CartLine } from "./context";
 import { useGuestCheckoutEnabled } from "./guest-config";
+import type { MessageKey } from "./locales";
 import type { Category, Product, Variant } from "./types";
 
 /* ------------------------------------------------------------------- home */
@@ -103,6 +104,14 @@ export function Home() {
 
 /* ------------------------------------------------------------------- shop */
 
+const SHOP_SEARCH_FIELDS = (t: (k: MessageKey) => string) => [
+  { value: "", label: t("search.everything") },
+  { value: "name", label: t("search.name") },
+  { value: "maker", label: t("search.maker") },
+  { value: "category__name", label: t("search.category") },
+  { value: "description", label: t("search.description") },
+];
+
 const SORTS = [
   { value: "-created_at", label: "Newest first" },
   { value: "base_price", label: "Price: low to high" },
@@ -116,6 +125,7 @@ export function Shop() {
   const [params, setParams] = useSearchParams();
   const category = params.get("category") ?? "";
   const search = params.get("q") ?? "";
+  const searchIn = params.get("in") ?? "";
   const ordering = params.get("sort") ?? "-created_at";
   const [draft, setDraft] = useState(search);
   const [page, setPage] = useState(1);
@@ -127,7 +137,7 @@ export function Shop() {
   const cats = useAsync(() => api<Category[]>("/categories/"), []);
 
   useEffect(() => setDraft((d) => (d.trim() === search ? d : search)), [search]);
-  useEffect(() => setPage(1), [category, search, ordering]);
+  useEffect(() => setPage(1), [category, search, searchIn, ordering]);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +146,7 @@ export function Shop() {
     const qs = new URLSearchParams({ ordering, page: String(page) });
     if (category) qs.set("category", category);
     if (search) qs.set("search", search);
+    if (search && searchIn) qs.set("search_in", searchIn);
     api<Page<Product>>(`/products/?${qs}`)
       .then((r) => {
         if (cancelled) return;
@@ -147,7 +158,7 @@ export function Shop() {
     return () => {
       cancelled = true;
     };
-  }, [category, search, ordering, page]);
+  }, [category, search, searchIn, ordering, page]);
 
   // Results follow the typing after a short pause; the Search button and Enter still work straight away.
   useEffect(() => {
@@ -182,19 +193,11 @@ export function Shop() {
       <h1>{category ? cats.data?.find((c) => c.slug === category)?.name ?? "Shop" : "All products"}</h1>
       <div className="shop-layout">
         <aside className={`filters${filtersOpen ? " open" : ""}`} aria-label={t("shop.filters")}>
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              update("q", draft.trim());
-            }}
-          >
-            <label htmlFor="q" className="sr-only">Search products</label>
-            <div className="search-row">
-              <input id="q" className="input" type="search" placeholder="Search products" value={draft} onChange={(e) => setDraft(e.target.value)} />
-              <button className="btn quiet" type="submit">{t("shop.searchButton")}</button>
-            </div>
-          </form>
+          <SearchBox
+            id="q" label="Search products" placeholder="Search products" value={draft} onChange={setDraft}
+            field={searchIn} onField={(v) => update("in", v)} fields={SHOP_SEARCH_FIELDS(t)}
+            onSubmit={() => update("q", draft.trim())} submitLabel={t("shop.searchButton")}
+          />
           <button type="button" className="btn quiet filters-toggle" aria-expanded={filtersOpen} aria-controls="filter-panel" onClick={() => setFiltersOpen((o) => !o)}>
             {t("shop.filters")}{category || ordering !== SORTS[0].value ? " \u2022" : ""}
           </button>
@@ -226,12 +229,7 @@ export function Shop() {
             </ul>
           </nav>
           <div className="sort-box">
-            <label htmlFor="sort"><h3>Sort by</h3></label>
-            <select id="sort" className="select" style={{ width: "100%" }} value={ordering} onChange={(e) => update("sort", e.target.value)}>
-              {SORTS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+            <SortButtons label="Sort by" value={ordering} options={SORTS} onChange={(v) => update("sort", v)} />
           </div>
           </div>
         </aside>

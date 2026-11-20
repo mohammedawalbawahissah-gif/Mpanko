@@ -32,7 +32,8 @@ export interface Resource {
   roles: string[];
   path: string;
   filters?: Filter[];
-  search?: { param: string; label: string };
+  /** One search box; `fields` (if any) lets the person choose which detail to search by (sent as search_in). */
+  search?: { param: string; label: string; fields?: Opt[] };
   dates?: { from: string; to: string };
   idOf: (r: Row) => string;
   rowTitle: (r: Row) => string;
@@ -114,7 +115,7 @@ export const RESOURCES: Resource[] = [
   },
   {
     key: "customers", title: "Customers", group: "Sell", roles: ["super_admin", "store_admin", "support"], path: "/customers/", empty: "No customers found.",
-    search: { param: "search", label: "Search by name, email or phone" },
+    search: { param: "search", label: "Search customers", fields: [{ value: "", label: "Everything" }, { value: "full_name", label: "Name" }, { value: "email", label: "Email" }, { value: "phone", label: "Phone" }] },
     idOf: (r) => String(r.id), rowTitle: (r) => r.full_name || r.email, rowSub: (r) => `${r.full_name ? r.email + " · " : ""}${r.order_count} order${r.order_count === 1 ? "" : "s"}`, rowSide: (r) => day(r.date_joined), pill: (r) => ({ text: r.is_active ? "Active" : "Switched off", tone: r.is_active ? "ok" : "bad" }),
     detail: (id) => `/customers/${id}/`,
     lines: (r) => [["Email", `${r.email} (${r.email_verified ? "verified" : "not verified"})`], ...(r.phone ? [["Phone", r.phone]] : []), ["Joined", when(r.date_joined)], ["Account", r.is_active ? "Active" : "Switched off"]] as [string, string][],
@@ -348,7 +349,7 @@ export const RESOURCES: Resource[] = [
   },
   {
     key: "audit", title: "Activity log", intro: "Who did what in the back office. Entries can't be edited.", group: "Settings", roles: SA, path: "/audit/", empty: "No entries match.",
-    search: { param: "search", label: "Search action, person or item" }, dates: { from: "from", to: "to" },
+    search: { param: "search", label: "Search the activity log", fields: [{ value: "", label: "Everything" }, { value: "action", label: "Action" }, { value: "actor__email", label: "Person" }, { value: "object_type", label: "Item type" }, { value: "object_id", label: "Item ID" }] }, dates: { from: "from", to: "to" },
     idOf: (r) => String(r.id), rowTitle: (r) => r.action, rowSub: (r) => `${r.actor_email} · ${r.object_type} ${r.object_id}`, rowSide: (r) => when(r.created_at),
     lines: (r) => [["When", when(r.created_at)], ["Who", r.actor_email], ["Action", r.action], ["Item", `${r.object_type} ${r.object_id}`], ...Object.entries(r.detail ?? {}).map(([k, v]) => [k, String(v)])] as [string, string][],
     readOnly: true,

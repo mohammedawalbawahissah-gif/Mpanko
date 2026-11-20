@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { StatusPill, pattern, routeTitle, statusLabel } from "./components";
+import { SearchBox, SortButtons, StatusPill, pattern, routeTitle, statusLabel } from "./components";
 
 describe("statusLabel", () => {
   it("makes API statuses readable", () => {
@@ -39,5 +39,21 @@ describe("routeTitle", () => {
   });
   it("calls an unknown address a missing page", () => {
     expect(routeTitle("/nope/nothing", t as never)).toBe("Page not found");
+  });
+});
+
+describe("search and sort controls", () => {
+  it("one search bar carries a drop-down of what to search by", () => {
+    const html = renderToStaticMarkup(<SearchBox id="q" label="Search" value="" onChange={() => undefined} field="name" onField={() => undefined} fields={[{ value: "", label: "Everything" }, { value: "name", label: "Name" }]} />);
+    expect(html.match(/<input/g)).toHaveLength(1);
+    expect(html).toContain("<select");
+    expect(html).toContain("Everything");
+    expect(html).toContain("Name");
+  });
+  it("sort choices are buttons, with the chosen one pressed and no select box", () => {
+    const html = renderToStaticMarkup(<SortButtons label="Sort by" value="b" onChange={() => undefined} options={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />);
+    expect(html).not.toContain("<select");
+    expect(html.match(/<button/g)).toHaveLength(2);
+    expect(html).toContain('aria-pressed="true"');
   });
 });

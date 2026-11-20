@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { Text } from "./text";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api, ApiError, type Page } from "./api";
@@ -9,7 +9,7 @@ import { usePrefs } from "./prefs";
 import { color, font, type } from "./theme";
 import type { Category, Product } from "./types";
 import { mainPhoto, photoList } from "./core/images";
-import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
+import { Busy, Button, ErrorRetry, KenteBand, Notice, Photo, SearchBox, SortButtons, s, useCachedAsync, useLayout, usePullRefresh } from "./ui";
 
 const GRID_GAP = 10;
 export type ShopStack = { List: { category?: string } | undefined; Product: { slug: string }; Menu: { slug: string } };
@@ -19,6 +19,8 @@ export function ShopList({ navigation, route }: NativeStackScreenProps<ShopStack
   const { t, money, currency } = usePrefs();
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [searchIn, setSearchIn] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [cat, setCat] = useState<string | null>(route.params?.category ?? null); // a category address (slug), which the shop API filters on
   useEffect(() => { if (route.params?.category) setCat(route.params.category); }, [route.params?.category]);
   // Search as you type: wait for a short pause so each keystroke is not a request.
@@ -38,9 +40,9 @@ export function ShopList({ navigation, route }: NativeStackScreenProps<ShopStack
   const topOfChosen = chosen ? (chosen.parent ? all.find((c) => c.id === chosen.parent) : chosen) : undefined;
   const subs = topOfChosen ? all.filter((c) => c.parent === topOfChosen.id).sort(byOrder) : [];
   const products = useCachedAsync(
-    `products?cat=${cat ?? ""}&q=${query}`,
-    () => api<Page<Product>>(`/products/?ordering=-created_at${cat ? `&category=${cat}` : ""}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
-    [cat, query]
+    `products?cat=${cat ?? ""}&q=${query}&in=${searchIn}&sort=${sort}`,
+    () => api<Page<Product>>(`/products/?ordering=${sort}${cat ? `&category=${cat}` : ""}${query ? `&search=${encodeURIComponent(query)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}`),
+    [cat, query, searchIn, sort]
   );
   const pull = usePullRefresh(() => {
     products.reload();
@@ -50,16 +52,14 @@ export function ShopList({ navigation, route }: NativeStackScreenProps<ShopStack
     <View style={s.screen}>
       <KenteBand />
       <View style={{ padding: 12, paddingBottom: 4 }}>
-        <TextInput
-          accessibilityLabel={t("shop.search")}
-          placeholder={t("shop.search")}
-          placeholderTextColor={color.muted}
-          returnKeyType="search"
-          value={q}
-          onChangeText={setQ}
-          onSubmitEditing={() => setQuery(q.trim())}
-          style={[s.input]}
+        <SearchBox
+          label={t("shop.search")} value={q} onChange={setQ} field={searchIn} onField={setSearchIn} onSubmit={() => setQuery(q.trim())}
+          fields={[{ value: "", label: t("search.everything") }, { value: "name", label: t("search.name") }, { value: "maker", label: t("search.maker") }, { value: "category__name", label: t("search.category") }, { value: "description", label: t("search.description") }]}
         />
+        <SortButtons label={t("orders.sort")} value={sort} onChange={setSort} options={[
+          { value: "-created_at", label: t("orders.sortNewest") }, { value: "base_price", label: t("shop.sortPriceLow") },
+          { value: "-base_price", label: t("shop.sortPriceHigh") }, { value: "name", label: t("shop.sortName") },
+        ]} />
       </View>
       {!!currency && (
         <Text accessibilityRole="button" onPress={() => navigation.getParent()?.getParent()?.navigate("Profile" as never)} style={{ color: color.teal, fontWeight: "600", paddingHorizontal: 14, paddingVertical: 12 }}>

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Page } from "./api";
 import { useAuth } from "./auth";
-import { Alert, Field, Loading, Pill, errText, label, useAsync, when } from "./ui";
+import { Alert, Field, Loading, Pill, SearchBox, errText, label, useAsync, when } from "./ui";
 
 type Msg = { kind: "ok" | "error"; text: string } | null;
 
@@ -329,13 +329,13 @@ interface CustomerFull extends CustomerRow {
 export function Customers() {
   const [query, setQuery] = useState("");
   const [applied, setApplied] = useState("");
-  const { data, error, loading } = useAsync(() => api<Page<CustomerRow>>(`/customers/${applied ? `?search=${encodeURIComponent(applied)}` : ""}`), [applied]);
+  const [searchIn, setSearchIn] = useState("");
+  const { data, error, loading } = useAsync(() => api<Page<CustomerRow>>(`/customers/${applied ? `?search=${encodeURIComponent(applied)}${searchIn ? `&search_in=${searchIn}` : ""}` : ""}`), [applied, searchIn]);
   return (
     <>
       <h1>Customers</h1>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setApplied(query.trim()); }}>
-        <Field id="cq" label="Search by name, email or phone"><input id="cq" className="input" value={query} onChange={(e) => setQuery(e.target.value)} /></Field>
-        <button className="btn">Search</button>
+        <SearchBox id="cq" label="Search customers" value={query} onChange={setQuery} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "full_name", label: "Name" }, { value: "email", label: "Email" }, { value: "phone", label: "Phone" }]} onSubmit={() => setApplied(query.trim())} />
       </form>
       {loading && <Loading />}
       {error && <Alert>{error}</Alert>}
@@ -486,19 +486,19 @@ interface AuditRow { id: number; created_at: string; actor_email: string; action
 export function AuditLog() {
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState("");
+  const [searchIn, setSearchIn] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const qs = [applied && `search=${encodeURIComponent(applied)}`, from && `from=${from}`, to && `to=${to}`].filter(Boolean).join("&");
+  const qs = [applied && `search=${encodeURIComponent(applied)}`, applied && searchIn && `search_in=${searchIn}`, from && `from=${from}`, to && `to=${to}`].filter(Boolean).join("&");
   const { data, error, loading } = useAsync(() => api<Page<AuditRow>>(`/audit/${qs ? `?${qs}` : ""}`), [qs]);
   return (
     <>
       <h1>Activity log</h1>
       <p className="muted">Who did what in the back office. Entries can't be edited.</p>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setApplied(search.trim()); }}>
-        <Field id="al-q" label="Search action, person or item"><input id="al-q" className="input" value={search} onChange={(e) => setSearch(e.target.value)} /></Field>
+        <SearchBox id="al-q" label="Search the activity log" value={search} onChange={setSearch} field={searchIn} onField={setSearchIn} fields={[{ value: "", label: "Everything" }, { value: "action", label: "Action" }, { value: "actor__email", label: "Person" }, { value: "object_type", label: "Item type" }, { value: "object_id", label: "Item ID" }]} onSubmit={() => setApplied(search.trim())} />
         <Field id="al-f" label="From"><input id="al-f" type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
         <Field id="al-t" label="To"><input id="al-t" type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
-        <button className="btn">Search</button>
       </form>
       {loading && <Loading />}
       {error && <Alert>{error}</Alert>}
