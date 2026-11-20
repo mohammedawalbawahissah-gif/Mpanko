@@ -72,3 +72,58 @@ class WebPushSubscription(models.Model):
     p256dh = models.CharField(max_length=200)
     auth = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class NotificationPreference(models.Model):
+    """One switch: a person turns a kind of message on or off for one channel. No row means the default applies."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_preferences")
+    category = models.CharField(max_length=20)
+    channel = models.CharField(max_length=10)
+    enabled = models.BooleanField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "category", "channel"], name="uniq_notification_preference")]
+
+
+class StockAlert(models.Model):
+    """A customer asked to be told when an out-of-stock item is available again."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stock_alerts")
+    variant = models.ForeignKey("catalog.ProductVariant", on_delete=models.CASCADE, related_name="stock_alerts")
+    created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "variant"], name="uniq_stock_alert")]
+
+
+class Campaign(models.Model):
+    """An announcement or offer that staff send to customers who agreed to receive them."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SENDING = "sending", "Sending"
+        SENT = "sent", "Sent"
+
+    title = models.CharField(max_length=120, help_text="Only staff see this name")
+    subject = models.CharField(max_length=200)
+    body = models.TextField(help_text="The message. Plain text; a blank line starts a new paragraph.")
+    link = models.URLField(blank=True, help_text="Optional page the message points to")
+    send_email = models.BooleanField(default=True)
+    send_push = models.BooleanField(default=True, help_text="App list, phone and browser notification, for customers who allowed them")
+    countries = models.JSONField(default=list, blank=True, help_text="Two-letter country codes. Empty means everyone who agreed.")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    emailed = models.PositiveIntegerField(default=0)
+    pushed = models.PositiveIntegerField(default=0)
+    skipped = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return self.title

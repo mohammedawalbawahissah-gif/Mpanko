@@ -94,10 +94,13 @@ def whatsapp_for_email(key, to, context, ref=""):
         return
     from apps.accounts.models import User
 
-    user = User.objects.filter(email__iexact=to, is_active=True, notify_whatsapp=True, phone_verified=True).first()
-    if not user:
+    user = User.objects.filter(email__iexact=to, is_active=True).first()
+    from .preferences import allowed
+    from .events import category_of
+
+    if not user or not allowed(user, category_of(key) or "orders", "whatsapp"):
         return
-    values = {**{k: "" for k in ("order_number", "carrier", "tracking_number", "return_number")}, **context}
+    values = {**{k: "" for k in ("order_number", "carrier", "tracking_number", "return_number", "currency", "amount", "pickup_place")}, **context}
     try:
         body = text.format_map(values)
     except (KeyError, IndexError, ValueError):

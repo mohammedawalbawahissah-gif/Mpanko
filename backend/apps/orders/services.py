@@ -35,6 +35,12 @@ ALLOWED = {
     OrderStatus.REFUNDED: set(),
 }
 STOCK_RELEASING = {OrderStatus.CANCELLED, OrderStatus.EXPIRED}
+# Status changes that also tell the customer (payment, shipping and delivery have their own messages)
+STATUS_MESSAGES = {
+    OrderStatus.PROCESSING: "order_processing",
+    OrderStatus.CANCELLED: "order_cancelled",
+    OrderStatus.EXPIRED: "order_expired",
+}
 
 
 @transaction.atomic
@@ -56,6 +62,11 @@ def transition(order, to_status, actor=None, note=""):
         from apps.payments.services import close_pending_attempts
 
         close_pending_attempts(order, "expired" if to_status == OrderStatus.EXPIRED else "cancelled", note)
+    key = STATUS_MESSAGES.get(to_status)
+    if key:
+        from .tasks import notify_order_event
+
+        transaction.on_commit(lambda: notify_order_event.delay(order.pk, key))
     return order
 
 
@@ -71,9 +82,10 @@ def _release_stock(order, actor):
 def mark_paid(order, note="Payment verified"):
     """Called by the payments app after server-side verification — the only way an order becomes paid."""
     order = transition(order, OrderStatus.PAID, actor=None, note=note)
-    from .tasks import send_order_confirmation
+    from .tasks import send_order_confirmation, staff_order_alert
 
     transaction.on_commit(lambda: send_order_confirmation.delay(order.pk))
+    transaction.on_commit(lambda: staff_order_alert.delay(order.pk, "staff_new_order"))
     return order
 
 
@@ -182,7 +194,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
         shipping_total = pricing.convert(rate.price, settings.BASE_CURRENCY, currency)
         note = pricing.fx_note(currency)
     except pricing.PricingError as exc:
-        raise CheckoutError(str(exc), "currency") from exc
+        raise CheckoutError(str(exc), "currency")
     coupon, discount = None, Decimal("0")
     if (d.get("coupon_code") or "").strip():
         from apps.promotions import services as promo
@@ -191,7 +203,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
             coupon = promo.find(d["coupon_code"], lock=True)
             discount = promo.discount_for(coupon, user, subtotal, shipping_total, currency)
         except (promo.CouponError, pricing.PricingError) as exc:
-            raise CheckoutError(str(exc), "coupon_code") from exc
+            raise CheckoutError(str(exc), "coupon_code")
     item_discount = discount if coupon and coupon.kind != "free_shipping" else Decimal("0")
     tax_total = pricing.tax_for(subtotal - item_discount, country, currency, shipping=shipping_total)
     grand_total = subtotal - discount + shipping_total + tax_total
@@ -216,7 +228,7 @@ def checkout(user, address, shipping_service_code, currency, idempotency_key="",
         try:
             adjust_stock(variant.id, -item.quantity, StockMovement.Reason.ORDER, actor=user, order_ref=order.number)
         except OutOfStock as exc:
-            raise CheckoutError(f"Not enough stock for {product.name} ({exc.sku}).", "cart") from exc
+            raise CheckoutError(f"Not enough stock for {product.name} ({exc.sku}).", "cart")
         OrderItem.objects.create(
             order=order, variant=variant, product_name=product.name, variant_name=variant.name, sku=variant.sku,
             unit_price=unit, quantity=item.quantity, line_total=line_total,

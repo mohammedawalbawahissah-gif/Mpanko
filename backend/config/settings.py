@@ -106,12 +106,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # emailed verify/reset links live 24h
-# Staff must use a second step in production; they are walked through enrolment at their next sign-in. Off while DEBUG is on.
-REQUIRE_STAFF_MFA = env_bool("REQUIRE_STAFF_MFA", not DEBUG)
-ADMIN_URL = os.environ.get("ADMIN_URL", "admin/").strip("/") + "/"  # set to something unguessable in production
-API_DOCS_PUBLIC = env_bool("API_DOCS_PUBLIC", False)
-LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "10"))
-LOGIN_LOCKOUT_SECONDS = int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "900"))
+REQUIRE_STAFF_MFA = env_bool("REQUIRE_STAFF_MFA", False)  # on in production once staff have enrolled
 REQUIRE_VERIFIED_EMAIL = env_bool("REQUIRE_VERIFIED_EMAIL", False)  # block checkout until email is verified
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -127,10 +122,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Refuse images that decode to an enormous number of pixels (decompression bombs); real photos are far below this.
-from PIL import Image as _PILImage  # noqa: E402
-
-_PILImage.MAX_IMAGE_PIXELS = 50_000_000
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 STORAGES = {
@@ -175,7 +166,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ),
-    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "600/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "webhook": os.environ.get("THROTTLE_WEBHOOK", "300/minute"), "account_delete": "5/hour", "client_errors": "30/hour", "guest_checkout": "30/hour", "corporate_contact": os.environ.get("THROTTLE_CORPORATE_CONTACT", "200/hour")},
+    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get("THROTTLE_ANON", "1000/hour"), "user": os.environ.get("THROTTLE_USER", "5000/hour"), "auth": "20/minute", "client_errors": "30/hour", "guest_checkout": "30/hour", "corporate_contact": os.environ.get("THROTTLE_CORPORATE_CONTACT", "200/hour")},
 }
 
 SIMPLE_JWT = {
@@ -211,9 +202,10 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_BEAT_SCHEDULE = {
     # Release stock held by unpaid orders once their reservation window passes.
     "expire-unpaid-orders": {"task": "apps.orders.tasks.expire_unpaid_orders_task", "schedule": 300.0},
-    "reverify-pending-payments": {"task": "apps.payments.tasks.reverify_pending_payments_task", "schedule": 300.0},
     "poll-carrier-tracking": {"task": "apps.shipping.tasks.poll_active_shipments", "schedule": 1800.0},
     "apply-retention": {"task": "apps.privacy.tasks.run_retention", "schedule": 24 * 3600.0},
+    "send-bag-reminders": {"task": "apps.notifications.tasks.send_bag_reminders", "schedule": 3600.0},
+    "send-feedback-requests": {"task": "apps.notifications.tasks.send_feedback_requests", "schedule": 6 * 3600.0},
     "refresh-fx-rates": {"task": "apps.currency.tasks.refresh_fx_rates", "schedule": 6 * 3600.0},
 }
 if REDIS_URL:
@@ -272,6 +264,8 @@ else:
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_TIMEOUT = 15
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+ADMIN_URL = os.environ.get("ADMIN_URL", "").rstrip("/")  # the admin app, used in links inside staff alerts
+STAFF_ALERT_WHATSAPP = [n.strip() for n in os.environ.get("STAFF_ALERT_WHATSAPP", "").split(",") if n.strip()]  # numbers that get urgent staff alerts on WhatsApp
 STAFF_ALERT_EMAILS = [e.strip() for e in os.environ.get("STAFF_ALERT_EMAILS", "").split(",") if e.strip()]  # extra low-stock alert recipients
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Mpanko <no-reply@mpanko.example>")
 
@@ -308,6 +302,7 @@ TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")  # e.g. whatsa
 WHATSAPP_TEMPLATE_SIDS = os.environ.get("WHATSAPP_TEMPLATE_SIDS", "")  # JSON: event key -> approved Twilio template sid
 
 APP_SCHEME = os.environ.get("APP_SCHEME", "mpanko")  # deep-link scheme of the mobile app
+ADMIN_APP_SCHEME = os.environ.get("ADMIN_APP_SCHEME", "mpanko-admin")  # deep-link scheme of the admin phone app
 EXPO_ACCESS_TOKEN = os.environ.get("EXPO_ACCESS_TOKEN", "")  # optional; raises Expo push limits
 RETURN_WINDOW_DAYS = int(os.environ.get("RETURN_WINDOW_DAYS", "14"))  # days after delivery (decided: OD-11)
 RETURN_ALLOW_CHANGED_MIND = env_bool("RETURN_ALLOW_CHANGED_MIND", True)

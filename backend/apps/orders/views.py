@@ -10,7 +10,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import Address, AuditLog
-from apps.accounts.permissions import FinanceStaff, FulfillmentStaff
+from apps.accounts.permissions import FulfillmentStaff
+from apps.catalog.models import ProductVariant
 
 from .models import Cart, CartItem, Order, OrderStatus
 from .serializers import (
@@ -88,7 +89,7 @@ class CheckoutView(APIView):
                 declarations={k: s.validated_data.get(k) for k in ("phone", "delivery_notes", "accept_terms", "duties_acknowledged", "coupon_code")},
             )
         except CheckoutError as exc:
-            raise ValidationError({exc.field: exc.message}) from exc
+            raise ValidationError({exc.field: exc.message})
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
@@ -137,17 +138,28 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         order = self.get_object()
         if not request.user.is_staff_role and order.status != OrderStatus.PENDING_PAYMENT:
             raise ValidationError({"detail": "Paid orders can only be cancelled by staff. Please contact support."})
-        # Cancelling an order that is already paid releases its stock, so it is limited to the roles that handle fulfilment or money.
-        if request.user.is_staff_role and order.status != OrderStatus.PENDING_PAYMENT and not (
-            FulfillmentStaff().has_permission(request, self) or FinanceStaff().has_permission(request, self)
-        ):
-            raise PermissionDenied()
         try:
             order = transition(order, OrderStatus.CANCELLED, actor=request.user, note=request.data.get("note", "Cancelled"))
         except InvalidTransition as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         if request.user.is_staff_role:
             AuditLog.record(request.user, "order.cancel", order)
+        return Response(OrderSerializer(order).data)
+
+    @action(detail=True, methods=["post"], url_path="ready-for-pickup")
+    def ready_for_pickup(self, request, number=None):
+        """Staff tell a pickup customer their order can be collected."""
+        if not FulfillmentStaff().has_permission(request, self):
+            raise PermissionDenied()
+        order = self.get_object()
+        from .tasks import is_pickup_order, notify_order_event
+
+        if not is_pickup_order(order):
+            raise ValidationError({"detail": "This order is not a pickup order."})
+        if order.status not in {OrderStatus.PAID, OrderStatus.PROCESSING}:
+            raise ValidationError({"detail": "Only a paid order that has not shipped can be marked ready for pickup."})
+        notify_order_event.delay(order.pk, "order_ready_for_pickup")
+        AuditLog.record(request.user, "order.ready_for_pickup", order)
         return Response(OrderSerializer(order).data)
 
     @action(detail=True, methods=["post"])
@@ -163,6 +175,6 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         try:
             order = transition(order, s.validated_data["to"], actor=request.user, note=s.validated_data.get("note", ""))
         except (InvalidTransition, ValueError) as exc:
-            raise ValidationError({"to": str(exc)}) from exc
+            raise ValidationError({"to": str(exc)})
         AuditLog.record(request.user, "order.transition", order, to=order.status)
         return Response(OrderSerializer(order).data)

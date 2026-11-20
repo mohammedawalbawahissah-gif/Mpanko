@@ -59,3 +59,34 @@ Safari on iPhone only supports browser push once the shop is added to the Home S
 
 ## Checks
 `python manage.py preflight` warns when browser push keys, the support email or the support phone are missing.
+
+
+## What customers are told, and what staff are told
+
+Customer messages (email always; SMS, WhatsApp, push and the in-app list where the customer allows them):
+order held and waiting for payment, order confirmed, being prepared, ready for pickup, shipped, delivered, payment failed, cancelled,
+released (payment never arrived), return requested / approved / rejected / refunded, support replies, a bag reminder (once, after 24 hours),
+back in stock (for items the customer asked about), "how was your order" (five days after delivery) and announcements.
+
+Staff alerts: new paid order, payment to confirm (Zelle, Cash App, cash), payment failed, return requested, new support message,
+chargeback, website enquiry and low stock. Each staff member chooses bell, email, phone push and WhatsApp in the admin app. Defaults are bell and email.
+
+### Customer control
+Order, payment, support and account emails are always sent. Everything else can be switched off per type and per channel from the
+shop (Account > Notifications) or the app (Profile). "News and offers" are off until the customer opts in, and every announcement email
+carries a one-click unsubscribe link.
+
+### Settings
+| Variable | Purpose |
+|---|---|
+| `ADMIN_URL` | The admin app address (for example `https://mpanko-admin.wolbiroyal.com`). Used for links inside staff alerts. |
+| `STAFF_ALERT_WHATSAPP` | Comma list of numbers (with country code) that get urgent alerts on WhatsApp: new orders, payments to confirm, chargebacks. Needs WhatsApp set up (section 3). |
+| `STAFF_ALERT_EMAILS` | Extra addresses that also get staff emails for low stock, chargebacks and website enquiries. |
+| `ADMIN_APP_SCHEME` | Deep-link scheme of the admin phone app. Default `mpanko-admin`. |
+| `API_PUBLIC_URL` | Must be set so the unsubscribe link in announcement emails points to the api. |
+
+Scheduled jobs (run by the `beat` service): bag reminders hourly, feedback requests every six hours.
+
+### Announcements
+Admin > Announcements: write a subject and message, choose email, the app list and push, optionally limit by country, send yourself a test,
+then send. A campaign sends once and only to customers who opted in.

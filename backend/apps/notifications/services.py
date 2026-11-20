@@ -122,6 +122,91 @@ DEFAULTS = {
         "{{ product }} ({{ sku }}) is down to {{ quantity }} in stock. The alert level is {{ threshold }}.\n",
         {"product": "Kente scarf", "sku": "KS-001", "quantity": "3", "threshold": "5"},
     ),
+
+    "order_awaiting_payment": (
+        "Order held, waiting for payment",
+        "Order {{ order_number }} is held for you",
+        "We are holding order {{ order_number }} for you.\n\n{{ instructions }}\n\nOnce the money arrives we confirm your order and email you.\nSee your order: {{ link }}\n",
+        {"order_number": "MP-1001", "instructions": "Send exactly USD 70.00 with Zelle to 508-410-9719. Write MP-1001 in the memo.", "link": "https://shop.example/orders/MP-1001"},
+    ),
+    "order_processing": (
+        "Order being prepared",
+        "We are preparing order {{ order_number }}",
+        "Good news: we have started preparing order {{ order_number }}. We will email you again when it ships or is ready for pickup.\nSee your order: {{ link }}\n",
+        {"order_number": "MP-1001", "link": "https://shop.example/orders/MP-1001"},
+    ),
+    "order_ready_for_pickup": (
+        "Order ready for pickup",
+        "Order {{ order_number }} is ready for pickup",
+        "Order {{ order_number }} is ready for you to collect.\n\nPickup: {{ pickup_place }}\nBring your order number.\nSee your order: {{ link }}\n",
+        {"order_number": "MP-1001", "pickup_place": "Worcester, Massachusetts", "link": "https://shop.example/orders/MP-1001"},
+    ),
+    "order_cancelled": (
+        "Order cancelled",
+        "Order {{ order_number }} was cancelled",
+        "Order {{ order_number }} was cancelled. If you paid, we will refund you to your original payment method.\nQuestions? Reach us from the Help page: {{ link }}\n",
+        {"order_number": "MP-1001", "link": "https://shop.example/support"},
+    ),
+    "order_expired": (
+        "Order released",
+        "We released order {{ order_number }}",
+        "We did not receive payment for order {{ order_number }} in time, so we released the items. You can place the order again any time.\n{{ link }}\n",
+        {"order_number": "MP-1001", "link": "https://shop.example/shop"},
+    ),
+    "abandoned_bag": (
+        "Bag reminder",
+        "You left something in your bag",
+        "Your bag is waiting:\n{{ lines }}\n\nFinish your order whenever you are ready: {{ link }}\n\nStop these reminders: {{ preferences_url }}\n",
+        {"lines": "  1 x Kente scarf", "link": "https://shop.example/bag", "preferences_url": "https://shop.example/account/notifications"},
+    ),
+    "back_in_stock": (
+        "Back in stock",
+        "{{ product }} is back in stock",
+        "You asked us to tell you when {{ product }} is available again. It is back: {{ link }}\n\nStock can go quickly. Stop these messages: {{ preferences_url }}\n",
+        {"product": "Kente scarf", "link": "https://shop.example/shop/kente-scarf", "preferences_url": "https://shop.example/account/notifications"},
+    ),
+    "order_feedback": (
+        "How was your order?",
+        "How was order {{ order_number }}?",
+        "Your order {{ order_number }} was delivered. We would love to know how it went. Tell us from the Help page and a person will read it: {{ link }}\n",
+        {"order_number": "MP-1001", "link": "https://shop.example/support"},
+    ),
+    "announcement": (
+        "Announcement (campaigns)",
+        "{{ subject }}",
+        "{{ message }}\n\n{{ link }}\n\nYou get this because you chose to hear from us. Unsubscribe: {{ unsubscribe_url }}\n",
+        {"subject": "A new collection", "message": "Our new collection has arrived.", "link": "https://shop.example/shop", "unsubscribe_url": "https://api.example/unsubscribe"},
+    ),
+    "staff_new_order": (
+        "New order (staff)",
+        "New order {{ order_number }}: {{ currency }} {{ grand_total }}",
+        "{{ customer }} ({{ country }}) paid for order {{ order_number }}.\n{{ lines }}\nTotal: {{ currency }} {{ grand_total }}\nDelivery: {{ delivery }}\n\nOpen it: {{ link }}\n",
+        {"order_number": "MP-1001", "customer": "Ama Mensah", "country": "US", "lines": "  1 x Kente scarf", "currency": "USD", "grand_total": "70.00", "delivery": "Local delivery", "link": "https://admin.example/orders/MP-1001"},
+    ),
+    "staff_manual_payment": (
+        "Payment to confirm (staff)",
+        "Confirm payment for order {{ order_number }}",
+        "{{ customer }} chose {{ method }} for order {{ order_number }}: {{ currency }} {{ amount }}.\nCheck your {{ method }} account for it, then confirm it here: {{ link }}\n",
+        {"order_number": "MP-1001", "customer": "Ama Mensah", "method": "Zelle", "currency": "USD", "amount": "70.00", "link": "https://admin.example/manual-payments"},
+    ),
+    "staff_payment_failed": (
+        "Payment failed (staff)",
+        "Payment failed for order {{ order_number }}",
+        "A payment for order {{ order_number }} from {{ customer }} did not go through.\nOpen it: {{ link }}\n",
+        {"order_number": "MP-1001", "customer": "Ama Mensah", "link": "https://admin.example/orders/MP-1001"},
+    ),
+    "staff_return_requested": (
+        "Return requested (staff)",
+        "Return {{ return_number }} requested for order {{ order_number }}",
+        "{{ customer }} asked to return items from order {{ order_number }}.\nReview it: {{ link }}\n",
+        {"return_number": "RT-1A2B3C", "order_number": "MP-1001", "customer": "Ama Mensah", "link": "https://admin.example/returns"},
+    ),
+    "staff_support_case": (
+        "New support message (staff)",
+        "New support message {{ case_number }}",
+        "{{ customer }} wrote: {{ subject }}\n\n{{ body }}\n\nReply: {{ link }}\n",
+        {"case_number": "SUP-1", "customer": "Ama Mensah", "subject": "Where is my order?", "body": "It has been a week.", "link": "https://admin.example/support"},
+    ),
 }
 
 
@@ -151,10 +236,11 @@ def effective_template(key):
     return subject, body, True, False
 
 
-def send_notification(key, to, context, ref="", dedupe=True):
+def send_notification(key, to, context, ref="", dedupe=True, fanout=True, headers=None):
     """
     Render and send one templated email, and log the outcome. With a `ref`, the same (key, ref, recipient)
     is only ever sent once, so retries never double-email (FR-NOT-01). Returns True if sent.
+    `fanout=False` sends the email alone (staff alerts choose their own channels). `headers` adds email headers, e.g. List-Unsubscribe.
     """
     if not to:
         return False
@@ -170,7 +256,7 @@ def send_notification(key, to, context, ref="", dedupe=True):
         body = render(body_t, context)
         from .html import to_html
 
-        msg = EmailMultiAlternatives(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [to])
+        msg = EmailMultiAlternatives(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [to], headers=headers or None)
         msg.attach_alternative(to_html(subject, body), "text/html")
         msg.send(fail_silently=False)
     except Exception as exc:  # noqa: BLE001 — never let a mail problem break checkout or shipping
@@ -178,6 +264,8 @@ def send_notification(key, to, context, ref="", dedupe=True):
         NotificationLog.objects.create(key=key, recipient=to, subject=subject, status=NotificationLog.Status.FAILED, error=str(exc)[:300], ref=ref)
         return False
     NotificationLog.objects.create(key=key, recipient=to, subject=subject, status=NotificationLog.Status.SENT, ref=ref)
+    if not fanout:
+        return True
     try:
         from .push import push_for_email
 

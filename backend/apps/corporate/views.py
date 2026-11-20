@@ -93,13 +93,14 @@ def alert_staff(message_id):
         "name": m.name, "email": m.email, "phone": m.phone or "not given",
         "about": m.business.name if m.business else "the company in general", "message": m.message,
     }
-    people = set(User.objects.filter(role__in=[Role.STORE_ADMIN, Role.SUPPORT], is_active=True).values_list("email", flat=True))
-    people |= set(getattr(settings, "STAFF_ALERT_EMAILS", []))
+    from apps.notifications.staff import admin_link, notify_staff
+
+    extra = set(getattr(settings, "STAFF_ALERT_EMAILS", []))
     profile_email = SiteProfile.get().contact_email
     if profile_email:
-        people.add(profile_email)
-    for email in sorted(people):
-        send_notification("corporate_enquiry", email, ctx, ref=f"enquiry-{m.pk}")
+        extra.add(profile_email)
+    ctx["link"] = admin_link("enquiries")
+    notify_staff("corporate_enquiry", ctx, ref=f"enquiry-{m.pk}", extra_emails=sorted(extra))
 
 
 # ---------------------------------------------------------------- staff

@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .models import Dispute, PaymentAttempt
+from .models import AttemptStatus, Dispute, PaymentAttempt
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def alert_staff(dispute_id):
         "order_number": d.order.number, "amount": f"{d.currency} {d.amount}", "category": d.category or "not given",
         "respond_by": d.respond_by.strftime("%d %b %Y") if d.respond_by else "see your payment dashboard",
     }
-    people = set(User.objects.filter(role__in=[Role.STORE_ADMIN, Role.FINANCE], is_active=True).values_list("email", flat=True))
-    people |= set(getattr(settings, "STAFF_ALERT_EMAILS", []))
-    for email in sorted(people):
-        send_notification("dispute_opened", email, ctx, ref=f"dispute-{d.pk}")
+    from apps.notifications.staff import admin_link, notify_staff
+
+    ctx["link"] = admin_link("chargebacks")
+    notify_staff("dispute_opened", ctx, ref=f"dispute-{d.pk}", extra_emails=sorted(getattr(settings, "STAFF_ALERT_EMAILS", [])))

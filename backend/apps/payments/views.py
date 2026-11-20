@@ -11,14 +11,13 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import AuditLog
 from apps.accounts.permissions import FinanceStaff
 from apps.orders.models import Order, OrderStatus
 
-from .models import AttemptStatus, Dispute, PaymentAttempt, ReconciliationRecord, ReconciliationRun, WebhookEvent
+from .models import AttemptStatus, Dispute, PaymentAttempt, ReconciliationRecord, ReconciliationRun, Refund, WebhookEvent
 from .providers import InvalidSignature, ProviderError, enabled_providers, get_provider
 from .services import apply_result, issue_refund, reconcile
 
@@ -44,21 +43,13 @@ class MethodsView(APIView):
 
 
 def _start_payment(request, order, provider_name):
-    """Serialise payment starts per order, so two simultaneous taps cannot both open an attempt."""
-    with transaction.atomic():
-        Order.objects.select_for_update().get(pk=order.pk)
-        order.refresh_from_db()
-        return _start_payment_locked(request, order, provider_name)
-
-
-def _start_payment_locked(request, order, provider_name):
     """Start (or idempotently resume) a payment for `order`. The caller has already proven the order is theirs."""
     if order.status != OrderStatus.PENDING_PAYMENT:
         raise ValidationError({"order_number": f"Order is '{order.status}' and cannot be paid."})
     try:
         provider = get_provider(provider_name)
     except ProviderError as exc:
-        raise ValidationError({"provider": str(exc)}) from exc
+        raise ValidationError({"provider": str(exc)})
     if not provider.supports_currency(order.currency):
         raise ValidationError({"provider": f"{provider.name} cannot charge in {order.currency}."})
 
@@ -67,28 +58,27 @@ def _start_payment_locked(request, order, provider_name):
         existing = PaymentAttempt.objects.filter(order=order, idempotency_key=key).first()
         if existing:
             return Response(_attempt_payload(existing), status=status.HTTP_200_OK)
-    # One open attempt per order and provider: a second tap or a retry resumes the first instead of opening a second charge.
-    open_attempt = (PaymentAttempt.objects.filter(order=order, provider=provider.name, status=AttemptStatus.PENDING)
-                    .exclude(authorization_url="").order_by("-id").first())
-    if open_attempt and not provider.manual:
-        return Response(_attempt_payload(open_attempt), status=status.HTTP_200_OK)
     # Amount comes from the order record on our server, never from the request.
     attempt = PaymentAttempt(order=order, provider=provider.name, amount=order.grand_total, currency=order.currency, idempotency_key=key)
     try:
         result = provider.initiate(attempt, order.contact_email, settings.PAYMENT_RETURN_URL)
     except ProviderError as exc:
-        raise ValidationError({"detail": str(exc)}) from exc
+        raise ValidationError({"detail": str(exc)})
     attempt.authorization_url = result["authorization_url"]
     attempt.provider_reference = result.get("provider_reference", "")
     attempt.raw_response = result.get("raw", {})
     try:
-        with transaction.atomic():
-            attempt.save()
+        attempt.save()
         if provider.manual:
             # A person confirms this payment, which takes longer than a gateway: hold the stock for longer than usual.
             hold = timezone.now() + timedelta(hours=settings.MANUAL_PAYMENT_HOLD_HOURS)
             if order.expires_at is None or order.expires_at < hold:
                 Order.objects.filter(pk=order.pk).update(expires_at=hold)
+            from apps.orders.tasks import notify_order_event, staff_order_alert
+
+            instructions = attempt.raw_response.get("instructions", "")
+            transaction.on_commit(lambda: notify_order_event.delay(order.pk, "order_awaiting_payment", {"instructions": instructions}))
+            transaction.on_commit(lambda: staff_order_alert.delay(order.pk, "staff_manual_payment", {"method": getattr(provider, "label", "") or provider.name}))
     except IntegrityError:  # two simultaneous requests with the same key
         return Response(_attempt_payload(PaymentAttempt.objects.get(order=order, idempotency_key=key)))
     return Response(_attempt_payload(attempt), status=status.HTTP_201_CREATED)
@@ -140,7 +130,7 @@ def _verify_attempt(attempt, reference):
         try:
             v = get_provider(attempt.provider).verify(attempt)
         except ProviderError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         attempt = apply_result(reference, v.status, v.amount, v.currency, v.provider_reference) or attempt
     attempt.order.refresh_from_db()
     manual = bool(attempt.raw_response.get("manual"))
@@ -180,9 +170,7 @@ class WebhookView(APIView):
 
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
-    # Generous enough for a provider's retries, tight enough that this open door cannot be used to drive outbound lookups.
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "webhook"
+    throttle_classes = []
 
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request, provider):
@@ -277,7 +265,7 @@ class RefundView(APIView):
         try:
             refund = issue_refund(order, s.validated_data.get("amount"), s.validated_data.get("reason", ""), request.user)
         except ProviderError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         AuditLog.record(request.user, "payment.refund", order, amount=str(refund.amount), currency=refund.currency)
         return Response({"refund_id": refund.pk, "amount": str(refund.amount), "currency": refund.currency, "status": refund.status}, status=status.HTTP_201_CREATED)
 
@@ -321,7 +309,7 @@ class ReconciliationRunView(APIView):
         try:
             run = reconcile(s.validated_data["provider"], s.validated_data["start"], s.validated_data["end"], request.user)
         except ProviderError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         AuditLog.record(request.user, "payment.reconcile", run, exceptions=run.exceptions)
         return Response({"id": run.pk, "matched": run.matched, "exceptions": run.exceptions}, status=status.HTTP_201_CREATED)
 

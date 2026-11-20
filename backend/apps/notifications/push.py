@@ -9,17 +9,9 @@ from .models import DeviceToken
 logger = logging.getLogger(__name__)
 EXPO_URL = "https://exp.host/--/api/v2/push/send"
 
-# Email key -> (push title, context key holding the number used to open the right screen, screen)
-PUSH_EVENTS = {
-    "order_confirmation": ("Order confirmed", "order_number", "orders"),
-    "shipment_dispatched": ("Your order has shipped", "order_number", "orders"),
-    "order_delivered": ("Your order was delivered", "order_number", "orders"),
-    "payment_failed": ("Payment didn't go through", "order_number", "orders"),
-    "return_approved": ("Your return was approved", "order_number", "orders"),
-    "return_rejected": ("About your return request", "order_number", "orders"),
-    "return_refunded": ("Your refund is on its way", None, None),
-    "support_reply": ("New reply from Mpanko support", "case_number", "support"),
-}
+from .events import CUSTOMER_EVENTS, category_of  # noqa: E402
+
+PUSH_EVENTS = {k: v["push"] for k, v in CUSTOMER_EVENTS.items() if v.get("push")}
 
 
 def describe_event(key, context):
@@ -46,9 +38,10 @@ def push_for_email(key, to, context):
         return
     title, body, path = described
     from .inbox import add_to_inbox
+    from .preferences import allowed
 
     add_to_inbox(user, key, title, body, path)
-    if not user.notify_push:
+    if not allowed(user, category_of(key) or "orders", "push"):
         return
     if user.device_tokens.exists():
         send_push.delay(user.pk, title, body, {"url": f"{settings.APP_SCHEME}://{path}"})

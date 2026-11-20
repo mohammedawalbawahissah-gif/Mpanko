@@ -2,23 +2,23 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog, Role
-from apps.accounts.permissions import FinanceStaff, roles_permission
+from apps.accounts.permissions import FinanceStaff, IsStaffRole, roles_permission
 from apps.orders.models import Order
 from apps.payments.providers import ProviderError
 
 from . import services
 from .models import ReturnRequest, SupportCase, SupportMessage
 from .serializers import (
-    ApproveSerializer, CaseCreateSerializer, CaseSerializer, MessageCreateSerializer, ReceiveSerializer,
+    ApproveSerializer, CaseCreateSerializer, CaseSerializer, MessageCreateSerializer, MessageSerializer, ReceiveSerializer,
     RejectSerializer, ReturnCreateSerializer, ReturnSerializer,
 )
-from .tasks import send_case_reply, send_return_email
+from .tasks import alert_staff_case, alert_staff_return, send_case_reply, send_return_email
 
 ReturnStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT, Role.FULFILLMENT)
 SupportStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
@@ -67,8 +67,9 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = services.create_return(request.user, order, d["items"], d["reason"], d["note"])
         except services.ReturnError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         transaction.on_commit(lambda: send_return_email.delay("return_requested", req.pk))
+        transaction.on_commit(lambda: alert_staff_return.delay(req.pk))
         return Response(ReturnSerializer(req).data, status=status.HTTP_201_CREATED)
 
     def _run(self, request, fn, key=None, perm=None, audit=None, **kwargs):
@@ -78,7 +79,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         try:
             req = fn(req, **kwargs)
         except (services.ReturnError, ProviderError) as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            raise ValidationError({"detail": str(exc)})
         if key:
             transaction.on_commit(lambda: send_return_email.delay(key, req.pk))
         if audit:
@@ -136,7 +137,8 @@ class SupportCaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         if d["order_number"]:
             order = get_object_or_404(Order, number=d["order_number"], user=request.user)
         case = SupportCase.objects.create(user=request.user, order=order, subject=d["subject"])
-        SupportMessage.objects.create(case=case, author=request.user, body=d["message"])
+        first = SupportMessage.objects.create(case=case, author=request.user, body=d["message"])
+        transaction.on_commit(lambda: alert_staff_case.delay(first.pk))
         return Response(CaseSerializer(case).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=MessageCreateSerializer, responses=CaseSerializer)
@@ -155,6 +157,8 @@ class SupportCaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         case.save(update_fields=["status", "updated_at"])
         if staff:
             transaction.on_commit(lambda: send_case_reply.delay(msg.pk))
+        else:
+            transaction.on_commit(lambda: alert_staff_case.delay(msg.pk))
         return Response(CaseSerializer(self.get_queryset().get(pk=case.pk)).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])

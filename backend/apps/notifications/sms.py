@@ -12,15 +12,10 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# Email key -> short text (SMS has no room for the long email body)
-SMS_EVENTS = {
-    "order_confirmation": "Mpanko: order {order_number} is confirmed. Thank you!",
-    "shipment_dispatched": "Mpanko: order {order_number} has shipped with {carrier}. Tracking: {tracking_number}",
-    "order_delivered": "Mpanko: order {order_number} was delivered. We hope you love it.",
-    "payment_failed": "Mpanko: payment for order {order_number} did not go through. You can try again in your orders.",
-    "return_approved": "Mpanko: your return for order {order_number} is approved. Check your email for next steps.",
-    "return_refunded": "Mpanko: your refund for return {return_number} is on its way.",
-}
+from .events import CUSTOMER_EVENTS, category_of, sms_text  # noqa: E402
+
+SMS_EVENTS = {k: v["sms"] for k, v in CUSTOMER_EVENTS.items() if v.get("sms")}
+SMS_FIELDS = ("order_number", "carrier", "tracking_number", "return_number", "currency", "amount", "pickup_place")
 
 
 def _log_backend(to, body):
@@ -79,11 +74,13 @@ def sms_for_email(key, to, context, ref=""):
         return
     from apps.accounts.models import User
 
-    user = User.objects.filter(email__iexact=to, is_active=True, notify_sms=True, phone_verified=True).first()
-    if not user:
+    user = User.objects.filter(email__iexact=to, is_active=True).first()
+    from .preferences import allowed
+
+    if not user or not allowed(user, category_of(key) or "orders", "sms"):
         return
     try:
-        body = text.format_map({**{k: "" for k in ("order_number", "carrier", "tracking_number", "return_number")}, **context})
+        body = text.format_map({**{k: "" for k in SMS_FIELDS}, **context})
     except (KeyError, IndexError, ValueError):
         return
     send_sms(user.phone, body, kind=key, ref=ref)

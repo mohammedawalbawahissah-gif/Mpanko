@@ -38,6 +38,7 @@ def send_payment_failed(order_id, reference):
         {"order_number": order.number, "link": f"{settings.FRONTEND_URL}/orders/{order.number}"},
         ref=reference,
     )
+    staff_order_alert.delay(order_id, "staff_payment_failed", {"method": reference})
 
 
 @shared_task
@@ -73,3 +74,50 @@ def send_guest_order_link(order_id, dedupe=True):
         {"order_number": order.number, "link": order_link(order)},
         ref=order.number if dedupe else f"{order.number}:{order.updated_at.timestamp()}", dedupe=dedupe,
     )
+
+
+def _link(order):
+    from django.conf import settings
+
+    return f"{settings.FRONTEND_URL}/orders/{order.number}"
+
+
+def is_pickup_order(order):
+    svc = order.shipping_service or {}
+    return "pickup" in f"{svc.get('service_code', '')} {svc.get('service_name', '')}".lower()
+
+
+def _who(order):
+    addr = order.shipping_address or {}
+    return (addr.get("recipient_name") or (order.user.full_name if order.user_id else "") or order.contact_email), addr.get("country", "")
+
+
+@shared_task
+def notify_order_event(order_id, key, extra=None):
+    """Tell the customer about one stage of their order (processing, ready for pickup, cancelled, expired, waiting for payment...)."""
+    from apps.notifications.services import send_notification
+
+    from .models import Order
+
+    order = Order.objects.get(pk=order_id)
+    ctx = {"order_number": order.number, "link": _link(order), "currency": order.currency, "amount": order.grand_total,
+           "pickup_place": (order.shipping_service or {}).get("service_name", "our pickup point"), "instructions": ""}
+    ctx.update(extra or {})
+    send_notification(key, order.contact_email, ctx, ref=f"{order.number}:{key}")
+
+
+@shared_task
+def staff_order_alert(order_id, key, extra=None):
+    """Tell staff about an order event: a new paid order, a payment to confirm, a failed payment."""
+    from apps.notifications.staff import admin_link, notify_staff
+
+    from .models import Order
+
+    order = Order.objects.prefetch_related("items").get(pk=order_id)
+    who, country = _who(order)
+    lines = "\n".join(f"  {i.quantity} x {i.product_name}" for i in order.items.all())
+    ctx = {"order_number": order.number, "customer": who, "country": country, "lines": lines, "currency": order.currency,
+           "grand_total": order.grand_total, "amount": order.grand_total, "delivery": (order.shipping_service or {}).get("service_name", ""),
+           "method": "", "link": admin_link(f"orders/{order.number}" if key != "staff_manual_payment" else "manual-payments")}
+    ctx.update(extra or {})
+    notify_staff(key, ctx, ref=f"{order.number}:{key}:{(extra or {}).get('method', '')}", path_ref=order.number if key != "staff_manual_payment" else "")
