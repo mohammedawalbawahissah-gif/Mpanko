@@ -246,7 +246,7 @@ export function homePage(ctx) {
   </section>` : ""}
   ${founder ? `<section aria-labelledby="meet-h">
     <div class="wrap">
-      <div><h2 id="meet-h">${esc(founder.title)}</h2>${founder.kicker ? `<p class="meta">${esc(founder.kicker)}</p>` : ""}</div>
+      <div><h2 id="meet-h">${esc(founder.title)}</h2>${founder.kicker ? `<p class="meta">${esc(founder.kicker)}</p>` : ""}${photo(founder.image, founder.image_alt || founder.title, "photo portrait")}</div>
       <div class="prose"><p>${esc(founder.summary || paragraphs(founder.body)[0] || "")}</p><p><a class="textlink" href="/about#founder">Read Teefa's story</a></p></div>
     </div>
   </section>` : ""}
