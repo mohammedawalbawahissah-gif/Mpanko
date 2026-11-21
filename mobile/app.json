@@ -13,12 +13,16 @@
       "package": "com.wolbiroyal.mpanko"
     },
     "extra": {
-      "apiUrl": "http://10.0.2.2:8000/api/v1"
+      "apiUrl": "http://10.0.2.2:8000/api/v1",
+      "eas": {
+        "projectId": "e9a5bc3f-f25b-4fa9-bd01-5e0ebfa7cdf9"
+      }
     },
     "scheme": "mpanko",
     "plugins": [
       "expo-secure-store",
       "expo-notifications"
-    ]
+    ],
+    "owner": "mohammedawal"
   }
 }

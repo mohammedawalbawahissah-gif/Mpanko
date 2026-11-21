@@ -10,7 +10,10 @@
       "bundleIdentifier": "com.wolbiroyal.mpankoadmin"
     },
     "android": {
-      "package": "com.wolbiroyal.mpankoadmin"
+      "package": "com.wolbiroyal.mpankoadmin",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "scheme": "mpanko-admin",
     "plugins": [
@@ -23,6 +26,12 @@
           "cameraPermission": "Mpanko Admin needs your camera so you can take photos of products and proof of delivery."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6bd03d5a-07b6-49a5-a95e-f172ec9bce77"
+      }
+    },
+    "owner": "mohammedawal"
   }
 }
