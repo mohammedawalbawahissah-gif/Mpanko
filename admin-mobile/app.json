@@ -13,17 +13,37 @@
       "package": "com.wolbiroyal.mpankoadmin",
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png",
+        "backgroundColor": "#0E7F74"
+      }
     },
     "scheme": "mpanko-admin",
     "plugins": [
       "expo-secure-store",
-      "expo-notifications",
       [
         "expo-image-picker",
         {
           "photosPermission": "Mpanko Admin needs your photos so you can attach pictures to products and shipments.",
           "cameraPermission": "Mpanko Admin needs your camera so you can take photos of products and proof of delivery."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0E7F74"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0E7F74"
         }
       ]
     ],
@@ -32,6 +52,7 @@
         "projectId": "6bd03d5a-07b6-49a5-a95e-f172ec9bce77"
       }
     },
-    "owner": "mohammedawal"
+    "owner": "mohammedawal",
+    "icon": "./assets/icon.png"
   }
 }

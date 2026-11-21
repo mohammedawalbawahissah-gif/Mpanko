@@ -10,7 +10,12 @@
       "bundleIdentifier": "com.wolbiroyal.mpanko"
     },
     "android": {
-      "package": "com.wolbiroyal.mpanko"
+      "package": "com.wolbiroyal.mpanko",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "extra": {
       "apiUrl": "http://10.0.2.2:8000/api/v1",
@@ -21,8 +26,24 @@
     "scheme": "mpanko",
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0E7F74"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ]
     ],
-    "owner": "mohammedawal"
+    "owner": "mohammedawal",
+    "icon": "./assets/icon.png"
   }
 }
