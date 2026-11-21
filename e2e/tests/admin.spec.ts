@@ -60,8 +60,8 @@ test("an admin finds a paid order and refunds it in full", async ({ page }) => {
 
   await signInToAdmin(page);
   await page.goto(`${ADMIN}/orders`);
-  await page.getByLabel("Order number or email").fill(number!);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search orders").fill(number!);
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByRole("link", { name: number! }).click();
   await expect(page.getByRole("heading", { name: new RegExp(`Order ${number}`) })).toBeVisible();
 
@@ -91,7 +91,7 @@ test("an admin can decline the refund confirmation and nothing changes", async (
 test("the admin orders list shows an empty state for a search with no match", async ({ page }) => {
   await signInToAdmin(page);
   await page.goto(`${ADMIN}/orders`);
-  await page.getByLabel("Order number or email").fill("no-such-order-anywhere");
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search orders").fill("no-such-order-anywhere");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByText("No orders match.")).toBeVisible();
 });
