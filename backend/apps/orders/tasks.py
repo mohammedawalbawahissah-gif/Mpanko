@@ -1,4 +1,5 @@
 from celery import shared_task
+from apps.notifications.enqueue import enqueue
 
 
 @shared_task
@@ -38,7 +39,7 @@ def send_payment_failed(order_id, reference):
         {"order_number": order.number, "link": f"{settings.FRONTEND_URL}/orders/{order.number}"},
         ref=reference,
     )
-    staff_order_alert.delay(order_id, "staff_payment_failed", {"method": reference})
+    enqueue(staff_order_alert, order_id, "staff_payment_failed", {"method": reference})
 
 
 @shared_task

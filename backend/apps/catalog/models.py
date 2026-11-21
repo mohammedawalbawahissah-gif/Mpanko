@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.text import slugify
+from apps.notifications.enqueue import enqueue
 
 
 class Category(models.Model):
@@ -219,7 +220,7 @@ def adjust_stock(variant_id, delta, reason, actor=None, note="", order_ref="", e
     if was_out and new_qty > 0:  # it just came back: tell anyone waiting for it
         from apps.notifications.tasks import notify_back_in_stock
 
-        transaction.on_commit(lambda: notify_back_in_stock.delay(variant_id))
+        transaction.on_commit(lambda: enqueue(notify_back_in_stock, variant_id))
     if inv.is_low and not was_low:  # only the moment stock crosses the line, not on every sale after it
         transaction.on_commit(lambda: alert_low_stock(inv.variant_id))
     return inv

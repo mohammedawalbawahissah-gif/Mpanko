@@ -17,6 +17,7 @@ from apps.corporate.contacts import contact_config
 from .models import Order
 from .serializers import OrderSerializer
 from .services import CheckoutError, checkout
+from apps.notifications.enqueue import enqueue
 
 SALT = "mpanko.guest-order"
 
@@ -109,7 +110,7 @@ class GuestCheckoutView(GuestOnly, Throttled, APIView):
         if created:
             from .tasks import send_guest_order_link
 
-            send_guest_order_link.delay(order.pk)
+            enqueue(send_guest_order_link, order.pk)
         body = OrderSerializer(order).data
         body["guest_token"] = make_token(order)
         return Response(body, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
@@ -143,7 +144,7 @@ class GuestLookupView(GuestOnly, Throttled, APIView):
         if order:
             from .tasks import send_guest_order_link
 
-            send_guest_order_link.delay(order.pk, dedupe=False)
+            enqueue(send_guest_order_link, order.pk, dedupe=False)
         return Response({"detail": "If those details match an order, we have emailed a link to it."})
 
 

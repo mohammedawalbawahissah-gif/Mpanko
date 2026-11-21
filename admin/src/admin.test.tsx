@@ -64,7 +64,7 @@ describe("ApiError", () => {
   });
   it("prefers detail", () => {
     expect(new ApiError(403, { detail: "No access" }).message).toBe("No access");
-    expect(new ApiError(500, null).message).toBe("Request failed (500)");
+    expect(new ApiError(500, null).message).toBe("Something went wrong on our side. Please try again in a minute.");
   });
 });
 

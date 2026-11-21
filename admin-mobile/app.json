@@ -15,7 +15,14 @@
     "scheme": "mpanko-admin",
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mpanko Admin needs your photos so you can attach pictures to products and shipments.",
+          "cameraPermission": "Mpanko Admin needs your camera so you can take photos of products and proof of delivery."
+        }
+      ]
     ]
   }
 }

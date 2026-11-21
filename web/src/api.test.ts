@@ -18,8 +18,13 @@ describe("ApiError", () => {
   it("exposes field errors by name", () => {
     expect(new ApiError(400, { email: ["Bad email"], phone: "Bad phone" }).fields()).toEqual({ email: "Bad email", phone: "Bad phone" });
   });
+  it("explains rate limits, missing pages and denied access in plain words", () => {
+    expect(new ApiError(429, null).message).toMatch(/Too many attempts/);
+    expect(new ApiError(404, null).message).toBe("We couldn't find that.");
+    expect(new ApiError(403, null).message).toBe("You don't have access to this.");
+  });
   it("has a readable default", () => {
-    expect(new ApiError(500, null).message).toBe("Request failed (500)");
+    expect(new ApiError(500, null).message).toBe("Something went wrong on our side. Please try again in a minute.");
   });
 });
 
@@ -81,5 +86,20 @@ describe("api()", () => {
   it("returns undefined for 204", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
     expect(await api("/auth/addresses/1/", { method: "DELETE" })).toBeUndefined();
+  });
+});
+
+describe("request timeout", () => {
+  it("gives up on a request that never answers and says so", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation((_url, init) => new Promise((_res, rej) => {
+      (init?.signal as AbortSignal).addEventListener("abort", () => rej(Object.assign(new Error("aborted"), { name: "AbortError" })));
+    }));
+    const pending = api("/products/").catch((e: ApiError) => e);
+    await vi.advanceTimersByTimeAsync(31000);
+    const err = (await pending) as ApiError;
+    expect(err.status).toBe(0);
+    expect(err.message).toMatch(/taking too long/);
+    vi.useRealTimers();
   });
 });

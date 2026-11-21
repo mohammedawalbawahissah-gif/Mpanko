@@ -9,6 +9,7 @@ from apps.orders.models import Order, OrderStatus
 
 from .models import AttemptStatus, PaymentAttempt, PaymentStatusEvent, Refund
 from .providers import ProviderError, get_provider
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def apply_result(reference, status, amount=None, currency="", provider_reference
             if status == "failed":
                 from apps.orders.tasks import send_payment_failed
 
-                transaction.on_commit(lambda: send_payment_failed.delay(attempt.order_id, attempt.reference))
+                transaction.on_commit(lambda: enqueue(send_payment_failed, attempt.order_id, attempt.reference))
         else:
             attempt.save()
     else:

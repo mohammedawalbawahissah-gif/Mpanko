@@ -19,6 +19,7 @@ from .serializers import (
     RejectSerializer, ReturnCreateSerializer, ReturnSerializer,
 )
 from .tasks import alert_staff_case, alert_staff_return, send_case_reply, send_return_email
+from apps.notifications.enqueue import enqueue
 
 ReturnStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT, Role.FULFILLMENT)
 SupportStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
@@ -68,8 +69,8 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
             req = services.create_return(request.user, order, d["items"], d["reason"], d["note"])
         except services.ReturnError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
-        transaction.on_commit(lambda: send_return_email.delay("return_requested", req.pk))
-        transaction.on_commit(lambda: alert_staff_return.delay(req.pk))
+        transaction.on_commit(lambda: enqueue(send_return_email, "return_requested", req.pk))
+        transaction.on_commit(lambda: enqueue(alert_staff_return, req.pk))
         return Response(ReturnSerializer(req).data, status=status.HTTP_201_CREATED)
 
     def _run(self, request, fn, key=None, perm=None, audit=None, **kwargs):
@@ -81,7 +82,7 @@ class ReturnViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
         except (services.ReturnError, ProviderError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc
         if key:
-            transaction.on_commit(lambda: send_return_email.delay(key, req.pk))
+            transaction.on_commit(lambda: enqueue(send_return_email, key, req.pk))
         if audit:
             AuditLog.record(request.user, audit, req, order=req.order.number)
         return Response(ReturnSerializer(req).data)
@@ -138,7 +139,7 @@ class SupportCaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
             order = get_object_or_404(Order, number=d["order_number"], user=request.user)
         case = SupportCase.objects.create(user=request.user, order=order, subject=d["subject"])
         first = SupportMessage.objects.create(case=case, author=request.user, body=d["message"])
-        transaction.on_commit(lambda: alert_staff_case.delay(first.pk))
+        transaction.on_commit(lambda: enqueue(alert_staff_case, first.pk))
         return Response(CaseSerializer(case).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=MessageCreateSerializer, responses=CaseSerializer)
@@ -156,9 +157,9 @@ class SupportCaseViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         case.status = SupportCase.Status.ANSWERED if staff else SupportCase.Status.OPEN
         case.save(update_fields=["status", "updated_at"])
         if staff:
-            transaction.on_commit(lambda: send_case_reply.delay(msg.pk))
+            transaction.on_commit(lambda: enqueue(send_case_reply, msg.pk))
         else:
-            transaction.on_commit(lambda: alert_staff_case.delay(msg.pk))
+            transaction.on_commit(lambda: enqueue(alert_staff_case, msg.pk))
         return Response(CaseSerializer(self.get_queryset().get(pk=case.pk)).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])

@@ -13,6 +13,7 @@ from apps.accounts.permissions import CatalogManager
 from . import campaigns, preferences
 from .models import Campaign, StockAlert
 from .tasks import send_campaign
+from apps.notifications.enqueue import enqueue
 
 
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
@@ -145,7 +146,7 @@ class CampaignViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.C
         if not preferences_has_audience(c):
             raise ValidationError({"detail": "Nobody who agreed to offers matches this announcement yet."})
         AuditLog.record(request.user, "campaign.send", c)
-        send_campaign.delay(c.pk)
+        enqueue(send_campaign, c.pk)
         c.refresh_from_db()
         return Response(CampaignSerializer(c).data)
 

@@ -8,6 +8,7 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "./src/api";
 import { AuthProvider, useAuth } from "./src/auth";
+import { ErrorBoundary } from "./src/crash";
 import { parseTarget } from "./src/core/links";
 import { Notifications } from "./src/push";
 import { AlertsScreen, LoginScreen, MeScreen, PaymentsScreen } from "./src/screens";
@@ -115,9 +116,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <AuthProvider>
-        <Gate />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <Gate />
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

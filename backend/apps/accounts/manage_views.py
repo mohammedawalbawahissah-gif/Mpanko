@@ -9,6 +9,7 @@ from .models import STAFF_ROLES, Address, AuditLog, Role, User
 from .permissions import roles_permission
 from .phone import normalize
 from .tasks import send_staff_invite
+from apps.notifications.enqueue import enqueue
 
 CustomerStaff = roles_permission(Role.STORE_ADMIN, Role.SUPPORT)
 AdminStaff = roles_permission(Role.STORE_ADMIN)
@@ -125,7 +126,7 @@ class StaffViewSet(viewsets.ModelViewSet):
         user.is_staff = False
         user.save()
         AuditLog.record(self.request.user, "staff.invite", user, email=user.email, role=user.role)
-        send_staff_invite.delay(user.pk)
+        enqueue(send_staff_invite, user.pk)
 
     def perform_update(self, serializer):
         self._check_target(serializer.instance)

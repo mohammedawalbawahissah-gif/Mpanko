@@ -218,8 +218,18 @@ CELERY_BEAT_SCHEDULE = {
     "send-feedback-requests": {"task": "apps.notifications.tasks.send_feedback_requests", "schedule": 6 * 3600.0},
     "refresh-fx-rates": {"task": "apps.currency.tasks.refresh_fx_rates", "schedule": 6 * 3600.0},
 }
+# A slow or dead Redis must fail fast: the API gives up on queueing after about a second and falls back (see apps/notifications/enqueue.py).
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 3, "socket_timeout": 5}
+CELERY_TASK_PUBLISH_RETRY_POLICY = {"max_retries": 1, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.5}
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True  # the worker and beat wait for Redis instead of exiting
 if REDIS_URL:
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
+    CACHES = {
+        "default": {
+            "BACKEND": "config.cache.ResilientRedisCache",  # keeps serving requests if Redis is unreachable
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2},
+        }
+    }
 
 # --- Commerce -----------------------------------------------------------------
 BASE_CURRENCY = os.environ.get("BASE_CURRENCY", "USD")  # OD-04: confirm with client

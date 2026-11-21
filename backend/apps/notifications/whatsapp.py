@@ -17,6 +17,7 @@ from celery import shared_task
 from django.conf import settings
 
 from .sms import SMS_EVENTS
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def send_whatsapp(to, body, kind="notice", ref="", template=None):
     """Queue one WhatsApp message. Returns immediately; the outcome is written to the notification log."""
     if not to:
         return False
-    deliver_whatsapp.delay(to, body[:1000], kind, ref, list(template) if template else None)
+    enqueue(deliver_whatsapp, to, body[:1000], kind, ref, list(template) if template else None)
     return True
 
 

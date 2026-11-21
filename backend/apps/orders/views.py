@@ -17,6 +17,7 @@ from .serializers import (
     CartItemSerializer, CartSerializer, CheckoutSerializer, OrderListSerializer, OrderSerializer, TransitionSerializer,
 )
 from .services import CheckoutError, InvalidTransition, checkout, transition
+from apps.notifications.enqueue import enqueue
 
 
 def _cart_for(user):
@@ -162,7 +163,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
             raise ValidationError({"detail": "This order is not a pickup order."})
         if order.status not in {OrderStatus.PAID, OrderStatus.PROCESSING}:
             raise ValidationError({"detail": "Only a paid order that has not shipped can be marked ready for pickup."})
-        notify_order_event.delay(order.pk, "order_ready_for_pickup")
+        enqueue(notify_order_event, order.pk, "order_ready_for_pickup")
         AuditLog.record(request.user, "order.ready_for_pickup", order)
         return Response(OrderSerializer(order).data)
 

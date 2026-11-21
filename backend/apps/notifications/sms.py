@@ -9,6 +9,7 @@ import logging
 import requests
 from celery import shared_task
 from django.conf import settings
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def send_sms(to, body, kind="notice", ref=""):
     """Queue one SMS. Returns immediately; the outcome is written to the notification log."""
     if not to:
         return False
-    deliver_sms.delay(to, body[:320], kind, ref)
+    enqueue(deliver_sms, to, body[:320], kind, ref)
     return True
 
 

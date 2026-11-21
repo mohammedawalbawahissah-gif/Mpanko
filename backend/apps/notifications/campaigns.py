@@ -10,6 +10,7 @@ from .inbox import add_to_inbox
 from .models import Campaign
 from .preferences import allowed, unsubscribe_token
 from .services import send_notification
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +75,10 @@ def deliver(campaign, user):
             from .push import send_push, send_web_push
 
             if user.device_tokens.exists():
-                send_push.delay(user.pk, campaign.subject[:120], campaign.body[:150], {"url": f"{settings.APP_SCHEME}://notifications"})
+                enqueue(send_push, user.pk, campaign.subject[:120], campaign.body[:150], {"url": f"{settings.APP_SCHEME}://notifications"})
                 pushed = True
             if user.web_push_subscriptions.exists() and settings.VAPID_PRIVATE_KEY:
-                send_web_push.delay(user.pk, campaign.subject[:120], campaign.body[:150], "/notifications")
+                enqueue(send_web_push, user.pk, campaign.subject[:120], campaign.body[:150], "/notifications")
                 pushed = True
     return emailed, pushed
 

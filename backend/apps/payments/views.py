@@ -21,6 +21,7 @@ from apps.orders.models import Order, OrderStatus
 from .models import AttemptStatus, Dispute, PaymentAttempt, ReconciliationRecord, ReconciliationRun, WebhookEvent
 from .providers import InvalidSignature, ProviderError, enabled_providers, get_provider
 from .services import apply_result, issue_refund, reconcile
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +93,8 @@ def _start_payment_locked(request, order, provider_name):
             from apps.orders.tasks import notify_order_event, staff_order_alert
 
             instructions = attempt.raw_response.get("instructions", "")
-            transaction.on_commit(lambda: notify_order_event.delay(order.pk, "order_awaiting_payment", {"instructions": instructions}))
-            transaction.on_commit(lambda: staff_order_alert.delay(order.pk, "staff_manual_payment", {"method": getattr(provider, "label", "") or provider.name}))
+            transaction.on_commit(lambda: enqueue(notify_order_event, order.pk, "order_awaiting_payment", {"instructions": instructions}))
+            transaction.on_commit(lambda: enqueue(staff_order_alert, order.pk, "staff_manual_payment", {"method": getattr(provider, "label", "") or provider.name}))
     except IntegrityError:  # two simultaneous requests with the same key
         return Response(_attempt_payload(PaymentAttempt.objects.get(order=order, idempotency_key=key)))
     return Response(_attempt_payload(attempt), status=status.HTTP_201_CREATED)

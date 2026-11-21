@@ -19,6 +19,7 @@ redis==8.1.0
 reportlab==5.1.0
 requests==2.34.2
 pywebpush==2.5.0
+packaging==26.2
 cryptography==50.0.2
 sentry-sdk==2.75.0
 whitenoise==6.12.0

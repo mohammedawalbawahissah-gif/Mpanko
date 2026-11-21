@@ -47,7 +47,7 @@ export class ApiError extends Error {
   status: number;
   data: unknown;
   constructor(status: number, data: unknown) {
-    super(messageFrom(data) || `Request failed (${status})`);
+    super(messageFrom(data) || fallbackMessage(status));
     this.status = status;
     this.data = data;
   }
@@ -76,12 +76,32 @@ function messageFrom(data: unknown): string {
   return "";
 }
 
+const REQUEST_TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 90000;
+
+/** A plain-words message for an error that came with no message of its own. */
+export function fallbackMessage(status: number): string {
+  if (status >= 500) return "Something went wrong on our side. Please try again in a minute.";
+  if (status === 429) return "Too many attempts. Wait a minute and try again.";
+  if (status === 404) return "We couldn't find that.";
+  if (status === 403) return "You don't have access to this.";
+  return `Something went wrong (code ${status}). Please try again.`;
+}
+
+/** fetch that gives up after a while, so a stalled connection ends in a clear message instead of an endless spinner. */
+function timedFetch(url: string, init: RequestInit = {}, ms?: number): Promise<Response> {
+  const isUpload = typeof FormData !== "undefined" && init.body instanceof FormData;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms ?? (isUpload ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS));
+  return fetch(url, { ...init, signal: ctl.signal }).finally(() => clearTimeout(timer));
+}
+
 let refreshing: Promise<boolean> | null = null;
 async function refreshTokens(): Promise<boolean> {
   const t = await getTokens();
   if (!t) return false;
   if (!refreshing) {
-    refreshing = fetch(`${BASE}/auth/refresh/`, {
+    refreshing = timedFetch(`${BASE}/auth/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: t.refresh }),
@@ -115,13 +135,14 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retry =
   if (tokens) headers.Authorization = `Bearer ${tokens.access}`;
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, {
+    res = await timedFetch(`${BASE}${path}`, {
       method: opts.method ?? "GET",
       headers,
       body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
     });
-  } catch {
-    throw new ApiError(0, { detail: "Can't reach the Mpanko server. Check your connection and try again." });
+  } catch (e) {
+    const slow = (e as { name?: string } | null)?.name === "AbortError";
+    throw new ApiError(0, { detail: slow ? "Mpanko is taking too long to answer. Check your connection and try again." : "Can't reach the Mpanko server. Check your connection and try again." });
   }
   if (res.status === 401 && tokens && retry) {
     if (await refreshTokens()) return api<T>(path, opts, false);

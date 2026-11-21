@@ -10,6 +10,7 @@ from apps.shipping import providers as shipping_providers
 
 from . import pricing
 from .models import Cart, Order, OrderItem, OrderStatus, OrderStatusEvent
+from apps.notifications.enqueue import enqueue
 
 
 class InvalidTransition(Exception):
@@ -66,7 +67,7 @@ def transition(order, to_status, actor=None, note=""):
     if key:
         from .tasks import notify_order_event
 
-        transaction.on_commit(lambda: notify_order_event.delay(order.pk, key))
+        transaction.on_commit(lambda: enqueue(notify_order_event, order.pk, key))
     return order
 
 
@@ -84,8 +85,8 @@ def mark_paid(order, note="Payment verified"):
     order = transition(order, OrderStatus.PAID, actor=None, note=note)
     from .tasks import send_order_confirmation, staff_order_alert
 
-    transaction.on_commit(lambda: send_order_confirmation.delay(order.pk))
-    transaction.on_commit(lambda: staff_order_alert.delay(order.pk, "staff_new_order"))
+    transaction.on_commit(lambda: enqueue(send_order_confirmation, order.pk))
+    transaction.on_commit(lambda: enqueue(staff_order_alert, order.pk, "staff_new_order"))
     return order
 
 

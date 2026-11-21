@@ -5,6 +5,7 @@ from celery import shared_task
 from django.conf import settings
 
 from .models import DeviceToken
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 EXPO_URL = "https://exp.host/--/api/v2/push/send"
@@ -44,9 +45,9 @@ def push_for_email(key, to, context):
     if not allowed(user, category_of(key) or "orders", "push"):
         return
     if user.device_tokens.exists():
-        send_push.delay(user.pk, title, body, {"url": f"{settings.APP_SCHEME}://{path}"})
+        enqueue(send_push, user.pk, title, body, {"url": f"{settings.APP_SCHEME}://{path}"})
     if user.web_push_subscriptions.exists() and settings.VAPID_PRIVATE_KEY:
-        send_web_push.delay(user.pk, title, body, f"/{path}")
+        enqueue(send_web_push, user.pk, title, body, f"/{path}")
 
 
 @shared_task

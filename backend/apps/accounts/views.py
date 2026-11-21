@@ -23,6 +23,7 @@ from .serializers import (
 )
 from .tasks import send_password_reset_email, send_verification_email
 from .tokens import email_verification_token
+from apps.notifications.enqueue import enqueue
 
 
 class AuthThrottled:
@@ -45,10 +46,10 @@ class RegisterView(AuthThrottled, generics.CreateAPIView):
         existing = User.objects.filter(email__iexact=d["email"]).first()
         if existing:
             if existing.is_active:
-                transaction.on_commit(lambda: send_password_reset_email.delay(existing.pk))
+                transaction.on_commit(lambda: enqueue(send_password_reset_email, existing.pk))
         else:
             user = serializer.save()
-            transaction.on_commit(lambda: send_verification_email.delay(user.pk))
+            transaction.on_commit(lambda: enqueue(send_verification_email, user.pk))
         return Response(
             {"email": d["email"], "full_name": d.get("full_name", ""), "phone": d.get("phone", "")}, status=status.HTTP_201_CREATED,
         )
@@ -99,7 +100,7 @@ class VerifyEmailRequestView(AuthThrottled, APIView):
     def post(self, request):
         if request.user.email_verified:
             return Response({"detail": "Email already verified."})
-        send_verification_email.delay(request.user.pk)
+        enqueue(send_verification_email, request.user.pk)
         return Response({"detail": "Verification email sent."})
 
 
@@ -137,7 +138,7 @@ class PasswordResetRequestView(AuthThrottled, APIView):
         s.is_valid(raise_exception=True)
         user = User.objects.filter(email__iexact=s.validated_data["email"], is_active=True).first()
         if user:
-            send_password_reset_email.delay(user.pk)
+            enqueue(send_password_reset_email, user.pk)
         # Identical response whether or not the account exists: no user enumeration.
         return Response({"detail": "If an account exists for that email, a reset link has been sent."})
 

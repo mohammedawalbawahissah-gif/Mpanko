@@ -11,6 +11,7 @@ from . import services
 from .events import STAFF_EVENTS
 from .inbox import add_to_inbox
 from .preferences import _explicit, channel_available, staff_allows
+from apps.notifications.enqueue import enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def notify_staff(key, context, ref="", path_ref="", extra_emails=()):
             if staff_allows(user, "push", explicit) and user.device_tokens.exists():
                 from .push import send_push
 
-                send_push.delay(user.pk, title, body, {"url": f"{settings.ADMIN_APP_SCHEME}://{path}"})
+                enqueue(send_push, user.pk, title, body, {"url": f"{settings.ADMIN_APP_SCHEME}://{path}"})
                 did = True
             if staff_allows(user, "whatsapp", explicit) and channel_available(user, "whatsapp"):
                 from .whatsapp import send_staff_whatsapp

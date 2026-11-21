@@ -2,6 +2,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .models import Shipment, ShipmentStatus, TrackingEvent
+from apps.notifications.enqueue import enqueue
 
 IN_MOTION = {ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY}
 INACTIVE = {ShipmentStatus.DECLINED, ShipmentStatus.RETURNED}
@@ -47,7 +48,7 @@ def record_event(shipment, status, actor=None, description="", location="", exte
 def _queue_email(shipment, key):
     from apps.orders.tasks import send_shipment_email
 
-    transaction.on_commit(lambda: send_shipment_email.delay(shipment.pk, key))
+    transaction.on_commit(lambda: enqueue(send_shipment_email, shipment.pk, key))
 
 
 def remaining_quantities(order, exclude_shipment=None):
